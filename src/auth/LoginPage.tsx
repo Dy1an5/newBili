@@ -13,25 +13,6 @@ import { hasLoginCookie, saveLoginCookie } from './authCookie';
 
 const BILIBILI_LOGIN_URL = 'https://passport.bilibili.com/login';
 const BILIBILI_COOKIE_URL = 'https://www.bilibili.com';
-const LOGIN_COOKIE_NAME = 'SESSDATA';
-
-function getCookieValue(cookie: string, cookieName: string): string | null {
-    for (const part of cookie.split(';')) {
-        const separatorIndex = part.indexOf('=');
-
-        if (separatorIndex < 0) {
-            continue;
-        }
-
-        const name = part.slice(0, separatorIndex).trim();
-
-        if (name === cookieName) {
-            return part.slice(separatorIndex + 1);
-        }
-    }
-
-    return null;
-}
 
 export type LoginPageProps = {
     onLoginSuccess: () => void;
@@ -61,14 +42,6 @@ export default function LoginPage({
 
             if (!hasLoginCookie(cookie)) {
                 return;
-            }
-
-            if (__DEV__) {
-                console.log('[LoginDebug] Cookie:', cookie);
-                console.log(
-                    '[LoginDebug] SESSDATA:',
-                    getCookieValue(cookie, LOGIN_COOKIE_NAME),
-                );
             }
 
             setMessage('正在安全保存登录信息');
