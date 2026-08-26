@@ -1,0 +1,175 @@
+import {
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+
+import { colors } from '@/theme/colors';
+import { radius } from '@/theme/radius';
+import { spacing } from '@/theme/spacing';
+
+type Props = {
+    title: string;
+    cover: string;
+    avatar: string;
+    author: string;
+    time: string;
+
+    onPress?: () => void;
+};
+
+export default function VideoFollowingCard({
+    title,
+    cover,
+    avatar,
+    author,
+    time,
+    onPress,
+}: Props) {
+    return (
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+                styles.card,
+                pressed && styles.cardPressed,
+            ]}
+        >
+            <Text
+                style={styles.title}
+                numberOfLines={2}
+            >
+                {title}
+            </Text>
+
+            <View style={styles.coverContainer}>
+                <Image
+                    source={{ uri: cover }}
+                    style={styles.cover}
+                    resizeMode="cover"
+                />
+            </View>
+
+            <View style={styles.footer}>
+                <View style={styles.authorContainer}>
+                    <Image
+                        source={{ uri: avatar }}
+                        style={styles.avatar}
+                    />
+
+                    <Text
+                        style={styles.author}
+                        numberOfLines={1}
+                    >
+                        {author}
+                    </Text>
+                </View>
+
+                <Text style={styles.time}>
+                    {time}
+                </Text>
+            </View>
+        </Pressable>
+    );
+}
+
+const styles = StyleSheet.create({
+    card: {
+        marginHorizontal: spacing.lg,
+        marginVertical: spacing.sm,
+
+        padding: spacing.md,
+
+        backgroundColor: colors.surface,
+
+        borderRadius: radius.lg,
+
+        shadowColor: colors.shadow,
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.05,
+        shadowRadius: spacing.sm,
+
+        elevation: 2,
+    },
+
+    cardPressed: {
+        opacity: 0.94,
+
+        transform: [
+            {
+                scale: 0.995,
+            },
+        ],
+    },
+
+    title: {
+        marginBottom: spacing.md,
+
+        fontSize: 18,
+        lineHeight: 25,
+
+        fontWeight: '700',
+
+        color: colors.textPrimary,
+    },
+
+    coverContainer: {
+        overflow: 'hidden',
+
+        borderRadius: radius.md,
+
+        backgroundColor: colors.background,
+    },
+
+    cover: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+    },
+
+    footer: {
+        marginTop: spacing.md,
+
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+
+    authorContainer: {
+        flex: 1,
+
+        flexDirection: 'row',
+        alignItems: 'center',
+
+        marginRight: spacing.md,
+    },
+
+    avatar: {
+        width: 34,
+        height: 34,
+
+        borderRadius: radius.full,
+
+        marginRight: spacing.sm,
+
+        backgroundColor: colors.background,
+    },
+
+    author: {
+        flex: 1,
+
+        fontSize: 14,
+        fontWeight: '600',
+
+        color: colors.textSecondary,
+    },
+
+    time: {
+        fontSize: 13,
+
+        color: colors.textMuted,
+    },
+});
