@@ -1,0 +1,29 @@
+{
+    "name": "new-bili",
+    "version": "1.0.0",
+    "description": "An Android Bilibili client built with Expo and React Native.",
+    "private": true,
+    "main": "src/index.ts",
+    "scripts": {
+        "start": "expo start",
+        "typecheck": "tsc --noEmit"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "packageManager": "pnpm@11.23.0+sha512.f00082e5b283a199b74e079da28d155c008fe232f44c8a06ea7ddfa014ecf719fc362f790ecc67b28106ddac2afb24c49a9a079159da560b2ce7d1e98efd11af",
+    "type": "module",
+    "dependencies": {
+        "@preeternal/react-native-cookie-manager": "6.4.0",
+        "expo": "57.0.16",
+        "expo-dev-client": "57.0.14",
+        "expo-secure-store": "57.0.1",
+        "react": "19.2.3",
+        "react-native": "0.86.2",
+        "react-native-webview": "13.16.1"
+    },
+    "devDependencies": {
+        "@types/react": "19.2.2",
+        "typescript": "6.0.3"
+    }
+}

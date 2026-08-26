@@ -1,0 +1,14 @@
+{
+    "cli": {
+        "version": "22.4.0"
+    },
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk"
+            }
+        }
+    }
+}

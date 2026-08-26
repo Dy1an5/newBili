@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "newBili",
+    "slug": "new-bili",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "android": {
+      "package": "com.dylan.newbili"
+    },
+    "plugins": [
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "@preeternal/react-native-cookie-manager",
+        {
+          "androidWebkitVersion": "1.16.0"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c88e4e80-6f7e-459c-a286-35ae12cdaf29"
+      }
+    }
+  }
+}
