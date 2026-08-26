@@ -8,6 +8,7 @@ export type VideoFollowingItem = {
     duration?: string;
 
     author: {
+        id: string;
         name: string;
         avatar: string;
     };
