@@ -3,9 +3,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, Text, View } from 'react-native';
 
+import FavoriteFoldersPage from '@/favorites/FavoriteFoldersPage';
+import FavoriteVideosPage from '@/favorites/FavoriteVideosPage';
 import FollowingPage from '@/following/FollowingPage';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import type { FavoriteFolder } from '@/types/favorites';
 import type { VideoFollowingItem } from '@/types/following';
 import VideoDetailPage from '@/video/VideoDetailPage';
 
@@ -22,7 +25,18 @@ type MainTabParamList = {
     WatchLaterTab: undefined;
 };
 
+type FavoritesStackParamList = {
+    FavoriteFolders: undefined;
+    FavoriteVideos: {
+        folder: FavoriteFolder;
+    };
+    VideoDetail: {
+        video: VideoFollowingItem;
+    };
+};
+
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const FavoritesStack = createNativeStackNavigator<FavoritesStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function HomeScreen({
@@ -68,8 +82,51 @@ function PlaceholderPage({ message }: { message: string }) {
     );
 }
 
-function FavoritesPage() {
-    return <PlaceholderPage message='收藏功能将在后续模块中实现' />;
+function FavoriteFoldersScreen({
+    navigation,
+}: NativeStackScreenProps<FavoritesStackParamList, 'FavoriteFolders'>) {
+    return (
+        <FavoriteFoldersPage
+            onFolderPress={(folder) => {
+                navigation.navigate('FavoriteVideos', { folder });
+            }}
+        />
+    );
+}
+
+function FavoriteVideosScreen({
+    navigation,
+    route,
+}: NativeStackScreenProps<FavoritesStackParamList, 'FavoriteVideos'>) {
+    return (
+        <FavoriteVideosPage
+            folder={route.params.folder}
+            onBack={() => navigation.goBack()}
+            onVideoPress={(video) => navigation.navigate('VideoDetail', { video })}
+        />
+    );
+}
+
+function FavoriteVideoDetailScreen({
+    navigation,
+    route,
+}: NativeStackScreenProps<FavoritesStackParamList, 'VideoDetail'>) {
+    return (
+        <VideoDetailPage
+            video={route.params.video}
+            onBack={() => navigation.goBack()}
+        />
+    );
+}
+
+function FavoritesNavigator() {
+    return (
+        <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
+            <FavoritesStack.Screen name='FavoriteFolders' component={FavoriteFoldersScreen} />
+            <FavoritesStack.Screen name='FavoriteVideos' component={FavoriteVideosScreen} />
+            <FavoritesStack.Screen name='VideoDetail' component={FavoriteVideoDetailScreen} />
+        </FavoritesStack.Navigator>
+    );
 }
 
 function WatchLaterPage() {
@@ -96,7 +153,7 @@ export default function MainTabNavigator() {
             />
             <Tab.Screen
                 name='FavoritesTab'
-                component={FavoritesPage}
+                component={FavoritesNavigator}
                 options={{ title: '收藏' }}
             />
             <Tab.Screen

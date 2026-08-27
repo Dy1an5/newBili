@@ -19,6 +19,13 @@ export type VideoPlayback = {
     headers: Record<string, string>;
 };
 
+export type VideoPart = {
+    cid: number;
+    page: number;
+    title: string;
+    durationSeconds: number;
+};
+
 export class VideoPlaybackError extends Error {
     readonly code?: number;
 
@@ -130,11 +137,12 @@ async function requestBilibili(
     return body;
 }
 
-async function fetchFirstCid(
+export async function fetchVideoParts(
     bvid: string,
-    sessdata: string,
+    cookie: string,
     signal?: AbortSignal,
-): Promise<number> {
+): Promise<VideoPart[]> {
+    const sessdata = getSessdataPair(cookie);
     const parameters = new URLSearchParams({ bvid });
     const body = await requestBilibili(
         `${VIDEO_VIEW_URL}?${parameters.toString()}`,
@@ -142,21 +150,43 @@ async function fetchFirstCid(
         signal,
     );
     const data = asRecord(body.data);
-    const directCid = readNumber(data?.cid);
+    const pages = Array.isArray(data?.pages) ? data.pages : [];
+    const videoParts = pages.flatMap((value, index): VideoPart[] => {
+        const page = asRecord(value);
+        const cid = readNumber(page?.cid);
 
-    if (directCid !== null && directCid > 0) {
-        return directCid;
+        if (cid === null || cid <= 0) {
+            return [];
+        }
+
+        const pageNumber = readNumber(page?.page) ?? index + 1;
+        const title = readString(page?.part) ?? `P${pageNumber}`;
+        const durationSeconds = readNumber(page?.duration) ?? 0;
+
+        return [{
+            cid,
+            page: pageNumber,
+            title,
+            durationSeconds,
+        }];
+    });
+
+    if (videoParts.length > 0) {
+        return videoParts;
     }
 
-    const pages = Array.isArray(data?.pages) ? data.pages : [];
-    const firstPage = asRecord(pages[0]);
-    const firstPageCid = readNumber(firstPage?.cid);
+    const directCid = readNumber(data?.cid);
 
-    if (firstPageCid === null || firstPageCid <= 0) {
+    if (directCid === null || directCid <= 0) {
         throw new VideoPlaybackError('视频详情中没有找到可播放的cid');
     }
 
-    return firstPageCid;
+    return [{
+        cid: directCid,
+        page: 1,
+        title: '正片',
+        durationSeconds: readNumber(data?.duration) ?? 0,
+    }];
 }
 
 async function fetchProgressiveUrl(
@@ -229,11 +259,11 @@ async function fetchProgressiveUrl(
 
 export async function fetchVideoPlayback(
     bvid: string,
+    cid: number,
     cookie: string,
     signal?: AbortSignal,
 ): Promise<VideoPlayback> {
     const sessdata = getSessdataPair(cookie);
-    const cid = await fetchFirstCid(bvid, sessdata, signal);
     const url = await fetchProgressiveUrl(bvid, cid, sessdata, signal);
 
     return {

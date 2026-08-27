@@ -13,10 +13,13 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { getLoginCookie } from '@/auth/authCookie';
 import { colors } from '@/theme/colors';
+import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import type { VideoFollowingItem } from '@/types/following';
 import {
+    fetchVideoParts,
     fetchVideoPlayback,
+    type VideoPart,
     type VideoPlayback,
     VideoPlaybackError,
 } from './fetchVideoPlayback';
@@ -42,6 +45,24 @@ function getErrorMessage(error: unknown): string {
     }
 
     return '获取播放地址失败,请稍后重试';
+}
+
+function formatDuration(durationSeconds: number): string {
+    if (durationSeconds <= 0) {
+        return '';
+    }
+
+    const hours = Math.floor(durationSeconds / 3600);
+    const minutes = Math.floor((durationSeconds % 3600) / 60);
+    const seconds = durationSeconds % 60;
+
+    if (hours > 0) {
+        return [hours, minutes, seconds]
+            .map((value, index) => index === 0 ? String(value) : String(value).padStart(2, '0'))
+            .join(':');
+    }
+
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
 function VideoPlayer({ playback, title, onPlaybackError }: PlayerProps) {
@@ -83,6 +104,8 @@ function VideoPlayer({ playback, title, onPlaybackError }: PlayerProps) {
 }
 
 export default function VideoDetailPage({ video, onBack }: Props) {
+    const [parts, setParts] = useState<VideoPart[]>([]);
+    const [selectedCid, setSelectedCid] = useState<number | null>(null);
     const [playback, setPlayback] = useState<VideoPlayback | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
@@ -101,6 +124,47 @@ export default function VideoDetailPage({ video, onBack }: Props) {
     useEffect(() => {
         const controller = new AbortController();
 
+        const loadParts = async () => {
+            setParts([]);
+            setSelectedCid(null);
+            setPlayback(null);
+            setErrorMessage(null);
+
+            try {
+                const cookie = await getLoginCookie();
+
+                if (!cookie) {
+                    throw new VideoPlaybackError('登录信息不存在,请重新登录');
+                }
+
+                const nextParts = await fetchVideoParts(
+                    video.bvid,
+                    cookie,
+                    controller.signal,
+                );
+                setParts(nextParts);
+                setSelectedCid(nextParts[0].cid);
+            } catch (error) {
+                if (!isAbortError(error)) {
+                    setErrorMessage(getErrorMessage(error));
+                }
+            }
+        };
+
+        void loadParts();
+
+        return () => {
+            controller.abort();
+        };
+    }, [reloadKey, video.bvid]);
+
+    useEffect(() => {
+        if (selectedCid === null) {
+            return;
+        }
+
+        const controller = new AbortController();
+
         const loadPlayback = async () => {
             setPlayback(null);
             setErrorMessage(null);
@@ -114,6 +178,7 @@ export default function VideoDetailPage({ video, onBack }: Props) {
 
                 const nextPlayback = await fetchVideoPlayback(
                     video.bvid,
+                    selectedCid,
                     cookie,
                     controller.signal,
                 );
@@ -130,7 +195,10 @@ export default function VideoDetailPage({ video, onBack }: Props) {
         return () => {
             controller.abort();
         };
-    }, [reloadKey, video.bvid]);
+    }, [selectedCid, video.bvid]);
+
+    const selectedPartIndex = parts.findIndex((part) => part.cid === selectedCid);
+    const selectedPart = selectedPartIndex >= 0 ? parts[selectedPartIndex] : null;
 
     return (
         <View style={styles.page}>
@@ -173,6 +241,69 @@ export default function VideoDetailPage({ video, onBack }: Props) {
 
                 <Text style={styles.title}>{video.title}</Text>
                 <Text style={styles.author}>{video.author.name}</Text>
+
+                {parts.length > 1 ? (
+                    <View style={styles.partsSection}>
+                        <View style={styles.partsHeader}>
+                            <Text style={styles.partsHeading}>视频选集</Text>
+                            <Text numberOfLines={1} style={styles.partsSummary}>
+                                {selectedPart
+                                    ? `正在播放:P${selectedPart.page} ${selectedPart.title}`
+                                    : `共${parts.length}P`}
+                            </Text>
+                        </View>
+
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.partsList}
+                        >
+                            {parts.map((part) => {
+                                const isSelected = part.cid === selectedCid;
+                                const duration = formatDuration(part.durationSeconds);
+
+                                return (
+                                    <Pressable
+                                        key={part.cid}
+                                        accessibilityRole='button'
+                                        accessibilityState={{ selected: isSelected }}
+                                        accessibilityLabel={`P${part.page} ${part.title}`}
+                                        onPress={() => {
+                                            if (!isSelected) {
+                                                setSelectedCid(part.cid);
+                                            }
+                                        }}
+                                        style={({ pressed }) => [
+                                            styles.partButton,
+                                            isSelected && styles.partButtonSelected,
+                                            pressed && styles.partButtonPressed,
+                                        ]}
+                                    >
+                                        <Text
+                                            numberOfLines={1}
+                                            style={[
+                                                styles.partTitle,
+                                                isSelected && styles.partTitleSelected,
+                                            ]}
+                                        >
+                                            P{part.page} {part.title}
+                                        </Text>
+                                        {duration ? (
+                                            <Text
+                                                style={[
+                                                    styles.partDuration,
+                                                    isSelected && styles.partDurationSelected,
+                                                ]}
+                                            >
+                                                {duration}
+                                            </Text>
+                                        ) : null}
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                ) : null}
             </ScrollView>
         </View>
     );
@@ -258,5 +389,64 @@ const styles = StyleSheet.create({
         marginHorizontal: spacing.lg,
         color: colors.textSecondary,
         fontSize: 15,
+    },
+    partsSection: {
+        marginTop: spacing.xl,
+    },
+    partsHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: spacing.lg,
+        marginBottom: spacing.md,
+    },
+    partsHeading: {
+        color: colors.textPrimary,
+        fontSize: 17,
+        fontWeight: '700',
+    },
+    partsSummary: {
+        flex: 1,
+        marginLeft: spacing.md,
+        color: colors.textMuted,
+        fontSize: 12,
+        textAlign: 'right',
+    },
+    partsList: {
+        paddingHorizontal: spacing.lg,
+    },
+    partButton: {
+        width: 156,
+        minHeight: 64,
+        justifyContent: 'center',
+        marginRight: spacing.sm,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.divider,
+        borderRadius: radius.sm,
+        backgroundColor: colors.surface,
+    },
+    partButtonSelected: {
+        borderColor: colors.primary,
+        backgroundColor: '#EAF8FE',
+    },
+    partButtonPressed: {
+        opacity: 0.76,
+    },
+    partTitle: {
+        color: colors.textPrimary,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    partTitleSelected: {
+        color: colors.primary,
+    },
+    partDuration: {
+        marginTop: spacing.xs,
+        color: colors.textMuted,
+        fontSize: 12,
+    },
+    partDurationSelected: {
+        color: colors.primary,
     },
 });
