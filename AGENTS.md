@@ -43,7 +43,7 @@
 
 1. 主界面:先判断是否有登录信息.如果没有,主界面为空白页面加登录按钮;如果有,跳转到首页.
 2. 登录页面:b站官方webview,模仿浏览器端登录后获取cookie.
-3. 首页页面:所有关注up主的动态,动态分为视频动态和图文动态,其他不展示.分别设计单个视频动态和单个图文动态卡片的样式.记录up主id,用于后续分组获取.
+3. 首页页面:所有关注up主的动态,当前展示视频动态、图文动态和文字动态,其他不展示.设计对应的单个动态卡片样式.记录up主id,用于后续分组获取.
 4. 收藏页面:获取我收藏的视频
 5. 稍后再看页面:获取我稍后再看的视频
 
@@ -104,14 +104,39 @@ MainTabNavigator
 
 页面组件不直接依赖导航对象。页面通过 `onVideoPress`、`onFolderPress` 和 `onBack` 等普通 Props 回调表达操作,导航包装组件负责调用 `navigate()` 或 `goBack()`。
 
+页面相关功能按模块放在 `src/page` 下:
+
+```text
+src/page
+├─ following
+│  ├─ FollowingPage.tsx
+│  └─ fetchFollowing.ts
+├─ favorites
+│  ├─ FavoriteFoldersPage.tsx
+│  ├─ FavoriteVideosPage.tsx
+│  └─ fetchFavorites.ts
+├─ watchLater
+│  ├─ WatchLaterPage.tsx
+│  └─ fetchWatchLater.ts
+└─ video
+   ├─ VideoDetailPage.tsx
+   ├─ fetchVideoPlayback.ts
+   └─ videoPlaybackTarget.ts
+```
+
+三个视频列表页面的 `onVideoPress` 都输出统一的 `VideoPlaybackTarget`,导航层不再传递某个列表 API 的完整视频对象。
+
 ### 4. 关注动态页面
 
 1. `FollowingPage` 打开后从 SecureStore 获取 Cookie。
-2. `fetchVideoFollowingPage()` 请求 `x/polymer/web-dynamic/v1/feed/all`,当前只解析视频动态。
-3. 请求函数把不可信 JSON 转换成 `VideoFollowingItem`,无法识别的项目被过滤。
-4. 页面使用 `FlatList` 和 `VideoFollowingCard` 展示视频动态,支持首次加载、错误重试、空列表和下拉刷新。
-5. 点击视频卡片后,页面调用 `onVideoPress(video)`,由 `HomeStack` 打开统一的 `VideoDetailPage`。
-6. 当前关注动态还没有实现图文动态卡片和基于UP主ID的分组功能。
+2. `fetchFollowingPage()` 使用 `type=all` 请求 `x/polymer/web-dynamic/v1/feed/all`,当前解析顶层视频、图文和文字动态,不解析转发动态内的 `orig`。
+3. `parseFollowingItem()` 优先按外层 `item.type` 区分 `DYNAMIC_TYPE_AV`、`DYNAMIC_TYPE_DRAW` 和 `DYNAMIC_TYPE_WORD`,再使用 `major.type` 验证 `MAJOR_TYPE_ARCHIVE` 或 `MAJOR_TYPE_OPUS`,并转换成 `FollowingItem`。
+4. Opus正文依次读取 `module_dynamic.desc.text`、`major.opus.summary.text` 和 `major.opus.title`;图片依次读取 `major.opus.pics[].url` 和 `src`。文本转换时会去除首尾空白和空行,避免空行占用卡片标题行。
+5. 页面使用联合类型上的 `kind` 分派视频、图文和文字动态;文字动态暂时复用 `FollowingPictureCard` 的无图片布局。图文和文字正文默认显示2行,只有实际超过2行时才显示“展开”,展开后可在卡片内“收起”。
+6. 图文卡片最多展示9张缩略图:1张使用单列大图,2张或4张使用两列,其他数量使用三列;无图片时不渲染图片区域。点击缩略图会打开黑色全屏预览,可水平切换、关闭或使用 Android 返回键退出。
+7. 页面支持首次加载、错误重试、空列表和下拉刷新。
+8. 点击视频卡片后,页面通过 `createVideoPlaybackTarget(video)` 输出不含 `initialCid` 的 `VideoPlaybackTarget`,由 `HomeStack` 打开统一的 `VideoDetailPage`。
+9. 请求结果已经返回 `offset` 和 `hasMore`,但当前动态页面尚未接入触底分页和基于UP主ID的分组功能。
 
 ### 5. 收藏夹与收藏视频
 
@@ -120,9 +145,10 @@ MainTabNavigator
 1. `FavoriteFoldersPage` 请求当前用户创建的收藏夹,使用两列卡片显示收藏夹名称和视频数量。
 2. 点击收藏夹后,`FavoritesStack` 把 `FavoriteFolder` 作为参数传给 `FavoriteVideosPage`。
 3. `FavoriteVideosPage` 按 `media_id` 分页请求收藏视频。
-4. 第一页替换列表,后续页追加数据并根据视频ID去重。
-5. 页面支持首次加载、错误重试、空列表、下拉刷新、触底分页和底部加载状态。
-6. 点击收藏视频后进入统一的 `VideoDetailPage`。
+4. `parseFavoriteVideo()` 把每条原始收藏数据转换成 `FavoriteVideo`,统一 `bvid`或`bv_id`、`cover`、`upper`、`cnt_info` 和 `fav_time` 等接口字段。
+5. 第一页替换列表,后续页追加数据并根据 `bvid` 去重。
+6. 页面支持首次加载、错误重试、空列表、下拉刷新、触底分页和底部加载状态。
+7. 点击收藏视频后通过 `createVideoPlaybackTarget(video)` 输出不含 `initialCid` 的 `VideoPlaybackTarget`,再进入统一的 `VideoDetailPage`。
 
 收藏夹列表接口需要 `DedeUserID` 作为查询参数并携带必要的 `SESSDATA`;收藏视频GET请求只携带必要的 `SESSDATA`,不携带CSRF。
 
@@ -132,42 +158,60 @@ MainTabNavigator
 2. 请求使用 `x/v2/history/toview/web`,参数包含页码、每页20条、观看筛选、排序和 `web_location`。
 3. 参数通过 `createWbiSignedQuery()` 添加 `wts` 和 `w_rid` 后再发送GET请求。
 4. 请求只从完整 Cookie 中提取并携带 `SESSDATA`。
-5. 接口项目被转换成 `WatchLaterVideo`,主要保存 `bvid`、`cid`、总时长和观看进度。
-6. 页面复用收藏视频卡片,根据进度显示“未观看”、“已看完”或“已观看至mm:ss”。
-7. 页面支持首次加载、错误重试、空列表、下拉刷新、触底分页、分页去重、总数显示和底部加载状态。
-8. 刷新会取消旧请求;页面卸载时也会取消当前请求。
-9. 点击视频后由 `WatchLaterStack` 打开统一的 `VideoDetailPage`。
+5. `parseWatchLaterVideo()` 把每条原始数据转换成 `WatchLaterVideo`,统一 `pic`、`owner`、`stat`、`pubdate` 等接口字段。
+6. `WatchLaterVideo` 主要保存 `bvid`、可选的 `aid` 和 `cid`、`durationSeconds` 和 `progressSeconds`;缺少有效 `cid` 的视频不会仅因此被过滤。
+7. 页面与收藏视频共用 `VideoListCard`,根据进度显示“未观看”、“已看完”或“已观看至mm:ss”。
+8. 页面支持首次加载、错误重试、空列表、下拉刷新、触底分页、按 `bvid` 去重、总数显示和底部加载状态。
+9. 刷新会取消旧请求;页面卸载时也会取消当前请求。
+10. 点击视频时通过 `createVideoPlaybackTarget(video, video.cid)` 把可用 `cid` 转换成 `initialCid`,再由 `WatchLaterStack` 打开统一的 `VideoDetailPage`。
 
 ### 7. 视频基础类型与共享卡片
 
 视频类型按共享程度组织:
 
 ```text
-VideoItem
-├─ VideoFollowingItem
-└─ VideoCardItem
+VideoSummary
+├─ FollowingVideo
+└─ VideoWithDuration
    ├─ FavoriteVideo
    └─ WatchLaterVideo
+
+FollowingItem
+├─ FollowingVideo
+├─ FollowingPicture
+└─ FollowingText
+
+VideoPlaybackTarget
+└─ 列表页面跳转到VideoDetailPage使用的最小播放参数
 ```
 
-- `VideoItem`: `id`、`bvid`、标题、封面、UP主、发布时间和可选统计数据。
-- `VideoFollowingItem`: 在基础视频上增加动态接口使用的可选时长文字。
-- `VideoCardItem`: 在基础视频上增加秒数形式的 `durationSeconds`。
-- `FavoriteVideo`: 增加 `favoriteAt`。
-- `WatchLaterVideo`: 增加 `cid` 和 `progressSeconds`。
+- `VideoSummary`: `bvid`、`title`、`coverUrl`、`author`、`publishedAt` 和可选 `stats`;不包含含义不确定的公共 `id`。
+- `VideoAuthor`: `mid`、`name` 和 `avatarUrl`。
+- `VideoStats`: 可选的 `viewCount` 和 `danmakuCount`。
+- `FollowingItem`: 关注动态列表使用的 `FollowingVideo | FollowingPicture | FollowingText` 可辨识联合,三者通过 `kind` 区分。
+- `FollowingVideo`: 在 `VideoSummary` 上增加 `kind: 'video'`、`dynamicId` 和可选 `durationText`。
+- `FollowingPicture`: 保存 `kind: 'picture'`、`dynamicId`、`contentText`、`imageUrls`、`author` 和 `publishedAt`。
+- `FollowingText`: 保存 `kind: 'text'`、`dynamicId`、`contentText`、`author` 和 `publishedAt`,不包含 `imageUrls`。
+- `VideoWithDuration`: 在 `VideoSummary` 上增加秒数形式的 `durationSeconds`。
+- `FavoriteVideo`: 增加可选 `aid` 和 `favoritedAt`。
+- `WatchLaterVideo`: 增加可选 `aid`、可选 `cid` 和 `progressSeconds`。
+- `VideoPlaybackTarget`: 只包含 `bvid`、可选 `initialCid`、`title` 和可选 `authorName`。
 
-`src/components/favorites/FavoriteVideoCard.tsx` 虽然保留当前文件名,但 Props 已使用通用 `VideoCardItem`。卡片只处理标题、封面、UP主和时长等共享展示;收藏时间或观看进度由各页面通过可选 `metaText` 传入。
+`src/components/video/VideoListCard.tsx` 使用通用 `VideoWithDuration`,供收藏和稍后再看页面复用。卡片只处理标题、封面、UP主和时长等共享展示;收藏时间或观看进度由各页面通过可选 `metaText` 传入。动态页面分别使用 `src/components/following/FollowingVideoCard.tsx` 和 `src/components/following/FollowingPictureCard.tsx`。
+
+API 原始字段只在各模块解析函数中读取,解析后的字段使用本地 `camelCase` 语义名称,不添加 `_local` 后缀。
 
 ### 8. 视频详情与播放
 
-1. 列表页把包含 `bvid` 的视频对象传给 `VideoDetailPage`。
-2. `fetchVideoParts()` 请求 `x/web-interface/view`,读取视频分P列表和 `cid`。
-3. 页面默认选中第一P;用户切换分P后重新请求该P的播放地址。
-4. `fetchVideoPlayback()` 使用 `bvid + cid` 请求 `x/player/wbi/playurl`。
-5. 播放地址请求通过WBI签名,当前请求单文件渐进式视频流;接口只返回DASH且没有可用单文件地址时显示错误。
-6. `expo-video` 的 `useVideoPlayer` 创建播放器并自动播放,`VideoView` 提供原生控制和横屏全屏。
-7. 播放源携带必要的 `Referer` 和 `User-Agent`,不把 Cookie 传给媒体地址。
-8. 页面支持加载状态、播放错误、重新加载、分P选择、应用内返回和Android硬件返回。
+1. 三个列表页点击卡片时调用 `createVideoPlaybackTarget()`,只把 `VideoPlaybackTarget` 交给导航和 `VideoDetailPage`。
+2. 动态和收藏不提供 `initialCid`;稍后再看在有效 `cid` 存在时把它作为 `initialCid`。
+3. `fetchVideoParts()` 使用 `target.bvid` 请求 `x/web-interface/view`,读取视频分P列表和 `cid`。
+4. 如果 `initialCid` 能在分P列表中找到,页面优先选中对应分P;否则默认选中第一P。用户切换分P后重新请求该P的播放地址。
+5. `fetchVideoPlayback()` 使用 `bvid + cid` 请求 `x/player/wbi/playurl`。
+6. 播放地址请求通过WBI签名,当前请求单文件渐进式视频流;接口只返回DASH且没有可用单文件地址时显示错误。
+7. `expo-video` 的 `useVideoPlayer` 创建播放器并自动播放,`VideoView` 提供原生控制和横屏全屏。
+8. 播放源携带必要的 `Referer` 和 `User-Agent`,不把 Cookie 传给媒体地址。
+9. 页面支持加载状态、播放错误、重新加载、分P选择、应用内返回和Android硬件返回。
 
 ### 9. WBI签名逻辑
 
@@ -205,13 +249,14 @@ fetch + AbortSignal
 - 每个业务请求模块使用自己的错误类并保留可选错误码,例如 `FollowingRequestError`、`FavoritesRequestError`、`WatchLaterRequestError` 和 `VideoPlaybackError`。
 - 页面使用 `AbortController` 取消刷新前的旧请求和卸载后的请求。
 - 请求控制器保存在 `useRef` 中,加载、错误、刷新和分页等可观察数据保存在 `useState` 中。
-- 依赖旧列表追加数据时使用函数式 `setState`,并在分页时根据ID去重。
-- 业务页面通过 Props 回调输出用户操作,导航层负责路由跳转。
+- 依赖旧列表追加数据时使用函数式 `setState`;收藏和稍后再看列表分页根据 `bvid` 去重。
+- 业务页面通过 Props 回调输出用户操作,导航层负责路由跳转;视频点击统一输出 `VideoPlaybackTarget`。
 - GET请求不使用CSRF;未来添加删除、移动、清空等写操作时才读取 `bili_jct` 并携带CSRF。
 
 ### 11. 当前功能边界
 
-- 当前已经有登录、视频动态、收藏夹、收藏视频、稍后再看和视频播放的最小可运行链路。
-- 当前没有实现图文动态、动态分组、退出登录界面、收藏写操作、稍后再看删除或清空、搜索和其他完整客户端功能。
+- 当前已经有登录、视频、图文与文字动态、收藏夹、收藏视频、稍后再看和视频播放的最小可运行链路。
+- 当前图文和文字动态只处理顶层 `MAJOR_TYPE_OPUS`,不展示转发内容、其他动态类型和图文详情页。
+- 当前没有实现动态分组、退出登录界面、收藏写操作、稍后再看删除或清空、搜索和其他完整客户端功能。
 - 当前稍后再看和收藏视频共用卡片展示,但仍保留各自独立的接口类型和页面状态。
 - 当前以Android开发构建的真实行为为准;修改接口解析或播放参数后仍需运行 `corepack pnpm exec tsc --noEmit`,再由用户在Android中验证。

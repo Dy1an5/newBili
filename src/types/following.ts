@@ -1,6 +1,26 @@
-import type { VideoSummary } from './video';
+import type { VideoAuthor, VideoSummary } from './video';
 
 export type FollowingVideo = VideoSummary & {
+    kind: 'video';
     dynamicId: string;
     durationText?: string;
 };
+
+export type FollowingPicture = {
+    kind: 'picture';
+    dynamicId: string;
+    contentText: string;
+    imageUrls: string[];
+    author: VideoAuthor;
+    publishedAt: number;
+};
+
+export type FollowingText = {
+    kind: 'text';
+    dynamicId: string;
+    contentText: string;
+    author: VideoAuthor;
+    publishedAt: number;
+};
+
+export type FollowingItem = FollowingVideo | FollowingPicture | FollowingText;
