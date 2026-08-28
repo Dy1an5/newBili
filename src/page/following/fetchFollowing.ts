@@ -1,4 +1,5 @@
 import type {
+    FollowingGroup,
     FollowingItem,
     FollowingPicture,
     FollowingText,
@@ -6,6 +7,9 @@ import type {
 } from '@/types/following';
 
 const FOLLOWING_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
+const FOLLOWING_GROUPS_URL = 'https://api.bilibili.com/x/relation/tags';
+const FOLLOWING_GROUP_MEMBERS_URL = 'https://api.bilibili.com/x/relation/tag';
+const FOLLOWING_GROUP_MEMBER_PAGE_SIZE = 20;
 const USER_AGENT =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
     '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -136,6 +140,162 @@ function getCookiePair(cookie: string, cookieName: string): string | null {
     }
 
     return null;
+}
+
+function getCookieValue(cookie: string, cookieName: string): string | null {
+    const pair = getCookiePair(cookie, cookieName);
+
+    if (!pair) {
+        return null;
+    }
+
+    return pair.slice(pair.indexOf('=') + 1);
+}
+
+function getSessdataPair(cookie: string): string {
+    const sessdata = getCookiePair(cookie, 'SESSDATA');
+
+    if (!sessdata) {
+        throw new FollowingRequestError('登录信息中没有有效的SESSDATA,请重新登录');
+    }
+
+    return sessdata;
+}
+
+function getRequestIdentity(cookie: string): { mid: string; sessdata: string } {
+    const mid = getCookieValue(cookie, 'DedeUserID');
+    const sessdata = getSessdataPair(cookie);
+
+    if (!mid || !/^\d+$/.test(mid)) {
+        throw new FollowingRequestError('登录信息中没有有效的DedeUserID,请重新登录');
+    }
+
+    return { mid, sessdata };
+}
+
+async function requestFollowingJson(
+    url: string,
+    sessdata: string,
+    resourceName: string,
+    signal?: AbortSignal,
+): Promise<JsonRecord> {
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            Accept: 'application/json',
+            Cookie: sessdata,
+            Referer: 'https://www.bilibili.com/',
+            'User-Agent': USER_AGENT,
+        },
+        signal,
+    });
+
+    if (!response.ok) {
+        throw new FollowingRequestError(`${resourceName}请求失败,HTTP ${response.status}`);
+    }
+
+    const body = asRecord(await response.json());
+    const code = readNumber(body?.code);
+
+    if (!body || code === null) {
+        throw new FollowingRequestError(`${resourceName}接口返回格式不正确`);
+    }
+
+    if (code !== 0) {
+        const message = readString(body.message) ?? '未知错误';
+        throw new FollowingRequestError(`${resourceName}接口错误 ${code}:${message}`, code);
+    }
+
+    return body;
+}
+
+function parseFollowingGroup(value: unknown): FollowingGroup | null {
+    const group = asRecord(value);
+    const tagId = readNumber(group?.tagid);
+    const name = readNonEmptyString(group?.name);
+
+    if (tagId === null || !Number.isInteger(tagId) || !name) {
+        return null;
+    }
+
+    return {
+        tagId,
+        name,
+        memberCount: Math.max(0, readNumber(group?.count) ?? 0),
+        tip: readNonEmptyString(group?.tip) ?? undefined,
+    };
+}
+
+export async function fetchFollowingGroups(
+    cookie: string,
+    signal?: AbortSignal,
+): Promise<FollowingGroup[]> {
+    const sessdata = getSessdataPair(cookie);
+    const body = await requestFollowingJson(
+        FOLLOWING_GROUPS_URL,
+        sessdata,
+        '关注分组',
+        signal,
+    );
+
+    if (!Array.isArray(body.data)) {
+        throw new FollowingRequestError('关注分组接口没有返回data列表');
+    }
+
+    return body.data
+        .map(parseFollowingGroup)
+        .filter((group): group is FollowingGroup => group !== null);
+}
+
+export async function fetchFollowingGroupMemberMids(
+    group: FollowingGroup,
+    cookie: string,
+    signal?: AbortSignal,
+): Promise<string[]> {
+    const { mid, sessdata } = getRequestIdentity(cookie);
+    const memberMids = new Set<string>();
+    let pageNumber = 1;
+
+    while (true) {
+        const parameters = new URLSearchParams({
+            mid,
+            tagid: String(group.tagId),
+            pn: String(pageNumber),
+            ps: String(FOLLOWING_GROUP_MEMBER_PAGE_SIZE),
+        });
+        const body = await requestFollowingJson(
+            `${FOLLOWING_GROUP_MEMBERS_URL}?${parameters.toString()}`,
+            sessdata,
+            '关注分组成员',
+            signal,
+        );
+
+        if (!Array.isArray(body.data)) {
+            throw new FollowingRequestError('关注分组成员接口没有返回data列表');
+        }
+
+        const previousMemberCount = memberMids.size;
+
+        for (const value of body.data) {
+            const memberMid = readNonEmptyString(asRecord(value)?.mid);
+
+            if (memberMid) {
+                memberMids.add(memberMid);
+            }
+        }
+
+        if (
+            body.data.length < FOLLOWING_GROUP_MEMBER_PAGE_SIZE ||
+            (group.memberCount > 0 && memberMids.size >= group.memberCount) ||
+            memberMids.size === previousMemberCount
+        ) {
+            break;
+        }
+
+        pageNumber += 1;
+    }
+
+    return [...memberMids];
 }
 
 function parseFollowingVideo(value: unknown): FollowingVideo | null {
@@ -326,38 +486,13 @@ export async function fetchFollowingPage(
     offset?: string,
     signal?: AbortSignal,
 ): Promise<FollowingPageData> {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
-
-    if (!sessdata) {
-        throw new FollowingRequestError('登录信息中没有有效的 SESSDATA');
-    }
-
-    const response = await fetch(buildRequestUrl(offset), {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Cookie: sessdata,
-            Referer: 'https://www.bilibili.com/',
-            'User-Agent': USER_AGENT,
-        },
+    const sessdata = getSessdataPair(cookie);
+    const body = await requestFollowingJson(
+        buildRequestUrl(offset),
+        sessdata,
+        '动态',
         signal,
-    });
-
-    if (!response.ok) {
-        throw new FollowingRequestError(`动态请求失败,HTTP ${response.status}`);
-    }
-
-    const body = asRecord(await response.json());
-    const code = readNumber(body?.code);
-
-    if (code === null) {
-        throw new FollowingRequestError('动态接口返回格式不正确');
-    }
-
-    if (code !== 0) {
-        const message = readString(body?.message) ?? '未知错误';
-        throw new FollowingRequestError(`动态接口错误 ${code}:${message}`, code);
-    }
+    );
 
     const data = asRecord(body?.data);
 

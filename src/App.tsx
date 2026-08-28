@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import {
+    SafeAreaProvider,
+    SafeAreaView,
+} from 'react-native-safe-area-context';
 
 import LoginPage from './auth/LoginPage';
 import { getLoginCookie } from './auth/authCookie';
@@ -36,20 +40,18 @@ export default function App() {
         };
     }, []);
 
+    let content: ReactNode;
+
     if (screen === 'checking') {
-        return (
+        content = (
             <View style={styles.loadingPage}>
                 <ActivityIndicator size='large' />
             </View>
         );
-    }
-
-    if (screen === 'main') {
-        return <MainPage onLoginPress={() => setScreen('login')} />;
-    }
-
-    if (screen === 'login') {
-        return (
+    } else if (screen === 'main') {
+        content = <MainPage onLoginPress={() => setScreen('login')} />;
+    } else if (screen === 'login') {
+        content = (
             <LoginPage
                 onLoginSuccess={() => {
                     setScreen('authenticated');
@@ -59,16 +61,29 @@ export default function App() {
                 }}
             />
         );
+    } else {
+        content = (
+            <NavigationContainer>
+                <MainTabNavigator />
+            </NavigationContainer>
+        );
     }
 
     return (
-        <NavigationContainer>
-            <MainTabNavigator />
-        </NavigationContainer>
+        <SafeAreaProvider>
+            <StatusBar barStyle='dark-content' backgroundColor='#fff' />
+            <SafeAreaView edges={['top']} style={styles.safeArea}>
+                {content}
+            </SafeAreaView>
+        </SafeAreaProvider>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
     loadingPage: {
         flex: 1,
         alignItems: 'center',

@@ -128,15 +128,18 @@ src/page
 
 ### 4. 关注动态页面
 
-1. `FollowingPage` 打开后从 SecureStore 获取 Cookie。
-2. `fetchFollowingPage()` 使用 `type=all` 请求 `x/polymer/web-dynamic/v1/feed/all`,当前解析顶层视频、图文和文字动态,不解析转发动态内的 `orig`。
+1. `FollowingPage` 打开后从 SecureStore 获取 Cookie,分别加载动态首页和关注分组;分组请求失败不影响“全部”动态。
+2. `fetchFollowingPage()` 使用 `type=all` 请求 `x/polymer/web-dynamic/v1/feed/all`,当前解析顶层视频、图文和文字动态,不解析转发动态内的 `orig`。首页替换列表,后续页按 `dynamicId` 去重追加。
 3. `parseFollowingItem()` 优先按外层 `item.type` 区分 `DYNAMIC_TYPE_AV`、`DYNAMIC_TYPE_DRAW` 和 `DYNAMIC_TYPE_WORD`,再使用 `major.type` 验证 `MAJOR_TYPE_ARCHIVE` 或 `MAJOR_TYPE_OPUS`,并转换成 `FollowingItem`。
 4. Opus正文依次读取 `module_dynamic.desc.text`、`major.opus.summary.text` 和 `major.opus.title`;图片依次读取 `major.opus.pics[].url` 和 `src`。文本转换时会去除首尾空白和空行,避免空行占用卡片标题行。
 5. 页面使用联合类型上的 `kind` 分派视频、图文和文字动态;文字动态暂时复用 `FollowingPictureCard` 的无图片布局。图文和文字正文默认显示2行,只有实际超过2行时才显示“展开”,展开后可在卡片内“收起”。
 6. 图文卡片最多展示9张缩略图:1张使用单列大图,2张或4张使用两列,其他数量使用三列;无图片时不渲染图片区域。点击缩略图会打开黑色全屏预览,可水平切换、关闭或使用 Android 返回键退出。
-7. 页面支持首次加载、错误重试、空列表和下拉刷新。
-8. 点击视频卡片后,页面通过 `createVideoPlaybackTarget(video)` 输出不含 `initialCid` 的 `VideoPlaybackTarget`,由 `HomeStack` 打开统一的 `VideoDetailPage`。
-9. 请求结果已经返回 `offset` 和 `hasMore`,但当前动态页面尚未接入触底分页和基于UP主ID的分组功能。
+7. `fetchFollowingGroups()` 请求 `x/relation/tags`,页面在顶部使用可水平滚动的 `FollowingGroupSelector` 展示“全部”、系统分组和自定义分组,默认选中“全部”。
+8. 首次选择分组时,`fetchFollowingGroupMemberMids()` 使用 `DedeUserID + tagid` 分页请求 `x/relation/tag`;成员MID按 `tagId` 在内存中缓存,再使用动态的 `author.mid` 本地过滤。
+9. “全部”触底时每次请求1页;分组动态每次最多连续扫描3页,找到新的匹配动态后立即停止。连续3页没有匹配时暂停,由用户点击“继续加载”再扫描。
+10. 下拉刷新保留当前选择,刷新动态首页和分组列表,清除成员缓存并重新加载当前分组;分组已不存在时回退到“全部”。
+11. 页面分别处理动态、分组列表、分组成员和触底分页的加载、空数据与错误状态;切换分组、刷新和卸载时会取消失效请求。
+12. 点击视频卡片后,页面通过 `createVideoPlaybackTarget(video)` 输出不含 `initialCid` 的 `VideoPlaybackTarget`,由 `HomeStack` 打开统一的 `VideoDetailPage`。
 
 ### 5. 收藏夹与收藏视频
 
@@ -181,6 +184,9 @@ FollowingItem
 ├─ FollowingPicture
 └─ FollowingText
 
+FollowingGroup
+└─ 关注分组选择和成员MID查询使用的本地类型
+
 VideoPlaybackTarget
 └─ 列表页面跳转到VideoDetailPage使用的最小播放参数
 ```
@@ -192,6 +198,7 @@ VideoPlaybackTarget
 - `FollowingVideo`: 在 `VideoSummary` 上增加 `kind: 'video'`、`dynamicId` 和可选 `durationText`。
 - `FollowingPicture`: 保存 `kind: 'picture'`、`dynamicId`、`contentText`、`imageUrls`、`author` 和 `publishedAt`。
 - `FollowingText`: 保存 `kind: 'text'`、`dynamicId`、`contentText`、`author` 和 `publishedAt`,不包含 `imageUrls`。
+- `FollowingGroup`: 保存 `tagId`、`name`、`memberCount` 和可选 `tip`。
 - `VideoWithDuration`: 在 `VideoSummary` 上增加秒数形式的 `durationSeconds`。
 - `FavoriteVideo`: 增加可选 `aid` 和 `favoritedAt`。
 - `WatchLaterVideo`: 增加可选 `aid`、可选 `cid` 和 `progressSeconds`。
@@ -249,7 +256,7 @@ fetch + AbortSignal
 - 每个业务请求模块使用自己的错误类并保留可选错误码,例如 `FollowingRequestError`、`FavoritesRequestError`、`WatchLaterRequestError` 和 `VideoPlaybackError`。
 - 页面使用 `AbortController` 取消刷新前的旧请求和卸载后的请求。
 - 请求控制器保存在 `useRef` 中,加载、错误、刷新和分页等可观察数据保存在 `useState` 中。
-- 依赖旧列表追加数据时使用函数式 `setState`;收藏和稍后再看列表分页根据 `bvid` 去重。
+- 依赖旧列表追加数据时必须保留最新状态;动态根据 `dynamicId` 去重,收藏和稍后再看列表根据 `bvid` 去重。
 - 业务页面通过 Props 回调输出用户操作,导航层负责路由跳转;视频点击统一输出 `VideoPlaybackTarget`。
 - GET请求不使用CSRF;未来添加删除、移动、清空等写操作时才读取 `bili_jct` 并携带CSRF。
 
@@ -257,6 +264,7 @@ fetch + AbortSignal
 
 - 当前已经有登录、视频、图文与文字动态、收藏夹、收藏视频、稍后再看和视频播放的最小可运行链路。
 - 当前图文和文字动态只处理顶层 `MAJOR_TYPE_OPUS`,不展示转发内容、其他动态类型和图文详情页。
-- 当前没有实现动态分组、退出登录界面、收藏写操作、稍后再看删除或清空、搜索和其他完整客户端功能。
+- 当前已支持读取关注分组并按分组成员MID过滤已加载动态,但不支持创建、修改、删除分组或调整UP主所属分组。
+- 当前没有实现退出登录界面、收藏写操作、稍后再看删除或清空、搜索和其他完整客户端功能。
 - 当前稍后再看和收藏视频共用卡片展示,但仍保留各自独立的接口类型和页面状态。
 - 当前以Android开发构建的真实行为为准;修改接口解析或播放参数后仍需运行 `corepack pnpm exec tsc --noEmit`,再由用户在Android中验证。
