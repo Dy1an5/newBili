@@ -13,7 +13,7 @@ const DEFAULT_AVATAR_URL = 'https://i0.hdslb.com/bfs/face/member/noface.jpg';
 type JsonRecord = Record<string, unknown>;
 
 export type FavoriteVideoPage = {
-    items: FavoriteVideo[];
+    videos: FavoriteVideo[];
     hasMore: boolean;
 };
 
@@ -188,35 +188,35 @@ function parseFavoriteVideo(value: unknown): FavoriteVideo | null {
     const upper = asRecord(video?.upper);
     const bvid = readString(video?.bvid) ?? readString(video?.bv_id);
     const title = readString(video?.title);
-    const cover = normalizeImageUrl(video?.cover);
+    const coverUrl = normalizeImageUrl(video?.cover);
 
-    if (!video || !bvid || !title || !cover) {
+    if (!video || !bvid || !title || !coverUrl) {
         return null;
     }
 
-    const id = readString(video.id) ?? bvid;
+    const aid = readNumber(video.id);
     const durationSeconds = readNumber(video.duration) ?? 0;
-    const authorId = readString(upper?.mid) ?? '';
+    const authorMid = readString(upper?.mid) ?? '';
     const authorName = readString(upper?.name) ?? '未知UP主';
-    const authorAvatar = normalizeImageUrl(upper?.face) ?? DEFAULT_AVATAR_URL;
+    const authorAvatarUrl = normalizeImageUrl(upper?.face) ?? DEFAULT_AVATAR_URL;
     const cntInfo = asRecord(video.cnt_info);
 
     return {
-        id: `${id}:${bvid}`,
+        aid: aid !== null && aid > 0 ? aid : undefined,
         bvid,
         title,
-        cover,
+        coverUrl,
         durationSeconds,
         author: {
-            id: authorId,
+            mid: authorMid,
             name: authorName,
-            avatar: authorAvatar,
+            avatarUrl: authorAvatarUrl,
         },
         publishedAt: readNumber(video.pubtime) ?? 0,
-        favoriteAt: readNumber(video.fav_time) ?? 0,
+        favoritedAt: readNumber(video.fav_time) ?? 0,
         stats: {
-            views: readNumber(cntInfo?.play) ?? undefined,
-            danmaku: readNumber(cntInfo?.danmaku) ?? undefined,
+            viewCount: readNumber(cntInfo?.play) ?? undefined,
+            danmakuCount: readNumber(cntInfo?.danmaku) ?? undefined,
         },
     };
 }
@@ -265,12 +265,12 @@ export async function fetchFavoriteVideoPage(
     );
     const data = asRecord(body.data);
     const medias = Array.isArray(data?.medias) ? data.medias : [];
-    const items = medias
+    const videos = medias
         .map(parseFavoriteVideo)
         .filter((video): video is FavoriteVideo => video !== null);
 
     return {
-        items,
+        videos,
         hasMore: typeof data?.has_more === 'boolean'
             ? data.has_more
             : medias.length >= pageSize,

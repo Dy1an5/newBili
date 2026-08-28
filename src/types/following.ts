@@ -1,5 +1,6 @@
-import type { VideoItem } from './video';
+import type { VideoSummary } from './video';
 
-export type VideoFollowingItem = VideoItem & {
-    duration?: string;
+export type FollowingVideo = VideoSummary & {
+    dynamicId: string;
+    durationText?: string;
 };

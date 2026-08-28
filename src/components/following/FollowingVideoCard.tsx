@@ -12,20 +12,19 @@ import { spacing } from '@/theme/spacing';
 
 type Props = {
     title: string;
-    cover: string;
-    avatar: string;
-    author: string;
-    time: string;
-
+    coverUrl: string;
+    avatarUrl: string;
+    authorName: string;
+    publishedTimeText: string;
     onPress?: () => void;
 };
 
-export default function VideoFollowingCard({
+export default function FollowingVideoCard({
     title,
-    cover,
-    avatar,
-    author,
-    time,
+    coverUrl,
+    avatarUrl,
+    authorName,
+    publishedTimeText,
     onPress,
 }: Props) {
     return (
@@ -45,16 +44,16 @@ export default function VideoFollowingCard({
 
             <View style={styles.coverContainer}>
                 <Image
-                    source={{ uri: cover }}
+                    source={{ uri: coverUrl }}
                     style={styles.cover}
-                    resizeMode="cover"
+                    resizeMode='cover'
                 />
             </View>
 
             <View style={styles.footer}>
                 <View style={styles.authorContainer}>
                     <Image
-                        source={{ uri: avatar }}
+                        source={{ uri: avatarUrl }}
                         style={styles.avatar}
                     />
 
@@ -62,12 +61,12 @@ export default function VideoFollowingCard({
                         style={styles.author}
                         numberOfLines={1}
                     >
-                        {author}
+                        {authorName}
                     </Text>
                 </View>
 
                 <Text style={styles.time}>
-                    {time}
+                    {publishedTimeText}
                 </Text>
             </View>
         </Pressable>

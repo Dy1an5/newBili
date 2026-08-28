@@ -15,17 +15,17 @@ import { getLoginCookie } from '@/auth/authCookie';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import type { VideoFollowingItem } from '@/types/following';
+import type { VideoPlaybackTarget } from '@/types/video';
 import {
     fetchVideoParts,
     fetchVideoPlayback,
     type VideoPart,
     type VideoPlayback,
     VideoPlaybackError,
-} from './fetchVideoPlayback';
+} from '@/page/video/fetchVideoPlayback';
 
 type Props = {
-    video: VideoFollowingItem;
+    target: VideoPlaybackTarget;
     onBack: () => void;
 };
 
@@ -103,7 +103,7 @@ function VideoPlayer({ playback, title, onPlaybackError }: PlayerProps) {
     );
 }
 
-export default function VideoDetailPage({ video, onBack }: Props) {
+export default function VideoDetailPage({ target, onBack }: Props) {
     const [parts, setParts] = useState<VideoPart[]>([]);
     const [selectedCid, setSelectedCid] = useState<number | null>(null);
     const [playback, setPlayback] = useState<VideoPlayback | null>(null);
@@ -138,12 +138,16 @@ export default function VideoDetailPage({ video, onBack }: Props) {
                 }
 
                 const nextParts = await fetchVideoParts(
-                    video.bvid,
+                    target.bvid,
                     cookie,
                     controller.signal,
                 );
+                const initialPart = target.initialCid === undefined
+                    ? undefined
+                    : nextParts.find((part) => part.cid === target.initialCid);
+
                 setParts(nextParts);
-                setSelectedCid(nextParts[0].cid);
+                setSelectedCid(initialPart?.cid ?? nextParts[0].cid);
             } catch (error) {
                 if (!isAbortError(error)) {
                     setErrorMessage(getErrorMessage(error));
@@ -156,7 +160,7 @@ export default function VideoDetailPage({ video, onBack }: Props) {
         return () => {
             controller.abort();
         };
-    }, [reloadKey, video.bvid]);
+    }, [reloadKey, target.bvid, target.initialCid]);
 
     useEffect(() => {
         if (selectedCid === null) {
@@ -177,7 +181,7 @@ export default function VideoDetailPage({ video, onBack }: Props) {
                 }
 
                 const nextPlayback = await fetchVideoPlayback(
-                    video.bvid,
+                    target.bvid,
                     selectedCid,
                     cookie,
                     controller.signal,
@@ -195,7 +199,7 @@ export default function VideoDetailPage({ video, onBack }: Props) {
         return () => {
             controller.abort();
         };
-    }, [selectedCid, video.bvid]);
+    }, [selectedCid, target.bvid]);
 
     const selectedPartIndex = parts.findIndex((part) => part.cid === selectedCid);
     const selectedPart = selectedPartIndex >= 0 ? parts[selectedPartIndex] : null;
@@ -214,7 +218,7 @@ export default function VideoDetailPage({ video, onBack }: Props) {
                     {playback ? (
                         <VideoPlayer
                             playback={playback}
-                            title={video.title}
+                            title={target.title}
                             onPlaybackError={() => {
                                 setPlayback(null);
                                 setErrorMessage('视频流播放失败,请重新加载');
@@ -239,8 +243,10 @@ export default function VideoDetailPage({ video, onBack }: Props) {
                     )}
                 </View>
 
-                <Text style={styles.title}>{video.title}</Text>
-                <Text style={styles.author}>{video.author.name}</Text>
+                <Text style={styles.title}>{target.title}</Text>
+                {target.authorName ? (
+                    <Text style={styles.author}>{target.authorName}</Text>
+                ) : null}
 
                 {parts.length > 1 ? (
                     <View style={styles.partsSection}>

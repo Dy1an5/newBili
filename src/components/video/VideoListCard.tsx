@@ -9,10 +9,10 @@ import {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import type { VideoCardItem } from '@/types/video';
+import type { VideoWithDuration } from '@/types/video';
 
 type Props = {
-    video: VideoCardItem;
+    video: VideoWithDuration;
     metaText?: string;
     onPress: () => void;
 };
@@ -33,7 +33,7 @@ function formatDuration(durationSeconds: number): string {
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-export default function FavoriteVideoCard({
+export default function VideoListCard({
     video,
     metaText,
     onPress,
@@ -50,7 +50,7 @@ export default function FavoriteVideoCard({
             ]}
         >
             <View style={styles.coverContainer}>
-                <Image source={{ uri: video.cover }} resizeMode='cover' style={styles.cover} />
+                <Image source={{ uri: video.coverUrl }} resizeMode='cover' style={styles.cover} />
                 {duration ? (
                     <View style={styles.durationBadge}>
                         <Text style={styles.durationText}>{duration}</Text>
@@ -61,7 +61,7 @@ export default function FavoriteVideoCard({
             <View style={styles.videoInfo}>
                 <Text numberOfLines={2} style={styles.videoTitle}>{video.title}</Text>
                 <View style={styles.authorRow}>
-                    <Image source={{ uri: video.author.avatar }} style={styles.avatar} />
+                    <Image source={{ uri: video.author.avatarUrl }} style={styles.avatar} />
                     <Text numberOfLines={1} style={styles.authorName}>{video.author.name}</Text>
                 </View>
                 {metaText ? (

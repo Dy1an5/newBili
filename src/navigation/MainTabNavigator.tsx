@@ -3,19 +3,19 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet } from 'react-native';
 
-import FavoriteFoldersPage from '@/favorites/FavoriteFoldersPage';
-import FavoriteVideosPage from '@/favorites/FavoriteVideosPage';
-import FollowingPage from '@/following/FollowingPage';
+import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
+import FavoriteVideosPage from '@/page/favorites/FavoriteVideosPage';
+import FollowingPage from '@/page/following/FollowingPage';
+import VideoDetailPage from '@/page/video/VideoDetailPage';
+import WatchLaterPage from '@/page/watchLater/WatchLaterPage';
 import { colors } from '@/theme/colors';
 import type { FavoriteFolder } from '@/types/favorites';
-import type { VideoFollowingItem } from '@/types/following';
-import VideoDetailPage from '@/video/VideoDetailPage';
-import WatchLaterPage from '@/watchLater/WatchLaterPage';
+import type { VideoPlaybackTarget } from '@/types/video';
 
 type HomeStackParamList = {
     Home: undefined;
     VideoDetail: {
-        video: VideoFollowingItem;
+        target: VideoPlaybackTarget;
     };
 };
 
@@ -31,14 +31,14 @@ type FavoritesStackParamList = {
         folder: FavoriteFolder;
     };
     VideoDetail: {
-        video: VideoFollowingItem;
+        target: VideoPlaybackTarget;
     };
 };
 
 type WatchLaterStackParamList = {
     WatchLaterList: undefined;
     VideoDetail: {
-        video: VideoFollowingItem;
+        target: VideoPlaybackTarget;
     };
 };
 
@@ -52,8 +52,8 @@ function HomeScreen({
 }: NativeStackScreenProps<HomeStackParamList, 'Home'>) {
     return (
         <FollowingPage
-            onVideoPress={(video) => {
-                navigation.navigate('VideoDetail', { video });
+            onVideoPress={(target) => {
+                navigation.navigate('VideoDetail', { target });
             }}
         />
     );
@@ -65,7 +65,7 @@ function VideoDetailScreen({
 }: NativeStackScreenProps<HomeStackParamList, 'VideoDetail'>) {
     return (
         <VideoDetailPage
-            video={route.params.video}
+            target={route.params.target}
             onBack={() => {
                 navigation.goBack();
             }}
@@ -102,7 +102,7 @@ function FavoriteVideosScreen({
         <FavoriteVideosPage
             folder={route.params.folder}
             onBack={() => navigation.goBack()}
-            onVideoPress={(video) => navigation.navigate('VideoDetail', { video })}
+            onVideoPress={(target) => navigation.navigate('VideoDetail', { target })}
         />
     );
 }
@@ -113,7 +113,7 @@ function FavoriteVideoDetailScreen({
 }: NativeStackScreenProps<FavoritesStackParamList, 'VideoDetail'>) {
     return (
         <VideoDetailPage
-            video={route.params.video}
+            target={route.params.target}
             onBack={() => navigation.goBack()}
         />
     );
@@ -134,8 +134,8 @@ function WatchLaterListScreen({
 }: NativeStackScreenProps<WatchLaterStackParamList, 'WatchLaterList'>) {
     return (
         <WatchLaterPage
-            onVideoPress={(video) => {
-                navigation.navigate('VideoDetail', { video });
+            onVideoPress={(target) => {
+                navigation.navigate('VideoDetail', { target });
             }}
         />
     );
@@ -147,7 +147,7 @@ function WatchLaterVideoDetailScreen({
 }: NativeStackScreenProps<WatchLaterStackParamList, 'VideoDetail'>) {
     return (
         <VideoDetailPage
-            video={route.params.video}
+            target={route.params.target}
             onBack={() => navigation.goBack()}
         />
     );

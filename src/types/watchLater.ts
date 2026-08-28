@@ -1,6 +1,7 @@
-import type { VideoCardItem } from './video';
+import type { VideoWithDuration } from './video';
 
-export type WatchLaterVideo = VideoCardItem & {
-    cid: number;
+export type WatchLaterVideo = VideoWithDuration & {
+    aid?: number;
+    cid?: number;
     progressSeconds: number;
 };

@@ -9,18 +9,20 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
-import FavoriteVideoCard from '@/components/favorites/FavoriteVideoCard';
+import VideoListCard from '@/components/video/VideoListCard';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import type { VideoPlaybackTarget } from '@/types/video';
 import type { WatchLaterVideo } from '@/types/watchLater';
+import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import {
     fetchWatchLaterVideoPage,
     WatchLaterRequestError,
-} from './fetchWatchLater';
+} from '@/page/watchLater/fetchWatchLater';
 
 type Props = {
-    onVideoPress: (video: WatchLaterVideo) => void;
+    onVideoPress: (target: VideoPlaybackTarget) => void;
 };
 
 function isAbortError(error: unknown): boolean {
@@ -67,8 +69,8 @@ export default function WatchLaterPage({
     onVideoPress,
 }: Props) {
     const [videos, setVideos] = useState<WatchLaterVideo[]>([]);
-    const [page, setPage] = useState(0);
-    const [total, setTotal] = useState(0);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalCount, setTotalCount] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -78,7 +80,7 @@ export default function WatchLaterPage({
     const requestControllerRef =
         useRef<AbortController | null>(null);
 
-    const loadPage = useCallback(async (
+    const loadVideoPage = useCallback(async (
         targetPage: number,
         refreshing: boolean,
     ) => {
@@ -120,21 +122,21 @@ export default function WatchLaterPage({
 
             setVideos((currentVideos) => {
                 if (targetPage === 1) {
-                    return nextPage.items;
+                    return nextPage.videos;
                 }
 
-                const existingIds = new Set(
-                    currentVideos.map((video) => video.id),
+                const existingBvids = new Set(
+                    currentVideos.map((video) => video.bvid),
                 );
-                const newVideos = nextPage.items.filter(
-                    (video) => !existingIds.has(video.id),
+                const newVideos = nextPage.videos.filter(
+                    (video) => !existingBvids.has(video.bvid),
                 );
 
                 return [...currentVideos, ...newVideos];
             });
 
-            setPage(targetPage);
-            setTotal(nextPage.total);
+            setCurrentPage(targetPage);
+            setTotalCount(nextPage.totalCount);
             setHasMore(nextPage.hasMore);
         } catch (error) {
             if (!isAbortError(error)) {
@@ -152,18 +154,18 @@ export default function WatchLaterPage({
     }, []);
 
     useEffect(() => {
-        void loadPage(1, false);
+        void loadVideoPage(1, false);
 
         return () => {
             requestControllerRef.current?.abort();
             requestControllerRef.current = null;
         };
-    }, [loadPage]);
+    }, [loadVideoPage]);
 
     if (isLoading && videos.length === 0) {
         return (
             <View style={styles.page}>
-                <PageHeader total={total} />
+                <PageHeader totalCount={totalCount} />
                 <View style={styles.centered}>
                     <ActivityIndicator color={colors.primary} size='large' />
                     <Text style={styles.statusText}>正在加载稍后再看...</Text>
@@ -175,12 +177,12 @@ export default function WatchLaterPage({
     if (errorMessage && videos.length === 0) {
         return (
             <View style={styles.page}>
-                <PageHeader total={total} />
+                <PageHeader totalCount={totalCount} />
                 <View style={styles.centered}>
                     <Text style={styles.errorText}>{errorMessage}</Text>
                     <Pressable
                         accessibilityRole='button'
-                        onPress={() => void loadPage(1, false)}
+                        onPress={() => void loadVideoPage(1, false)}
                         style={styles.retryButton}
                     >
                         <Text style={styles.retryButtonText}>重新加载</Text>
@@ -192,17 +194,17 @@ export default function WatchLaterPage({
 
     return (
         <View style={styles.page}>
-            <PageHeader total={total} />
+            <PageHeader totalCount={totalCount} />
             <FlatList
                 data={videos}
-                keyExtractor={(video) => video.id}
+                keyExtractor={(video) => video.bvid}
                 contentContainerStyle={
                     videos.length === 0
                         ? styles.emptyList
                         : styles.videoList
                 }
                 refreshing={isRefreshing}
-                onRefresh={() => void loadPage(1, true)}
+                onRefresh={() => void loadVideoPage(1, true)}
                 onEndReachedThreshold={0.4}
                 onEndReached={() => {
                     if (
@@ -210,7 +212,7 @@ export default function WatchLaterPage({
                         !isLoadingMore &&
                         !requestControllerRef.current
                     ) {
-                        void loadPage(page + 1, false);
+                        void loadVideoPage(currentPage + 1, false);
                     }
                 }}
                 ListHeaderComponent={
@@ -233,10 +235,12 @@ export default function WatchLaterPage({
                     ) : null
                 }
                 renderItem={({ item }) => (
-                    <FavoriteVideoCard
+                    <VideoListCard
                         video={item}
                         metaText={formatProgressText(item)}
-                        onPress={() => onVideoPress(item)}
+                        onPress={() => onVideoPress(
+                            createVideoPlaybackTarget(item, item.cid),
+                        )}
                     />
                 )}
             />
@@ -244,11 +248,11 @@ export default function WatchLaterPage({
     );
 }
 
-function PageHeader({ total }: { total: number }) {
+function PageHeader({ totalCount }: { totalCount: number }) {
     return (
         <View style={styles.header}>
             <Text style={styles.title}>稍后再看</Text>
-            <Text style={styles.summary}>共{total}个视频</Text>
+            <Text style={styles.summary}>共{totalCount}个视频</Text>
         </View>
     );
 }

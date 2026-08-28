@@ -9,20 +9,22 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
-import VideoFollowingCard from '@/components/following/VideoFollowingCard';
+import FollowingVideoCard from '@/components/following/FollowingVideoCard';
+import {
+    fetchFollowingVideoPage,
+    FollowingRequestError,
+    type FollowingVideoPage,
+} from '@/page/following/fetchFollowingVideos';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import type { VideoFollowingItem } from '@/types/following';
-import {
-    fetchVideoFollowingPage,
-    FollowingRequestError,
-    type VideoFollowingPage,
-} from './fetchVideoFollowing';
+import type { FollowingVideo } from '@/types/following';
+import type { VideoPlaybackTarget } from '@/types/video';
+import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 
-type Diagnostics = VideoFollowingPage['diagnostics'];
+type Diagnostics = FollowingVideoPage['diagnostics'];
 
 type Props = {
-    onVideoPress: (video: VideoFollowingItem) => void;
+    onVideoPress: (target: VideoPlaybackTarget) => void;
 };
 
 function formatPublishedTime(timestamp: number): string {
@@ -67,14 +69,14 @@ function isAbortError(error: unknown): boolean {
 }
 
 export default function FollowingPage({ onVideoPress }: Props) {
-    const [items, setItems] = useState<VideoFollowingItem[]>([]);
+    const [videos, setVideos] = useState<FollowingVideo[]>([]);
     const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const requestControllerRef = useRef<AbortController | null>(null);
 
-    const loadFollowing = useCallback(async (refreshing: boolean) => {
+    const loadFollowingVideos = useCallback(async (refreshing: boolean) => {
         requestControllerRef.current?.abort();
 
         const controller = new AbortController();
@@ -95,8 +97,8 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 throw new FollowingRequestError('登录信息不存在,请重新登录');
             }
 
-            const page = await fetchVideoFollowingPage(cookie, undefined, controller.signal);
-            setItems(page.items);
+            const page = await fetchFollowingVideoPage(cookie, undefined, controller.signal);
+            setVideos(page.videos);
             setDiagnostics(page.diagnostics);
         } catch (error) {
             if (!isAbortError(error)) {
@@ -112,15 +114,15 @@ export default function FollowingPage({ onVideoPress }: Props) {
     }, []);
 
     useEffect(() => {
-        void loadFollowing(false);
+        void loadFollowingVideos(false);
 
         return () => {
             requestControllerRef.current?.abort();
             requestControllerRef.current = null;
         };
-    }, [loadFollowing]);
+    }, [loadFollowingVideos]);
 
-    if (isLoading && items.length === 0) {
+    if (isLoading && videos.length === 0) {
         return (
             <View style={styles.centered}>
                 <ActivityIndicator color={colors.primary} size='large' />
@@ -129,11 +131,14 @@ export default function FollowingPage({ onVideoPress }: Props) {
         );
     }
 
-    if (errorMessage && items.length === 0) {
+    if (errorMessage && videos.length === 0) {
         return (
             <View style={styles.centered}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
-                <Pressable style={styles.retryButton} onPress={() => void loadFollowing(false)}>
+                <Pressable
+                    style={styles.retryButton}
+                    onPress={() => void loadFollowingVideos(false)}
+                >
                     <Text style={styles.retryButtonText}>重新加载</Text>
                 </Pressable>
             </View>
@@ -143,19 +148,19 @@ export default function FollowingPage({ onVideoPress }: Props) {
     return (
         <FlatList
             style={styles.page}
-            data={items}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-                <VideoFollowingCard
-                    title={item.title}
-                    cover={item.cover}
-                    avatar={item.author.avatar}
-                    author={item.author.name}
-                    time={formatPublishedTime(item.publishedAt)}
-                    onPress={() => onVideoPress(item)}
+            data={videos}
+            keyExtractor={(video) => video.dynamicId}
+            renderItem={({ item: video }) => (
+                <FollowingVideoCard
+                    title={video.title}
+                    coverUrl={video.coverUrl}
+                    avatarUrl={video.author.avatarUrl}
+                    authorName={video.author.name}
+                    publishedTimeText={formatPublishedTime(video.publishedAt)}
+                    onPress={() => onVideoPress(createVideoPlaybackTarget(video))}
                 />
             )}
-            contentContainerStyle={items.length === 0 ? styles.emptyList : styles.list}
+            contentContainerStyle={videos.length === 0 ? styles.emptyList : styles.list}
             ListEmptyComponent={
                 <View style={styles.emptyMessage}>
                     <Text style={styles.statusText}>暂时没有识别到视频动态</Text>
@@ -172,7 +177,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 errorMessage ? <Text style={styles.inlineError}>{errorMessage}</Text> : null
             }
             refreshing={isRefreshing}
-            onRefresh={() => void loadFollowing(true)}
+            onRefresh={() => void loadFollowingVideos(true)}
         />
     );
 }

@@ -1,20 +1,30 @@
-export type VideoItem = {
-    id: string;
-    bvid: string;
-    title: string;
-    cover: string;
-    author: {
-        id: string;
-        name: string;
-        avatar: string;
-    };
-    publishedAt: number;
-    stats?: {
-        views?: number;
-        danmaku?: number;
-    };
+export type VideoAuthor = {
+    mid: string;
+    name: string;
+    avatarUrl: string;
 };
 
-export type VideoCardItem = VideoItem & {
+export type VideoStats = {
+    viewCount?: number;
+    danmakuCount?: number;
+};
+
+export type VideoSummary = {
+    bvid: string;
+    title: string;
+    coverUrl: string;
+    author: VideoAuthor;
+    publishedAt: number;
+    stats?: VideoStats;
+};
+
+export type VideoWithDuration = VideoSummary & {
     durationSeconds: number;
+};
+
+export type VideoPlaybackTarget = {
+    bvid: string;
+    initialCid?: number;
+    title: string;
+    authorName?: string;
 };

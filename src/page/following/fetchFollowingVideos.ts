@@ -1,6 +1,6 @@
-import type { VideoFollowingItem } from '@/types/following';
+import type { FollowingVideo } from '@/types/following';
 
-const VIDEO_FOLLOWING_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
+const FOLLOWING_VIDEOS_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
 const USER_AGENT =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
     '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -8,8 +8,8 @@ const DEFAULT_AVATAR_URL = 'https://i0.hdslb.com/bfs/face/member/noface.jpg';
 
 type JsonRecord = Record<string, unknown>;
 
-export type VideoFollowingPage = {
-    items: VideoFollowingItem[];
+export type FollowingVideoPage = {
+    videos: FollowingVideo[];
     offset: string | null;
     hasMore: boolean;
     diagnostics: {
@@ -99,7 +99,7 @@ function getCookiePair(cookie: string, cookieName: string): string | null {
     return null;
 }
 
-function parseVideoFollowingItem(value: unknown): VideoFollowingItem | null {
+function parseFollowingVideo(value: unknown): FollowingVideo | null {
     const item = asRecord(value);
     const modules = asRecord(item?.modules);
     const author = asRecord(modules?.module_author);
@@ -113,31 +113,36 @@ function parseVideoFollowingItem(value: unknown): VideoFollowingItem | null {
     const archive = asRecord(major.archive);
     const bvid = readString(archive?.bvid);
     const title = readString(archive?.title);
-    const cover = normalizeImageUrl(archive?.cover);
+    const coverUrl = normalizeImageUrl(archive?.cover);
 
-    if (!bvid || !title || !cover) {
+    if (!bvid || !title || !coverUrl) {
         return null;
     }
 
-    const id = readString(item.id_str) ?? bvid;
-    const duration = readString(archive?.duration_text);
-    const authorId = readString(author.mid) ?? '';
+    const archiveStats = asRecord(archive?.stat);
+    const dynamicId = readString(item.id_str) ?? bvid;
+    const durationText = readString(archive?.duration_text);
+    const authorMid = readString(author.mid) ?? '';
     const authorName = readString(author.name) ?? '未知UP主';
-    const authorAvatar = normalizeImageUrl(author.face) ?? DEFAULT_AVATAR_URL;
+    const authorAvatarUrl = normalizeImageUrl(author.face) ?? DEFAULT_AVATAR_URL;
     const publishedAt = readNumber(author.pub_ts) ?? 0;
 
     return {
-        id,
+        dynamicId,
         bvid,
         title,
-        cover,
-        duration: duration ?? undefined,
+        coverUrl,
+        durationText: durationText ?? undefined,
         author: {
-            id: authorId,
+            mid: authorMid,
             name: authorName,
-            avatar: authorAvatar,
+            avatarUrl: authorAvatarUrl,
         },
         publishedAt,
+        stats: {
+            viewCount: readNumber(archiveStats?.play) ?? undefined,
+            danmakuCount: readNumber(archiveStats?.danmaku) ?? undefined,
+        },
     };
 }
 
@@ -176,14 +181,14 @@ function buildRequestUrl(offset?: string): string {
         parameters.set('offset', offset);
     }
 
-    return `${VIDEO_FOLLOWING_URL}?${parameters.toString()}`;
+    return `${FOLLOWING_VIDEOS_URL}?${parameters.toString()}`;
 }
 
-export async function fetchVideoFollowingPage(
+export async function fetchFollowingVideoPage(
     cookie: string,
     offset?: string,
     signal?: AbortSignal,
-): Promise<VideoFollowingPage> {
+): Promise<FollowingVideoPage> {
     const sessdata = getCookiePair(cookie, 'SESSDATA');
 
     if (!sessdata) {
@@ -224,12 +229,12 @@ export async function fetchVideoFollowingPage(
     }
 
     const rawItems = Array.isArray(data.items) ? data.items : [];
-    const items = rawItems
-        .map(parseVideoFollowingItem)
-        .filter((item): item is VideoFollowingItem => item !== null);
+    const videos = rawItems
+        .map(parseFollowingVideo)
+        .filter((video): video is FollowingVideo => video !== null);
 
     return {
-        items,
+        videos,
         offset: readString(data.offset),
         hasMore: data.has_more === true,
         diagnostics: {

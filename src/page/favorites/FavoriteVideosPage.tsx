@@ -9,21 +9,22 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
-import FavoriteVideoCard from '@/components/favorites/FavoriteVideoCard';
+import VideoListCard from '@/components/video/VideoListCard';
+import {
+    fetchFavoriteVideoPage,
+    FavoritesRequestError,
+} from '@/page/favorites/fetchFavorites';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import type { FavoriteFolder, FavoriteVideo } from '@/types/favorites';
-import type { VideoFollowingItem } from '@/types/following';
-import {
-    fetchFavoriteVideoPage,
-    FavoritesRequestError,
-} from './fetchFavorites';
+import type { VideoPlaybackTarget } from '@/types/video';
+import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 
 type Props = {
     folder: FavoriteFolder;
     onBack: () => void;
-    onVideoPress: (video: VideoFollowingItem) => void;
+    onVideoPress: (target: VideoPlaybackTarget) => void;
 };
 
 function isAbortError(error: unknown): boolean {
@@ -38,7 +39,7 @@ function getErrorMessage(error: unknown): string {
     return '加载收藏视频失败,请稍后重试';
 }
 
-function formatFavoriteTime(timestamp: number): string {
+function formatFavoritedTime(timestamp: number): string {
     if (timestamp <= 0) {
         return '';
     }
@@ -50,7 +51,7 @@ function formatFavoriteTime(timestamp: number): string {
 
 export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Props) {
     const [videos, setVideos] = useState<FavoriteVideo[]>([]);
-    const [page, setPage] = useState(0);
+    const [currentPage, setCurrentPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -58,7 +59,7 @@ export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Pro
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const requestControllerRef = useRef<AbortController | null>(null);
 
-    const loadPage = useCallback(async (targetPage: number, refreshing: boolean) => {
+    const loadVideoPage = useCallback(async (targetPage: number, refreshing: boolean) => {
         if (requestControllerRef.current) {
             if (!refreshing) {
                 return;
@@ -96,15 +97,17 @@ export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Pro
 
             setVideos((currentVideos) => {
                 if (targetPage === 1) {
-                    return nextPage.items;
+                    return nextPage.videos;
                 }
 
-                const existingIds = new Set(currentVideos.map((video) => video.id));
-                const newVideos = nextPage.items.filter((video) => !existingIds.has(video.id));
+                const existingBvids = new Set(currentVideos.map((video) => video.bvid));
+                const newVideos = nextPage.videos.filter(
+                    (video) => !existingBvids.has(video.bvid),
+                );
 
                 return [...currentVideos, ...newVideos];
             });
-            setPage(targetPage);
+            setCurrentPage(targetPage);
             setHasMore(nextPage.hasMore);
         } catch (error) {
             if (!isAbortError(error)) {
@@ -122,13 +125,13 @@ export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Pro
     }, [folder.id]);
 
     useEffect(() => {
-        void loadPage(1, false);
+        void loadVideoPage(1, false);
 
         return () => {
             requestControllerRef.current?.abort();
             requestControllerRef.current = null;
         };
-    }, [loadPage]);
+    }, [loadVideoPage]);
 
     if (isLoading && videos.length === 0) {
         return (
@@ -150,7 +153,7 @@ export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Pro
                     <Text style={styles.errorText}>{errorMessage}</Text>
                     <Pressable
                         accessibilityRole='button'
-                        onPress={() => void loadPage(1, false)}
+                        onPress={() => void loadVideoPage(1, false)}
                         style={styles.retryButton}
                     >
                         <Text style={styles.retryButtonText}>重新加载</Text>
@@ -165,14 +168,14 @@ export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Pro
             <PageHeader folder={folder} onBack={onBack} />
             <FlatList
                 data={videos}
-                keyExtractor={(video) => video.id}
+                keyExtractor={(video) => video.bvid}
                 contentContainerStyle={videos.length === 0 ? styles.emptyList : styles.videoList}
                 refreshing={isRefreshing}
-                onRefresh={() => void loadPage(1, true)}
+                onRefresh={() => void loadVideoPage(1, true)}
                 onEndReachedThreshold={0.4}
                 onEndReached={() => {
                     if (hasMore && !isLoadingMore && !requestControllerRef.current) {
-                        void loadPage(page + 1, false);
+                        void loadVideoPage(currentPage + 1, false);
                     }
                 }}
                 ListHeaderComponent={
@@ -191,10 +194,10 @@ export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Pro
                     ) : null
                 }
                 renderItem={({ item }) => (
-                    <FavoriteVideoCard
+                    <VideoListCard
                         video={item}
-                        metaText={formatFavoriteTime(item.favoriteAt)}
-                        onPress={() => onVideoPress(item)}
+                        metaText={formatFavoritedTime(item.favoritedAt)}
+                        onPress={() => onVideoPress(createVideoPlaybackTarget(item))}
                     />
                 )}
             />

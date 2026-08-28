@@ -16,8 +16,8 @@ const DEFAULT_AVATAR_URL =
 const PAGE_SIZE = 20;
 
 export type WatchLaterVideoPage = {
-    items: WatchLaterVideo[];
-    total: number;
+    videos: WatchLaterVideo[];
+    totalCount: number;
     hasMore: boolean;
 };
 
@@ -123,42 +123,42 @@ function parseWatchLaterVideo(
     const stat = asRecord(video?.stat);
     const bvid = readString(video?.bvid);
     const title = readString(video?.title);
-    const cover = normalizeImageUrl(video?.pic);
-    const cid = readNumber(video?.cid);
+    const coverUrl = normalizeImageUrl(video?.pic);
 
     if (
         !video ||
         !bvid ||
         !title ||
-        !cover ||
-        cid === null ||
-        cid <= 0
+        !coverUrl
     ) {
         return null;
     }
 
+    const aid = readNumber(video.aid);
+    const cid = readNumber(video.cid);
+
     return {
-        id: readString(video.aid) ?? bvid,
+        aid: aid !== null && aid > 0 ? aid : undefined,
         bvid,
         title,
-        cover,
-        cid,
+        coverUrl,
+        cid: cid !== null && cid > 0 ? cid : undefined,
         durationSeconds: readNumber(video.duration) ?? 0,
         progressSeconds: Math.max(
             0,
             readNumber(video.progress) ?? 0,
         ),
         author: {
-            id: readString(owner?.mid) ?? '',
+            mid: readString(owner?.mid) ?? '',
             name: readString(owner?.name) ?? '未知UP主',
-            avatar:
+            avatarUrl:
                 normalizeImageUrl(owner?.face) ??
                 DEFAULT_AVATAR_URL,
         },
         publishedAt: readNumber(video.pubdate) ?? 0,
         stats: {
-            views: readNumber(stat?.view) ?? undefined,
-            danmaku: readNumber(stat?.danmaku) ?? undefined,
+            viewCount: readNumber(stat?.view) ?? undefined,
+            danmakuCount: readNumber(stat?.danmaku) ?? undefined,
         },
     };
 }
@@ -259,21 +259,21 @@ export async function fetchWatchLaterVideoPage(
     }
 
     const list = Array.isArray(data.list) ? data.list : [];
-    const items = list
+    const videos = list
         .map(parseWatchLaterVideo)
         .filter(
             (video): video is WatchLaterVideo =>
                 video !== null,
         );
 
-    const total = Math.max(
+    const totalCount = Math.max(
         0,
-        readNumber(data.count) ?? items.length,
+        readNumber(data.count) ?? videos.length,
     );
 
     return {
-        items,
-        total,
-        hasMore: page * PAGE_SIZE < total,
+        videos,
+        totalCount,
+        hasMore: page * PAGE_SIZE < totalCount,
     };
 }
