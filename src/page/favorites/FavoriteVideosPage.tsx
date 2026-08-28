@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
     ActivityIndicator,
     FlatList,
@@ -50,6 +51,7 @@ function formatFavoritedTime(timestamp: number): string {
 }
 
 export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Props) {
+    const bottomTabBarHeight = useBottomTabBarHeight();
     const [videos, setVideos] = useState<FavoriteVideo[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -169,7 +171,10 @@ export default function FavoriteVideosPage({ folder, onBack, onVideoPress }: Pro
             <FlatList
                 data={videos}
                 keyExtractor={(video) => video.bvid}
-                contentContainerStyle={videos.length === 0 ? styles.emptyList : styles.videoList}
+                contentContainerStyle={[
+                    videos.length === 0 ? styles.emptyList : styles.videoList,
+                    { paddingBottom: bottomTabBarHeight + spacing.md },
+                ]}
                 refreshing={isRefreshing}
                 onRefresh={() => void loadVideoPage(1, true)}
                 onEndReachedThreshold={0.4}

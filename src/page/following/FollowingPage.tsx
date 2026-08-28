@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
     ActivityIndicator,
     FlatList,
@@ -100,6 +101,7 @@ function hasGroupDynamic(
 }
 
 export default function FollowingPage({ onVideoPress }: Props) {
+    const bottomTabBarHeight = useBottomTabBarHeight();
     const [dynamics, setDynamics] = useState<FollowingItem[]>([]);
     const [groups, setGroups] = useState<FollowingGroup[]>([]);
     const [memberMidsByTagId, setMemberMidsByTagId] =
@@ -659,9 +661,10 @@ export default function FollowingPage({ onVideoPress }: Props) {
             />
 
             <FlatList
-                contentContainerStyle={
-                    visibleDynamics.length === 0 ? styles.emptyList : styles.list
-                }
+                contentContainerStyle={[
+                    visibleDynamics.length === 0 ? styles.emptyList : styles.list,
+                    { paddingBottom: bottomTabBarHeight + spacing.md },
+                ]}
                 data={visibleDynamics}
                 keyExtractor={(item) => item.dynamicId}
                 ListEmptyComponent={renderEmptyContent}

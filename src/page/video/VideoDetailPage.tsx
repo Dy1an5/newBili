@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
     ActivityIndicator,
     BackHandler,
@@ -104,6 +105,7 @@ function VideoPlayer({ playback, title, onPlaybackError }: PlayerProps) {
 }
 
 export default function VideoDetailPage({ target, onBack }: Props) {
+    const bottomTabBarHeight = useBottomTabBarHeight();
     const [parts, setParts] = useState<VideoPart[]>([]);
     const [selectedCid, setSelectedCid] = useState<number | null>(null);
     const [playback, setPlayback] = useState<VideoPlayback | null>(null);
@@ -213,7 +215,12 @@ export default function VideoDetailPage({ target, onBack }: Props) {
                 <Text numberOfLines={1} style={styles.headerTitle}>视频详情</Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView
+                contentContainerStyle={[
+                    styles.content,
+                    { paddingBottom: bottomTabBarHeight + spacing.md },
+                ]}
+            >
                 <View style={styles.playerContainer}>
                     {playback ? (
                         <VideoPlayer

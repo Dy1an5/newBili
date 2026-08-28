@@ -9,6 +9,7 @@ export const colors = {
     divider: '#E3E5E7',
 
     primary: '#00AEEC',
+    primarySoft: '#E5F7FE',
 
     shadow: '#000000',
 } as const;

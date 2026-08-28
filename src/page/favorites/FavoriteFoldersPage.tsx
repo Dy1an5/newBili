@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
     ActivityIndicator,
     FlatList,
@@ -35,6 +36,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function FavoriteFoldersPage({ onFolderPress }: Props) {
+    const bottomTabBarHeight = useBottomTabBarHeight();
     const [folders, setFolders] = useState<FavoriteFolder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -122,7 +124,10 @@ export default function FavoriteFoldersPage({ onFolderPress }: Props) {
                 numColumns={2}
                 keyExtractor={(folder) => String(folder.id)}
                 columnWrapperStyle={styles.folderRow}
-                contentContainerStyle={folders.length === 0 ? styles.emptyList : styles.list}
+                contentContainerStyle={[
+                    folders.length === 0 ? styles.emptyList : styles.list,
+                    { paddingBottom: bottomTabBarHeight + spacing.md },
+                ]}
                 refreshing={isRefreshing}
                 onRefresh={() => void loadFolders(true)}
                 ListHeaderComponent={

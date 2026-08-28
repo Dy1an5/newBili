@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
     ActivityIndicator,
     FlatList,
@@ -68,6 +69,7 @@ function formatProgressText(video: WatchLaterVideo): string {
 export default function WatchLaterPage({
     onVideoPress,
 }: Props) {
+    const bottomTabBarHeight = useBottomTabBarHeight();
     const [videos, setVideos] = useState<WatchLaterVideo[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
@@ -198,11 +200,12 @@ export default function WatchLaterPage({
             <FlatList
                 data={videos}
                 keyExtractor={(video) => video.bvid}
-                contentContainerStyle={
+                contentContainerStyle={[
                     videos.length === 0
                         ? styles.emptyList
-                        : styles.videoList
-                }
+                        : styles.videoList,
+                    { paddingBottom: bottomTabBarHeight + spacing.md },
+                ]}
                 refreshing={isRefreshing}
                 onRefresh={() => void loadVideoPage(1, true)}
                 onEndReachedThreshold={0.4}

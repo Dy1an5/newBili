@@ -1,14 +1,22 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet } from 'react-native';
+import { BlurTargetView } from 'expo-blur';
+import {
+    createContext,
+    type RefObject,
+    useContext,
+    useMemo,
+    useRef,
+} from 'react';
+import { StyleSheet, type View } from 'react-native';
 
+import FloatingTabBar from '@/components/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
 import FavoriteVideosPage from '@/page/favorites/FavoriteVideosPage';
 import FollowingPage from '@/page/following/FollowingPage';
 import VideoDetailPage from '@/page/video/VideoDetailPage';
 import WatchLaterPage from '@/page/watchLater/WatchLaterPage';
-import { colors } from '@/theme/colors';
 import type { FavoriteFolder } from '@/types/favorites';
 import type { VideoPlaybackTarget } from '@/types/video';
 
@@ -24,6 +32,8 @@ type MainTabParamList = {
     FavoritesTab: undefined;
     WatchLaterTab: undefined;
 };
+
+type BlurTargets = Record<keyof MainTabParamList, RefObject<View | null>>;
 
 type FavoritesStackParamList = {
     FavoriteFolders: undefined;
@@ -46,6 +56,17 @@ const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const FavoritesStack = createNativeStackNavigator<FavoritesStackParamList>();
 const WatchLaterStack = createNativeStackNavigator<WatchLaterStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const BlurTargetsContext = createContext<BlurTargets | null>(null);
+
+function useBlurTarget(tabName: keyof MainTabParamList) {
+    const blurTargets = useContext(BlurTargetsContext);
+
+    if (!blurTargets) {
+        throw new Error('底部导航模糊目标不存在');
+    }
+
+    return blurTargets[tabName];
+}
 
 function HomeScreen({
     navigation,
@@ -74,11 +95,15 @@ function VideoDetailScreen({
 }
 
 function HomeNavigator() {
+    const blurTarget = useBlurTarget('HomeTab');
+
     return (
-        <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-            <HomeStack.Screen name='Home' component={HomeScreen} />
-            <HomeStack.Screen name='VideoDetail' component={VideoDetailScreen} />
-        </HomeStack.Navigator>
+        <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
+            <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+                <HomeStack.Screen name='Home' component={HomeScreen} />
+                <HomeStack.Screen name='VideoDetail' component={VideoDetailScreen} />
+            </HomeStack.Navigator>
+        </BlurTargetView>
     );
 }
 
@@ -120,12 +145,16 @@ function FavoriteVideoDetailScreen({
 }
 
 function FavoritesNavigator() {
+    const blurTarget = useBlurTarget('FavoritesTab');
+
     return (
-        <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
-            <FavoritesStack.Screen name='FavoriteFolders' component={FavoriteFoldersScreen} />
-            <FavoritesStack.Screen name='FavoriteVideos' component={FavoriteVideosScreen} />
-            <FavoritesStack.Screen name='VideoDetail' component={FavoriteVideoDetailScreen} />
-        </FavoritesStack.Navigator>
+        <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
+            <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
+                <FavoritesStack.Screen name='FavoriteFolders' component={FavoriteFoldersScreen} />
+                <FavoritesStack.Screen name='FavoriteVideos' component={FavoriteVideosScreen} />
+                <FavoritesStack.Screen name='VideoDetail' component={FavoriteVideoDetailScreen} />
+            </FavoritesStack.Navigator>
+        </BlurTargetView>
     );
 }
 
@@ -154,62 +183,75 @@ function WatchLaterVideoDetailScreen({
 }
 
 function WatchLaterNavigator() {
+    const blurTarget = useBlurTarget('WatchLaterTab');
+
     return (
-        <WatchLaterStack.Navigator screenOptions={{ headerShown: false }}>
-            <WatchLaterStack.Screen
-                name='WatchLaterList'
-                component={WatchLaterListScreen}
-            />
-            <WatchLaterStack.Screen
-                name='VideoDetail'
-                component={WatchLaterVideoDetailScreen}
-            />
-        </WatchLaterStack.Navigator>
+        <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
+            <WatchLaterStack.Navigator screenOptions={{ headerShown: false }}>
+                <WatchLaterStack.Screen
+                    name='WatchLaterList'
+                    component={WatchLaterListScreen}
+                />
+                <WatchLaterStack.Screen
+                    name='VideoDetail'
+                    component={WatchLaterVideoDetailScreen}
+                />
+            </WatchLaterStack.Navigator>
+        </BlurTargetView>
     );
 }
 
 export default function MainTabNavigator() {
+    const homeBlurTarget = useRef<View | null>(null);
+    const favoritesBlurTarget = useRef<View | null>(null);
+    const watchLaterBlurTarget = useRef<View | null>(null);
+    const blurTargets = useMemo<BlurTargets>(() => ({
+        HomeTab: homeBlurTarget,
+        FavoritesTab: favoritesBlurTarget,
+        WatchLaterTab: watchLaterBlurTarget,
+    }), []);
+
     return (
-        <Tab.Navigator
-            screenOptions={{
-                headerShown: false,
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: colors.textMuted,
-                tabBarIcon: () => null,
-                tabBarIconStyle: styles.tabBarIcon,
-                tabBarLabelStyle: styles.tabBarLabel,
-                tabBarStyle: styles.tabBar,
-            }}
-        >
-            <Tab.Screen
-                name='HomeTab'
-                component={HomeNavigator}
-                options={{ title: '动态' }}
-            />
-            <Tab.Screen
-                name='FavoritesTab'
-                component={FavoritesNavigator}
-                options={{ title: '收藏' }}
-            />
-            <Tab.Screen
-                name='WatchLaterTab'
-                component={WatchLaterNavigator}
-                options={{ title: '稍后再看' }}
-            />
-        </Tab.Navigator>
+        <BlurTargetsContext.Provider value={blurTargets}>
+            <Tab.Navigator
+                tabBar={(props) => {
+                    const routeName = props.state.routes[
+                        props.state.index
+                    ].name as keyof MainTabParamList;
+
+                    return (
+                        <FloatingTabBar
+                            {...props}
+                            blurTarget={blurTargets[routeName]}
+                        />
+                    );
+                }}
+                screenOptions={{
+                    headerShown: false,
+                }}
+            >
+                <Tab.Screen
+                    name='HomeTab'
+                    component={HomeNavigator}
+                    options={{ title: '动态' }}
+                />
+                <Tab.Screen
+                    name='FavoritesTab'
+                    component={FavoritesNavigator}
+                    options={{ title: '收藏' }}
+                />
+                <Tab.Screen
+                    name='WatchLaterTab'
+                    component={WatchLaterNavigator}
+                    options={{ title: '稍后再看' }}
+                />
+            </Tab.Navigator>
+        </BlurTargetsContext.Provider>
     );
 }
 
 const styles = StyleSheet.create({
-    tabBar: {
-        borderTopColor: colors.divider,
-        backgroundColor: colors.surface,
-    },
-    tabBarLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    tabBarIcon: {
-        display: 'none',
+    blurTarget: {
+        flex: 1,
     },
 });
