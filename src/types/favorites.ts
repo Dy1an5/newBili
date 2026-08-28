@@ -1,4 +1,4 @@
-import type { VideoFollowingItem } from './following';
+import type { VideoCardItem } from './video';
 
 export type FavoriteFolder = {
     id: number;
@@ -6,7 +6,6 @@ export type FavoriteFolder = {
     mediaCount: number;
 };
 
-export type FavoriteVideo = Omit<VideoFollowingItem, 'duration'> & {
-    durationSeconds: number;
+export type FavoriteVideo = VideoCardItem & {
     favoriteAt: number;
 };

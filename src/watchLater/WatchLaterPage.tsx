@@ -1,0 +1,327 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+
+import { getLoginCookie } from '@/auth/authCookie';
+import FavoriteVideoCard from '@/components/favorites/FavoriteVideoCard';
+import { colors } from '@/theme/colors';
+import { radius } from '@/theme/radius';
+import { spacing } from '@/theme/spacing';
+import type { WatchLaterVideo } from '@/types/watchLater';
+import {
+    fetchWatchLaterVideoPage,
+    WatchLaterRequestError,
+} from './fetchWatchLater';
+
+type Props = {
+    onVideoPress: (video: WatchLaterVideo) => void;
+};
+
+function isAbortError(error: unknown): boolean {
+    return error instanceof Error && error.name === 'AbortError';
+}
+
+function getErrorMessage(error: unknown): string {
+    if (error instanceof WatchLaterRequestError) {
+        return error.message;
+    }
+
+    return '加载稍后再看失败,请稍后重试';
+}
+
+function formatDuration(durationSeconds: number): string {
+    const totalSeconds = Math.max(0, Math.floor(durationSeconds));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function formatProgressText(video: WatchLaterVideo): string {
+    if (video.progressSeconds <= 0) {
+        return '未观看';
+    }
+
+    if (
+        video.durationSeconds > 0 &&
+        video.progressSeconds >= video.durationSeconds
+    ) {
+        return '已看完';
+    }
+
+    return `已观看至${formatDuration(video.progressSeconds)}`;
+}
+
+export default function WatchLaterPage({
+    onVideoPress,
+}: Props) {
+    const [videos, setVideos] = useState<WatchLaterVideo[]>([]);
+    const [page, setPage] = useState(0);
+    const [total, setTotal] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    const requestControllerRef =
+        useRef<AbortController | null>(null);
+
+    const loadPage = useCallback(async (
+        targetPage: number,
+        refreshing: boolean,
+    ) => {
+        if (requestControllerRef.current) {
+            if (!refreshing) {
+                return;
+            }
+
+            requestControllerRef.current.abort();
+        }
+
+        const controller = new AbortController();
+        requestControllerRef.current = controller;
+
+        if (refreshing) {
+            setIsRefreshing(true);
+        } else if (targetPage === 1) {
+            setIsLoading(true);
+        } else if (targetPage > 1) {
+            setIsLoadingMore(true);
+        }
+
+        setErrorMessage(null);
+
+        try {
+            const cookie = await getLoginCookie();
+
+            if (!cookie) {
+                throw new WatchLaterRequestError(
+                    '登录信息不存在,请重新登录',
+                );
+            }
+
+            const nextPage = await fetchWatchLaterVideoPage(
+                targetPage,
+                cookie,
+                controller.signal,
+            );
+
+            setVideos((currentVideos) => {
+                if (targetPage === 1) {
+                    return nextPage.items;
+                }
+
+                const existingIds = new Set(
+                    currentVideos.map((video) => video.id),
+                );
+                const newVideos = nextPage.items.filter(
+                    (video) => !existingIds.has(video.id),
+                );
+
+                return [...currentVideos, ...newVideos];
+            });
+
+            setPage(targetPage);
+            setTotal(nextPage.total);
+            setHasMore(nextPage.hasMore);
+        } catch (error) {
+            if (!isAbortError(error)) {
+                setErrorMessage(getErrorMessage(error));
+                setHasMore(false);
+            }
+        } finally {
+            if (requestControllerRef.current === controller) {
+                setIsLoading(false);
+                setIsRefreshing(false);
+                setIsLoadingMore(false);
+                requestControllerRef.current = null;
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadPage(1, false);
+
+        return () => {
+            requestControllerRef.current?.abort();
+            requestControllerRef.current = null;
+        };
+    }, [loadPage]);
+
+    if (isLoading && videos.length === 0) {
+        return (
+            <View style={styles.page}>
+                <PageHeader total={total} />
+                <View style={styles.centered}>
+                    <ActivityIndicator color={colors.primary} size='large' />
+                    <Text style={styles.statusText}>正在加载稍后再看...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    if (errorMessage && videos.length === 0) {
+        return (
+            <View style={styles.page}>
+                <PageHeader total={total} />
+                <View style={styles.centered}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                    <Pressable
+                        accessibilityRole='button'
+                        onPress={() => void loadPage(1, false)}
+                        style={styles.retryButton}
+                    >
+                        <Text style={styles.retryButtonText}>重新加载</Text>
+                    </Pressable>
+                </View>
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.page}>
+            <PageHeader total={total} />
+            <FlatList
+                data={videos}
+                keyExtractor={(video) => video.id}
+                contentContainerStyle={
+                    videos.length === 0
+                        ? styles.emptyList
+                        : styles.videoList
+                }
+                refreshing={isRefreshing}
+                onRefresh={() => void loadPage(1, true)}
+                onEndReachedThreshold={0.4}
+                onEndReached={() => {
+                    if (
+                        hasMore &&
+                        !isLoadingMore &&
+                        !requestControllerRef.current
+                    ) {
+                        void loadPage(page + 1, false);
+                    }
+                }}
+                ListHeaderComponent={
+                    errorMessage ? (
+                        <Text style={styles.inlineError}>{errorMessage}</Text>
+                    ) : null
+                }
+                ListEmptyComponent={
+                    <Text style={styles.statusText}>
+                        暂时没有可显示的稍后再看视频
+                    </Text>
+                }
+                ListFooterComponent={
+                    isLoadingMore ? (
+                        <ActivityIndicator
+                            color={colors.primary}
+                            size='small'
+                            style={styles.footerLoading}
+                        />
+                    ) : null
+                }
+                renderItem={({ item }) => (
+                    <FavoriteVideoCard
+                        video={item}
+                        metaText={formatProgressText(item)}
+                        onPress={() => onVideoPress(item)}
+                    />
+                )}
+            />
+        </View>
+    );
+}
+
+function PageHeader({ total }: { total: number }) {
+    return (
+        <View style={styles.header}>
+            <Text style={styles.title}>稍后再看</Text>
+            <Text style={styles.summary}>共{total}个视频</Text>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    page: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.md,
+        backgroundColor: colors.surface,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.divider,
+    },
+    title: {
+        color: colors.textPrimary,
+        fontSize: 20,
+        fontWeight: '600',
+    },
+    summary: {
+        marginTop: spacing.xs,
+        color: colors.textMuted,
+        fontSize: 12,
+    },
+    centered: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: spacing.lg,
+    },
+    videoList: {
+        paddingVertical: spacing.md,
+    },
+    emptyList: {
+        flexGrow: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: spacing.lg,
+    },
+    statusText: {
+        marginTop: spacing.sm,
+        color: colors.textSecondary,
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    errorText: {
+        color: colors.textPrimary,
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    inlineError: {
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.md,
+        color: colors.textSecondary,
+        fontSize: 13,
+        textAlign: 'center',
+    },
+    retryButton: {
+        marginTop: spacing.md,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.sm,
+        backgroundColor: colors.primary,
+    },
+    retryButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    footerLoading: {
+        paddingVertical: spacing.md,
+    },
+});

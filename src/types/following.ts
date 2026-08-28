@@ -1,22 +1,5 @@
-export type VideoFollowingItem = {
-    id: string;
-    bvid: string;
+import type { VideoItem } from './video';
 
-    title: string;
-
-    cover: string;
+export type VideoFollowingItem = VideoItem & {
     duration?: string;
-
-    author: {
-        id: string;
-        name: string;
-        avatar: string;
-    };
-
-    publishedAt: number;
-
-    stats?: {
-        views?: number;
-        danmaku?: number;
-    };
 };

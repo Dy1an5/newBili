@@ -1,16 +1,16 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import FavoriteFoldersPage from '@/favorites/FavoriteFoldersPage';
 import FavoriteVideosPage from '@/favorites/FavoriteVideosPage';
 import FollowingPage from '@/following/FollowingPage';
 import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
 import type { FavoriteFolder } from '@/types/favorites';
 import type { VideoFollowingItem } from '@/types/following';
 import VideoDetailPage from '@/video/VideoDetailPage';
+import WatchLaterPage from '@/watchLater/WatchLaterPage';
 
 type HomeStackParamList = {
     Home: undefined;
@@ -35,8 +35,16 @@ type FavoritesStackParamList = {
     };
 };
 
+type WatchLaterStackParamList = {
+    WatchLaterList: undefined;
+    VideoDetail: {
+        video: VideoFollowingItem;
+    };
+};
+
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const FavoritesStack = createNativeStackNavigator<FavoritesStackParamList>();
+const WatchLaterStack = createNativeStackNavigator<WatchLaterStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function HomeScreen({
@@ -71,14 +79,6 @@ function HomeNavigator() {
             <HomeStack.Screen name='Home' component={HomeScreen} />
             <HomeStack.Screen name='VideoDetail' component={VideoDetailScreen} />
         </HomeStack.Navigator>
-    );
-}
-
-function PlaceholderPage({ message }: { message: string }) {
-    return (
-        <View style={styles.placeholderPage}>
-            <Text style={styles.placeholderText}>{message}</Text>
-        </View>
     );
 }
 
@@ -129,8 +129,43 @@ function FavoritesNavigator() {
     );
 }
 
-function WatchLaterPage() {
-    return <PlaceholderPage message='稍后再看功能将在后续模块中实现' />;
+function WatchLaterListScreen({
+    navigation,
+}: NativeStackScreenProps<WatchLaterStackParamList, 'WatchLaterList'>) {
+    return (
+        <WatchLaterPage
+            onVideoPress={(video) => {
+                navigation.navigate('VideoDetail', { video });
+            }}
+        />
+    );
+}
+
+function WatchLaterVideoDetailScreen({
+    navigation,
+    route,
+}: NativeStackScreenProps<WatchLaterStackParamList, 'VideoDetail'>) {
+    return (
+        <VideoDetailPage
+            video={route.params.video}
+            onBack={() => navigation.goBack()}
+        />
+    );
+}
+
+function WatchLaterNavigator() {
+    return (
+        <WatchLaterStack.Navigator screenOptions={{ headerShown: false }}>
+            <WatchLaterStack.Screen
+                name='WatchLaterList'
+                component={WatchLaterListScreen}
+            />
+            <WatchLaterStack.Screen
+                name='VideoDetail'
+                component={WatchLaterVideoDetailScreen}
+            />
+        </WatchLaterStack.Navigator>
+    );
 }
 
 export default function MainTabNavigator() {
@@ -158,7 +193,7 @@ export default function MainTabNavigator() {
             />
             <Tab.Screen
                 name='WatchLaterTab'
-                component={WatchLaterPage}
+                component={WatchLaterNavigator}
                 options={{ title: '稍后再看' }}
             />
         </Tab.Navigator>
@@ -166,17 +201,6 @@ export default function MainTabNavigator() {
 }
 
 const styles = StyleSheet.create({
-    placeholderPage: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: spacing.lg,
-        backgroundColor: colors.background,
-    },
-    placeholderText: {
-        color: colors.textSecondary,
-        fontSize: 14,
-    },
     tabBar: {
         borderTopColor: colors.divider,
         backgroundColor: colors.surface,
