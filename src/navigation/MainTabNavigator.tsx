@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BlurTargetView } from 'expo-blur';
@@ -76,17 +77,9 @@ function HomeScreen({
 }
 
 function VideoDetailScreen({
-    navigation,
     route,
 }: NativeStackScreenProps<HomeStackParamList, 'VideoDetail'>) {
-    return (
-        <VideoDetailPage
-            target={route.params.target}
-            onBack={() => {
-                navigation.goBack();
-            }}
-        />
-    );
+    return <VideoDetailPage target={route.params.target} />;
 }
 
 function HomeNavigator() {
@@ -113,15 +106,9 @@ function FavoriteFoldersScreen({
 }
 
 function FavoriteVideoDetailScreen({
-    navigation,
     route,
 }: NativeStackScreenProps<FavoritesStackParamList, 'VideoDetail'>) {
-    return (
-        <VideoDetailPage
-            target={route.params.target}
-            onBack={() => navigation.goBack()}
-        />
-    );
+    return <VideoDetailPage target={route.params.target} />;
 }
 
 function FavoritesNavigator() {
@@ -150,15 +137,9 @@ function WatchLaterListScreen({
 }
 
 function WatchLaterVideoDetailScreen({
-    navigation,
     route,
 }: NativeStackScreenProps<WatchLaterStackParamList, 'VideoDetail'>) {
-    return (
-        <VideoDetailPage
-            target={route.params.target}
-            onBack={() => navigation.goBack()}
-        />
-    );
+    return <VideoDetailPage target={route.params.target} />;
 }
 
 function WatchLaterNavigator() {
@@ -194,9 +175,14 @@ export default function MainTabNavigator() {
         <BlurTargetsContext.Provider value={blurTargets}>
             <Tab.Navigator
                 tabBar={(props) => {
-                    const routeName = props.state.routes[
-                        props.state.index
-                    ].name as keyof MainTabParamList;
+                    const activeRoute = props.state.routes[props.state.index];
+                    const nestedRouteName = getFocusedRouteNameFromRoute(activeRoute);
+
+                    if (nestedRouteName === 'VideoDetail') {
+                        return null;
+                    }
+
+                    const routeName = activeRoute.name as keyof MainTabParamList;
 
                     return (
                         <FloatingTabBar

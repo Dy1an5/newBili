@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import type { TextLayoutEvent } from 'react-native';
 import {
     ActivityIndicator,
-    BackHandler,
+    Image,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View,
 } from 'react-native';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getLoginCookie } from '@/auth/authCookie';
 import { colors } from '@/theme/colors';
@@ -27,7 +29,6 @@ import {
 
 type Props = {
     target: VideoPlaybackTarget;
-    onBack: () => void;
 };
 
 type PlayerProps = {
@@ -35,6 +36,13 @@ type PlayerProps = {
     title: string;
     onPlaybackError: () => void;
 };
+
+const COLLAPSED_TITLE_LINE_COUNT = 2;
+const DEFAULT_VIDEO_ASPECT_RATIO = 16 / 9;
+const NEAR_SQUARE_ASPECT_RATIO_MIN = 0.8;
+const NEAR_SQUARE_ASPECT_RATIO_MAX = 1.2;
+const NEAR_SQUARE_PLAYER_HEIGHT_RATIO = 0.42;
+const VERTICAL_PLAYER_HEIGHT_RATIO = 0.48;
 
 function isAbortError(error: unknown): boolean {
     return error instanceof Error && error.name === 'AbortError';
@@ -64,6 +72,35 @@ function formatDuration(durationSeconds: number): string {
     }
 
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function getPlayerHeight(
+    windowWidth: number,
+    windowHeight: number,
+    part: VideoPart | null,
+): number {
+    const width = part?.width;
+    const height = part?.height;
+    const nearSquareMaximumHeight =
+        windowHeight * NEAR_SQUARE_PLAYER_HEIGHT_RATIO;
+
+    if (width === undefined || height === undefined || width <= 0 || height <= 0) {
+        return windowWidth / DEFAULT_VIDEO_ASPECT_RATIO;
+    }
+
+    const aspectRatio = width / height;
+
+    if (aspectRatio < NEAR_SQUARE_ASPECT_RATIO_MIN) {
+        return windowHeight * VERTICAL_PLAYER_HEIGHT_RATIO;
+    }
+
+    const naturalHeight = windowWidth / aspectRatio;
+
+    if (aspectRatio <= NEAR_SQUARE_ASPECT_RATIO_MAX) {
+        return Math.min(naturalHeight, nearSquareMaximumHeight);
+    }
+
+    return naturalHeight;
 }
 
 function VideoPlayer({ playback, title, onPlaybackError }: PlayerProps) {
@@ -104,24 +141,21 @@ function VideoPlayer({ playback, title, onPlaybackError }: PlayerProps) {
     );
 }
 
-export default function VideoDetailPage({ target, onBack }: Props) {
-    const bottomTabBarHeight = useBottomTabBarHeight();
+export default function VideoDetailPage({ target }: Props) {
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const safeAreaInsets = useSafeAreaInsets();
     const [parts, setParts] = useState<VideoPart[]>([]);
     const [selectedCid, setSelectedCid] = useState<number | null>(null);
     const [playback, setPlayback] = useState<VideoPlayback | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
+    const [isTitleExpanded, setIsTitleExpanded] = useState(false);
+    const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
 
     useEffect(() => {
-        const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-            onBack();
-            return true;
-        });
-
-        return () => {
-            subscription.remove();
-        };
-    }, [onBack]);
+        setIsTitleExpanded(false);
+        setIsTitleOverflowing(false);
+    }, [target.title]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -205,55 +239,125 @@ export default function VideoDetailPage({ target, onBack }: Props) {
 
     const selectedPartIndex = parts.findIndex((part) => part.cid === selectedCid);
     const selectedPart = selectedPartIndex >= 0 ? parts[selectedPartIndex] : null;
+    const playerHeight = getPlayerHeight(windowWidth, windowHeight, selectedPart);
+
+    const handleTitleTextLayout = (event: TextLayoutEvent) => {
+        const nextIsOverflowing =
+            event.nativeEvent.lines.length > COLLAPSED_TITLE_LINE_COUNT;
+
+        setIsTitleOverflowing((currentIsOverflowing) =>
+            currentIsOverflowing === nextIsOverflowing
+                ? currentIsOverflowing
+                : nextIsOverflowing,
+        );
+    };
 
     return (
         <View style={styles.page}>
-            <View style={styles.header}>
-                <Pressable accessibilityRole='button' onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>返回</Text>
-                </Pressable>
-                <Text numberOfLines={1} style={styles.headerTitle}>视频详情</Text>
+            <View
+                style={[
+                    styles.playerContainer,
+                    { height: playerHeight },
+                ]}
+            >
+                {playback ? (
+                    <VideoPlayer
+                        playback={playback}
+                        title={target.title}
+                        onPlaybackError={() => {
+                            setPlayback(null);
+                            setErrorMessage('视频流播放失败,请重新加载');
+                        }}
+                    />
+                ) : errorMessage ? (
+                    <View style={styles.playerStatus}>
+                        <Text style={styles.errorText}>{errorMessage}</Text>
+                        <Pressable
+                            accessibilityRole='button'
+                            onPress={() => setReloadKey((value) => value + 1)}
+                            style={styles.retryButton}
+                        >
+                            <Text style={styles.retryButtonText}>重新加载</Text>
+                        </Pressable>
+                    </View>
+                ) : (
+                    <View style={styles.playerStatus}>
+                        <ActivityIndicator color={colors.primary} size='large' />
+                        <Text style={styles.loadingText}>正在获取播放地址...</Text>
+                    </View>
+                )}
             </View>
 
             <ScrollView
                 contentContainerStyle={[
-                    styles.content,
-                    { paddingBottom: bottomTabBarHeight + spacing.md },
+                    styles.detailsContent,
+                    { paddingBottom: safeAreaInsets.bottom + spacing.xl },
                 ]}
+                style={styles.detailsScroll}
             >
-                <View style={styles.playerContainer}>
-                    {playback ? (
-                        <VideoPlayer
-                            playback={playback}
-                            title={target.title}
-                            onPlaybackError={() => {
-                                setPlayback(null);
-                                setErrorMessage('视频流播放失败,请重新加载');
-                            }}
-                        />
-                    ) : errorMessage ? (
-                        <View style={styles.playerStatus}>
-                            <Text style={styles.errorText}>{errorMessage}</Text>
-                            <Pressable
-                                accessibilityRole='button'
-                                onPress={() => setReloadKey((value) => value + 1)}
-                                style={styles.retryButton}
-                            >
-                                <Text style={styles.retryButtonText}>重新加载</Text>
-                            </Pressable>
-                        </View>
-                    ) : (
-                        <View style={styles.playerStatus}>
-                            <ActivityIndicator color={colors.primary} size='large' />
-                            <Text style={styles.loadingText}>正在获取播放地址...</Text>
-                        </View>
-                    )}
-                </View>
+                <View style={styles.infoSection}>
+                    <View style={styles.titleContainer}>
+                        <Text
+                            ellipsizeMode='tail'
+                            numberOfLines={
+                                isTitleExpanded
+                                    ? undefined
+                                    : COLLAPSED_TITLE_LINE_COUNT
+                            }
+                            style={styles.title}
+                        >
+                            {target.title}
+                        </Text>
 
-                <Text style={styles.title}>{target.title}</Text>
-                {target.authorName ? (
-                    <Text style={styles.author}>{target.authorName}</Text>
-                ) : null}
+                        <Text
+                            accessibilityElementsHidden
+                            importantForAccessibility='no-hide-descendants'
+                            onTextLayout={handleTitleTextLayout}
+                            pointerEvents='none'
+                            style={[styles.title, styles.titleMeasurement]}
+                        >
+                            {target.title}
+                        </Text>
+
+                        {isTitleOverflowing ? (
+                            <Pressable
+                                accessibilityLabel={isTitleExpanded ? '收起视频标题' : '展开视频标题'}
+                                accessibilityRole='button'
+                                onPress={() => {
+                                    setIsTitleExpanded((value) => !value);
+                                }}
+                                style={({ pressed }) => [
+                                    styles.titleToggle,
+                                    pressed && styles.titleTogglePressed,
+                                ]}
+                            >
+                                <Text style={styles.titleToggleText}>
+                                    {isTitleExpanded ? '收起' : '展开'}
+                                </Text>
+                            </Pressable>
+                        ) : null}
+                    </View>
+
+                    {target.authorName ? (
+                        <View style={styles.authorRow}>
+                            {target.authorAvatarUrl ? (
+                                <Image
+                                    source={{ uri: target.authorAvatarUrl }}
+                                    style={styles.authorAvatar}
+                                />
+                            ) : (
+                                <View style={styles.authorAvatarPlaceholder}>
+                                    <Text style={styles.authorAvatarPlaceholderText}>
+                                        {target.authorName.slice(0, 1)}
+                                    </Text>
+                                </View>
+                            )}
+                            <Text numberOfLines={1} style={styles.authorName}>
+                                {target.authorName}
+                            </Text>
+                        </View>
+                    ) : null}
+                </View>
 
                 {parts.length > 1 ? (
                     <View style={styles.partsSection}>
@@ -327,34 +431,17 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
-    header: {
-        minHeight: 52,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.md,
+    detailsScroll: {
+        flex: 1,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.divider,
         backgroundColor: colors.surface,
     },
-    backButton: {
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.sm,
-    },
-    backButtonText: {
-        color: colors.primary,
-        fontSize: 16,
-    },
-    headerTitle: {
-        flex: 1,
-        marginHorizontal: spacing.md,
-        color: colors.textPrimary,
-        fontSize: 17,
-        fontWeight: '600',
-    },
-    content: {
+    detailsContent: {
         paddingBottom: spacing.xl,
     },
     playerContainer: {
         width: '100%',
-        aspectRatio: 16 / 9,
         backgroundColor: colors.background,
     },
     player: {
@@ -389,22 +476,80 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
+    infoSection: {
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.md,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.divider,
+    },
+    titleContainer: {
+        position: 'relative',
+    },
     title: {
-        marginTop: spacing.lg,
-        marginHorizontal: spacing.lg,
         color: colors.textPrimary,
         fontSize: 20,
         lineHeight: 28,
         fontWeight: '700',
     },
-    author: {
+    titleMeasurement: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        left: 0,
+        opacity: 0,
+    },
+    titleToggle: {
+        alignSelf: 'flex-end',
+        marginTop: spacing.xs,
+        paddingHorizontal: spacing.xs,
+        paddingVertical: spacing.xs,
+    },
+    titleTogglePressed: {
+        opacity: 0.68,
+    },
+    titleToggleText: {
+        color: colors.primary,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    authorRow: {
         marginTop: spacing.md,
-        marginHorizontal: spacing.lg,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    authorAvatar: {
+        width: 38,
+        height: 38,
+        marginRight: spacing.sm,
+        borderRadius: radius.full,
+        backgroundColor: colors.surfaceRaised,
+    },
+    authorAvatarPlaceholder: {
+        width: 38,
+        height: 38,
+        marginRight: spacing.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: radius.full,
+        backgroundColor: colors.surfaceRaised,
+    },
+    authorAvatarPlaceholderText: {
+        color: colors.textSecondary,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    authorName: {
+        flex: 1,
         color: colors.textSecondary,
         fontSize: 15,
+        fontWeight: '600',
     },
     partsSection: {
-        marginTop: spacing.xl,
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.lg,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.divider,
     },
     partsHeader: {
         flexDirection: 'row',

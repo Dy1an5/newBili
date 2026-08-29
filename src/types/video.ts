@@ -27,4 +27,5 @@ export type VideoPlaybackTarget = {
     initialCid?: number;
     title: string;
     authorName?: string;
+    authorAvatarUrl?: string;
 };

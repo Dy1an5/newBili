@@ -199,7 +199,7 @@ VideoPlaybackTarget
 - `VideoWithDuration`: 在 `VideoSummary` 上增加秒数形式的 `durationSeconds`。
 - `FavoriteVideo`: 增加可选 `aid` 和 `favoritedAt`。
 - `WatchLaterVideo`: 增加可选 `aid`、可选 `cid` 和 `progressSeconds`。
-- `VideoPlaybackTarget`: 只包含 `bvid`、可选 `initialCid`、`title` 和可选 `authorName`。
+- `VideoPlaybackTarget`: 只包含 `bvid`、可选 `initialCid`、`title`、可选 `authorName` 和可选 `authorAvatarUrl`。
 
 `src/components/video/VideoListCard.tsx` 使用通用 `VideoWithDuration`,供收藏和稍后再看页面复用。卡片只处理标题、封面、UP主和时长等共享展示;收藏时间或发布时间由各页面通过可选 `metaText` 传入。动态页面分别使用 `src/components/following/FollowingVideoCard.tsx` 和 `src/components/following/FollowingPictureCard.tsx`。
 
@@ -209,13 +209,15 @@ API 原始字段只在各模块解析函数中读取,解析后的字段使用本
 
 1. 三个列表页点击卡片时调用 `createVideoPlaybackTarget()`,只把 `VideoPlaybackTarget` 交给导航和 `VideoDetailPage`。
 2. 动态和收藏不提供 `initialCid`;稍后再看在有效 `cid` 存在时把它作为 `initialCid`。
-3. `fetchVideoParts()` 使用 `target.bvid` 请求 `x/web-interface/view`,读取视频分P列表和 `cid`。
+3. `fetchVideoParts()` 使用 `target.bvid` 请求 `x/web-interface/view`,读取视频分P列表、`cid` 和画面尺寸。
 4. 如果 `initialCid` 能在分P列表中找到,页面优先选中对应分P;否则默认选中第一P。用户切换分P后重新请求该P的播放地址。
 5. `fetchVideoPlayback()` 使用 `bvid + cid` 请求 `x/player/wbi/playurl`。
 6. 播放地址请求通过WBI签名,当前请求单文件渐进式视频流;接口只返回DASH且没有可用单文件地址时显示错误。
 7. `expo-video` 的 `useVideoPlayer` 创建播放器并自动播放,`VideoView` 提供原生控制和横屏全屏。
 8. 播放源携带必要的 `Referer` 和 `User-Agent`,不把 Cookie 传给媒体地址。
-9. 页面支持加载状态、播放错误、重新加载、分P选择、应用内返回和Android硬件返回。
+9. 详情页不显示顶部标题栏和底部主导航,返回交给 Native Stack 处理Android系统返回手势和返回键。
+10. 播放器按当前分P画面比例分级调整高度:横屏按原比例、接近方形时最多占屏幕高度的42%、竖屏固定占48%;标题默认显示2行并可展开,UP主区域展示头像。
+11. 播放器固定在页面上方,标题、UP主和分P选择位于有分隔线的独立纵向滚动区域。
 
 ### 9. WBI签名逻辑
 

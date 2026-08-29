@@ -9,5 +9,6 @@ export function createVideoPlaybackTarget(
         initialCid,
         title: video.title,
         authorName: video.author.name,
+        authorAvatarUrl: video.author.avatarUrl,
     };
 }

@@ -24,6 +24,8 @@ export type VideoPart = {
     page: number;
     title: string;
     durationSeconds: number;
+    width?: number;
+    height?: number;
 };
 
 export class VideoPlaybackError extends Error {
@@ -66,6 +68,22 @@ function readNumber(value: unknown): number | null {
     }
 
     return null;
+}
+
+function readVideoDimension(value: unknown): Pick<VideoPart, 'width' | 'height'> {
+    const dimension = asRecord(value);
+    let width = readNumber(dimension?.width);
+    let height = readNumber(dimension?.height);
+
+    if (width === null || width <= 0 || height === null || height <= 0) {
+        return {};
+    }
+
+    if (readNumber(dimension?.rotate) === 1) {
+        [width, height] = [height, width];
+    }
+
+    return { width, height };
 }
 
 function normalizeUrl(value: unknown): string | null {
@@ -150,6 +168,7 @@ export async function fetchVideoParts(
         signal,
     );
     const data = asRecord(body.data);
+    const videoDimension = readVideoDimension(data?.dimension);
     const pages = Array.isArray(data?.pages) ? data.pages : [];
     const videoParts = pages.flatMap((value, index): VideoPart[] => {
         const page = asRecord(value);
@@ -162,12 +181,18 @@ export async function fetchVideoParts(
         const pageNumber = readNumber(page?.page) ?? index + 1;
         const title = readString(page?.part) ?? `P${pageNumber}`;
         const durationSeconds = readNumber(page?.duration) ?? 0;
+        const partDimension = readVideoDimension(page?.dimension);
 
         return [{
             cid,
             page: pageNumber,
             title,
             durationSeconds,
+            ...(
+                partDimension.width !== undefined
+                    ? partDimension
+                    : videoDimension
+            ),
         }];
     });
 
@@ -186,6 +211,7 @@ export async function fetchVideoParts(
         page: 1,
         title: '正片',
         durationSeconds: readNumber(data?.duration) ?? 0,
+        ...videoDimension,
     }];
 }
 
