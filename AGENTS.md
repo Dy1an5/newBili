@@ -155,16 +155,17 @@ src/page
 
 ### 6. 稍后再看页面
 
-1. `WatchLaterPage` 打开后调用 `fetchWatchLaterVideoPage(1, cookie, signal)`。
-2. 请求使用 `x/v2/history/toview/web`,参数包含页码、每页20条、观看筛选、排序和 `web_location`。
+1. `WatchLaterPage` 打开后调用 `fetchWatchLaterVideoPage(1, cookie, options, signal)`。
+2. 请求使用 `x/v2/history/toview/web`,参数包含页码、每页20条、排序和 `web_location`;当前固定请求全部观看状态。
 3. 参数通过 `createWbiSignedQuery()` 添加 `wts` 和 `w_rid` 后再发送GET请求。
 4. 请求只从完整 Cookie 中提取并携带 `SESSDATA`。
 5. `parseWatchLaterVideo()` 把每条原始数据转换成 `WatchLaterVideo`,统一 `pic`、`owner`、`stat`、`pubdate` 等接口字段。
 6. `WatchLaterVideo` 主要保存 `bvid`、可选的 `aid` 和 `cid`、`durationSeconds` 和 `progressSeconds`;缺少有效 `cid` 的视频不会仅因此被过滤。
-7. 页面与收藏视频共用 `VideoListCard`,根据进度显示“未观看”、“已看完”或“已观看至mm:ss”。
-8. 页面支持首次加载、错误重试、空列表、下拉刷新、触底分页、按 `bvid` 去重、总数显示和底部加载状态。
-9. 刷新会取消旧请求;页面卸载时也会取消当前请求。
-10. 点击视频时通过 `createVideoPlaybackTarget(video, video.cid)` 把可用 `cid` 转换成 `initialCid`,再由 `WatchLaterStack` 打开统一的 `VideoDetailPage`。
+7. 页面与收藏视频共用 `VideoListCard`,通过 `metaText` 显示视频发布时间。
+8. 页面顶部使用与动态分组、收藏夹选择条等高的 `WatchLaterToolbar`,左侧直接显示“稍后再看(数量)”,右侧通过分段按钮切换“最近添加/最早添加”;排序会应用到首次请求与后续分页。
+9. 页面支持首次加载、错误重试、空列表、下拉刷新、触底分页、按 `bvid` 去重、总数显示和底部加载状态。
+10. 切换排序或刷新时会取消旧请求;页面卸载时也会取消当前请求。
+11. 点击视频时通过 `createVideoPlaybackTarget(video, video.cid)` 把可用 `cid` 转换成 `initialCid`,再由 `WatchLaterStack` 打开统一的 `VideoDetailPage`。
 
 ### 7. 视频基础类型与共享卡片
 
@@ -200,7 +201,7 @@ VideoPlaybackTarget
 - `WatchLaterVideo`: 增加可选 `aid`、可选 `cid` 和 `progressSeconds`。
 - `VideoPlaybackTarget`: 只包含 `bvid`、可选 `initialCid`、`title` 和可选 `authorName`。
 
-`src/components/video/VideoListCard.tsx` 使用通用 `VideoWithDuration`,供收藏和稍后再看页面复用。卡片只处理标题、封面、UP主和时长等共享展示;收藏时间或观看进度由各页面通过可选 `metaText` 传入。动态页面分别使用 `src/components/following/FollowingVideoCard.tsx` 和 `src/components/following/FollowingPictureCard.tsx`。
+`src/components/video/VideoListCard.tsx` 使用通用 `VideoWithDuration`,供收藏和稍后再看页面复用。卡片只处理标题、封面、UP主和时长等共享展示;收藏时间或发布时间由各页面通过可选 `metaText` 传入。动态页面分别使用 `src/components/following/FollowingVideoCard.tsx` 和 `src/components/following/FollowingPictureCard.tsx`。
 
 API 原始字段只在各模块解析函数中读取,解析后的字段使用本地 `camelCase` 语义名称,不添加 `_local` 后缀。
 

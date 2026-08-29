@@ -21,6 +21,10 @@ export type WatchLaterVideoPage = {
     hasMore: boolean;
 };
 
+export type WatchLaterQueryOptions = {
+    ascending: boolean;
+};
+
 type JsonRecord = Record<string, unknown>;
 
 export class WatchLaterRequestError extends Error {
@@ -201,6 +205,7 @@ async function requestBilibili(
 async function createWatchLaterSignedQuery(
     page: number,
     sessdata: string,
+    options: WatchLaterQueryOptions,
     signal?: AbortSignal,
 ): Promise<string> {
     try {
@@ -210,7 +215,7 @@ async function createWatchLaterSignedQuery(
                 ps: PAGE_SIZE,
                 viewed: 0,
                 key: '',
-                asc: false,
+                asc: options.ascending,
                 need_split: true,
                 web_location: 333.881,
             },
@@ -232,6 +237,7 @@ async function createWatchLaterSignedQuery(
 export async function fetchWatchLaterVideoPage(
     page: number,
     cookie: string,
+    options: WatchLaterQueryOptions,
     signal?: AbortSignal,
 ): Promise<WatchLaterVideoPage> {
     if (!Number.isInteger(page) || page < 1) {
@@ -243,6 +249,7 @@ export async function fetchWatchLaterVideoPage(
     const signedQuery = await createWatchLaterSignedQuery(
         page,
         sessdata,
+        options,
         signal,
     );
 

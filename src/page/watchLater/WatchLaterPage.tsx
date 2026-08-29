@@ -11,6 +11,7 @@ import {
 
 import { getLoginCookie } from '@/auth/authCookie';
 import VideoListCard from '@/components/video/VideoListCard';
+import WatchLaterToolbar from '@/components/watchLater/WatchLaterToolbar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -38,32 +39,14 @@ function getErrorMessage(error: unknown): string {
     return '加载稍后再看失败,请稍后重试';
 }
 
-function formatDuration(durationSeconds: number): string {
-    const totalSeconds = Math.max(0, Math.floor(durationSeconds));
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-        return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+function formatPublishedTime(timestamp: number): string {
+    if (timestamp <= 0) {
+        return '';
     }
 
-    return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
+    const date = new Date(timestamp * 1000);
 
-function formatProgressText(video: WatchLaterVideo): string {
-    if (video.progressSeconds <= 0) {
-        return '未观看';
-    }
-
-    if (
-        video.durationSeconds > 0 &&
-        video.progressSeconds >= video.durationSeconds
-    ) {
-        return '已看完';
-    }
-
-    return `已观看至${formatDuration(video.progressSeconds)}`;
+    return `发布于${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 export default function WatchLaterPage({
@@ -71,6 +54,7 @@ export default function WatchLaterPage({
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [videos, setVideos] = useState<WatchLaterVideo[]>([]);
+    const [ascending, setAscending] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -119,6 +103,9 @@ export default function WatchLaterPage({
             const nextPage = await fetchWatchLaterVideoPage(
                 targetPage,
                 cookie,
+                {
+                    ascending,
+                },
                 controller.signal,
             );
 
@@ -153,7 +140,7 @@ export default function WatchLaterPage({
                 requestControllerRef.current = null;
             }
         }
-    }, []);
+    }, [ascending]);
 
     useEffect(() => {
         void loadVideoPage(1, false);
@@ -164,10 +151,37 @@ export default function WatchLaterPage({
         };
     }, [loadVideoPage]);
 
+    const resetQuery = useCallback(() => {
+        requestControllerRef.current?.abort();
+        setVideos([]);
+        setCurrentPage(0);
+        setHasMore(true);
+        setIsLoading(true);
+        setIsLoadingMore(false);
+        setErrorMessage(null);
+    }, []);
+
+    const selectSort = useCallback((nextAscending: boolean) => {
+        if (nextAscending === ascending) {
+            return;
+        }
+
+        resetQuery();
+        setAscending(nextAscending);
+    }, [ascending, resetQuery]);
+
+    const toolbar = (
+        <WatchLaterToolbar
+            ascending={ascending}
+            onSortChange={selectSort}
+            totalCount={totalCount}
+        />
+    );
+
     if (isLoading && videos.length === 0) {
         return (
             <View style={styles.page}>
-                <PageHeader totalCount={totalCount} />
+                {toolbar}
                 <View style={styles.centered}>
                     <ActivityIndicator color={colors.primary} size='large' />
                     <Text style={styles.statusText}>正在加载稍后再看...</Text>
@@ -179,7 +193,7 @@ export default function WatchLaterPage({
     if (errorMessage && videos.length === 0) {
         return (
             <View style={styles.page}>
-                <PageHeader totalCount={totalCount} />
+                {toolbar}
                 <View style={styles.centered}>
                     <Text style={styles.errorText}>{errorMessage}</Text>
                     <Pressable
@@ -196,7 +210,7 @@ export default function WatchLaterPage({
 
     return (
         <View style={styles.page}>
-            <PageHeader totalCount={totalCount} />
+            {toolbar}
             <FlatList
                 data={videos}
                 keyExtractor={(video) => video.bvid}
@@ -240,7 +254,7 @@ export default function WatchLaterPage({
                 renderItem={({ item }) => (
                     <VideoListCard
                         video={item}
-                        metaText={formatProgressText(item)}
+                        metaText={formatPublishedTime(item.publishedAt)}
                         onPress={() => onVideoPress(
                             createVideoPlaybackTarget(item, item.cid),
                         )}
@@ -251,37 +265,10 @@ export default function WatchLaterPage({
     );
 }
 
-function PageHeader({ totalCount }: { totalCount: number }) {
-    return (
-        <View style={styles.header}>
-            <Text style={styles.title}>稍后再看</Text>
-            <Text style={styles.summary}>共{totalCount}个视频</Text>
-        </View>
-    );
-}
-
 const styles = StyleSheet.create({
     page: {
         flex: 1,
         backgroundColor: colors.background,
-    },
-    header: {
-        paddingHorizontal: spacing.lg,
-        paddingTop: spacing.lg,
-        paddingBottom: spacing.md,
-        backgroundColor: colors.surface,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.divider,
-    },
-    title: {
-        color: colors.textPrimary,
-        fontSize: 20,
-        fontWeight: '600',
-    },
-    summary: {
-        marginTop: spacing.xs,
-        color: colors.textMuted,
-        fontSize: 12,
     },
     centered: {
         flex: 1,
