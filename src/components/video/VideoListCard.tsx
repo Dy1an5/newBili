@@ -78,16 +78,10 @@ const styles = StyleSheet.create({
         marginHorizontal: spacing.md,
         marginBottom: spacing.md,
         padding: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.outline,
         borderRadius: radius.md,
-        backgroundColor: colors.surface,
-        elevation: 1,
-        shadowColor: colors.shadow,
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: spacing.xs,
+        backgroundColor: colors.surfaceRaised,
     },
     videoCardPressed: {
         opacity: 0.8,
@@ -113,7 +107,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.68)',
     },
     durationText: {
-        color: '#fff',
+        color: colors.textOnMedia,
         fontSize: 11,
         fontWeight: '600',
     },

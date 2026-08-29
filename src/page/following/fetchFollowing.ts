@@ -2,7 +2,6 @@ import type {
     FollowingGroup,
     FollowingItem,
     FollowingPicture,
-    FollowingText,
     FollowingVideo,
 } from '@/types/following';
 
@@ -406,22 +405,6 @@ function parseFollowingPicture(value: unknown): FollowingPicture | null {
     };
 }
 
-function parseFollowingText(value: unknown): FollowingText | null {
-    const opus = parseFollowingOpusData(value);
-
-    if (!opus || opus.contentText.length === 0) {
-        return null;
-    }
-
-    return {
-        kind: 'text',
-        dynamicId: opus.dynamicId,
-        contentText: opus.contentText,
-        author: opus.author,
-        publishedAt: opus.publishedAt,
-    };
-}
-
 function parseFollowingItem(value: unknown): FollowingItem | null {
     const item = asRecord(value);
     const modules = asRecord(item?.modules);
@@ -434,10 +417,6 @@ function parseFollowingItem(value: unknown): FollowingItem | null {
 
     if (item?.type === 'DYNAMIC_TYPE_DRAW' && major?.type === 'MAJOR_TYPE_OPUS') {
         return parseFollowingPicture(value);
-    }
-
-    if (item?.type === 'DYNAMIC_TYPE_WORD' && major?.type === 'MAJOR_TYPE_OPUS') {
-        return parseFollowingText(value);
     }
 
     return null;

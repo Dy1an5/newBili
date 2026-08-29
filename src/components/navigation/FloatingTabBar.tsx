@@ -100,11 +100,10 @@ export default function FloatingTabBar({
                         blurMethod='dimezisBlurViewSdk31Plus'
                         blurReductionFactor={3}
                         blurTarget={blurTarget}
-                        intensity={68}
+                        intensity={36}
                         style={styles.tabGroupGlass}
-                        tint='systemThinMaterialLight'
+                        tint='systemThinMaterialDark'
                     >
-                        <View pointerEvents='none' style={styles.glassHighlight} />
                         {state.routes.map((route, index) => {
                             const item = TAB_ITEMS[route.name];
 
@@ -174,11 +173,10 @@ export default function FloatingTabBar({
                         blurMethod='dimezisBlurViewSdk31Plus'
                         blurReductionFactor={3}
                         blurTarget={blurTarget}
-                        intensity={68}
+                        intensity={36}
                         style={styles.placeholderGlass}
-                        tint='systemThinMaterialLight'
+                        tint='systemThinMaterialDark'
                     >
-                        <View pointerEvents='none' style={styles.glassHighlight} />
                         <Pressable
                             accessibilityLabel='预留功能'
                             accessibilityRole='button'
@@ -202,20 +200,20 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         paddingTop: spacing.sm,
-        paddingHorizontal: spacing.md,
+        paddingHorizontal: spacing.lg,
         backgroundColor: 'transparent',
     },
     row: {
-        height: 64,
+        height: 56,
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
     },
     tabGroupShadow: {
         flex: 1,
-        height: 64,
+        height: 56,
         borderRadius: radius.full,
-        backgroundColor: 'rgba(255, 255, 255, 0.42)',
+        backgroundColor: 'rgba(0, 0, 0, 0.12)',
         elevation: 10,
         shadowColor: colors.shadow,
         shadowOffset: {
@@ -231,24 +229,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: spacing.xs,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.88)',
+        borderColor: 'rgba(255, 255, 255, 0.26)',
         borderRadius: radius.full,
         overflow: 'hidden',
-        backgroundColor: 'rgba(255, 255, 255, 0.28)',
-    },
-    glassHighlight: {
-        position: 'absolute',
-        top: 1,
-        right: spacing.lg,
-        left: spacing.lg,
-        height: 1,
-        borderRadius: radius.full,
-        backgroundColor: 'rgba(255, 255, 255, 0.26)',
+        backgroundColor: 'rgba(255, 255, 255, 0.07)',
     },
     tabItem: {
         flex: 1,
         minWidth: 0,
-        height: 56,
+        height: 48,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 3,
@@ -256,24 +245,24 @@ const styles = StyleSheet.create({
     },
     tabItemSelected: {
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.82)',
-        backgroundColor: 'rgba(213, 245, 255, 0.76)',
+        borderColor: 'rgba(92, 216, 255, 0.48)',
+        backgroundColor: 'rgba(0, 174, 236, 0.18)',
     },
     pressed: {
         opacity: 0.7,
     },
     tabLabel: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '500',
     },
     tabLabelSelected: {
         fontWeight: '700',
     },
     placeholderShadow: {
-        width: 64,
-        height: 64,
+        width: 56,
+        height: 56,
         borderRadius: radius.full,
-        backgroundColor: 'rgba(255, 255, 255, 0.42)',
+        backgroundColor: 'rgba(0, 0, 0, 0.12)',
         elevation: 10,
         shadowColor: colors.shadow,
         shadowOffset: {
@@ -286,10 +275,10 @@ const styles = StyleSheet.create({
     placeholderGlass: {
         flex: 1,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.88)',
+        borderColor: 'rgba(255, 255, 255, 0.26)',
         borderRadius: radius.full,
         overflow: 'hidden',
-        backgroundColor: 'rgba(255, 255, 255, 0.28)',
+        backgroundColor: 'rgba(255, 255, 255, 0.07)',
     },
     placeholderButton: {
         flex: 1,
@@ -297,8 +286,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     dynamicIcon: {
-        width: 22,
-        height: 18,
+        width: 20,
+        height: 16,
         justifyContent: 'space-between',
     },
     dynamicIconBar: {
@@ -307,8 +296,8 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
     },
     favoriteIcon: {
-        width: 17,
-        height: 20,
+        width: 16,
+        height: 18,
         borderWidth: 2,
         borderRadius: 3,
     },
@@ -327,8 +316,8 @@ const styles = StyleSheet.create({
         transform: [{ rotate: '180deg' }],
     },
     watchLaterIcon: {
-        width: 21,
-        height: 21,
+        width: 19,
+        height: 19,
         borderWidth: 2,
         borderRadius: radius.full,
     },
@@ -351,12 +340,12 @@ const styles = StyleSheet.create({
         transformOrigin: 'left center',
     },
     placeholderIcon: {
-        width: 28,
-        height: 28,
+        width: 25,
+        height: 25,
     },
     placeholderIconCircle: {
-        width: 21,
-        height: 21,
+        width: 19,
+        height: 19,
         borderWidth: 3,
         borderColor: colors.textSecondary,
         borderRadius: radius.full,

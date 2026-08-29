@@ -80,19 +80,11 @@ const styles = StyleSheet.create({
 
         padding: spacing.md,
 
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceRaised,
 
+        borderWidth: 1,
+        borderColor: colors.outline,
         borderRadius: radius.lg,
-
-        shadowColor: colors.shadow,
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: spacing.sm,
-
-        elevation: 2,
     },
 
     cardPressed: {

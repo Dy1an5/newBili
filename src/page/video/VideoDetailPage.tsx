@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     playerContainer: {
         width: '100%',
         aspectRatio: 16 / 9,
-        backgroundColor: '#000',
+        backgroundColor: colors.background,
     },
     player: {
         width: '100%',
@@ -369,11 +369,11 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: spacing.sm,
-        color: '#fff',
+        color: colors.textOnMedia,
         fontSize: 14,
     },
     errorText: {
-        color: '#fff',
+        color: colors.textOnMedia,
         fontSize: 14,
         textAlign: 'center',
     },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     retryButtonText: {
-        color: '#fff',
+        color: colors.textOnPrimary,
         fontSize: 14,
         fontWeight: '600',
     },
@@ -435,13 +435,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderWidth: 1,
-        borderColor: colors.divider,
+        borderColor: colors.outline,
         borderRadius: radius.sm,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceRaised,
     },
     partButtonSelected: {
         borderColor: colors.primary,
-        backgroundColor: '#EAF8FE',
+        backgroundColor: colors.primarySoft,
     },
     partButtonPressed: {
         opacity: 0.76,

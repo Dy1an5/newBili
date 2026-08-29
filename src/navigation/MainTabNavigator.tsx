@@ -13,11 +13,9 @@ import { StyleSheet, type View } from 'react-native';
 
 import FloatingTabBar from '@/components/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
-import FavoriteVideosPage from '@/page/favorites/FavoriteVideosPage';
 import FollowingPage from '@/page/following/FollowingPage';
 import VideoDetailPage from '@/page/video/VideoDetailPage';
 import WatchLaterPage from '@/page/watchLater/WatchLaterPage';
-import type { FavoriteFolder } from '@/types/favorites';
 import type { VideoPlaybackTarget } from '@/types/video';
 
 type HomeStackParamList = {
@@ -37,9 +35,6 @@ type BlurTargets = Record<keyof MainTabParamList, RefObject<View | null>>;
 
 type FavoritesStackParamList = {
     FavoriteFolders: undefined;
-    FavoriteVideos: {
-        folder: FavoriteFolder;
-    };
     VideoDetail: {
         target: VideoPlaybackTarget;
     };
@@ -112,21 +107,6 @@ function FavoriteFoldersScreen({
 }: NativeStackScreenProps<FavoritesStackParamList, 'FavoriteFolders'>) {
     return (
         <FavoriteFoldersPage
-            onFolderPress={(folder) => {
-                navigation.navigate('FavoriteVideos', { folder });
-            }}
-        />
-    );
-}
-
-function FavoriteVideosScreen({
-    navigation,
-    route,
-}: NativeStackScreenProps<FavoritesStackParamList, 'FavoriteVideos'>) {
-    return (
-        <FavoriteVideosPage
-            folder={route.params.folder}
-            onBack={() => navigation.goBack()}
             onVideoPress={(target) => navigation.navigate('VideoDetail', { target })}
         />
     );
@@ -151,7 +131,6 @@ function FavoritesNavigator() {
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
             <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
                 <FavoritesStack.Screen name='FavoriteFolders' component={FavoriteFoldersScreen} />
-                <FavoritesStack.Screen name='FavoriteVideos' component={FavoriteVideosScreen} />
                 <FavoritesStack.Screen name='VideoDetail' component={FavoriteVideoDetailScreen} />
             </FavoritesStack.Navigator>
         </BlurTargetView>

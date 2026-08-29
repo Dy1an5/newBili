@@ -1,15 +1,19 @@
 export const colors = {
-    background: '#F5F6F8',
-    surface: '#FFFFFF',
+    background: '#000000',
+    surface: '#000000',
+    surfaceRaised: '#17191D',
 
-    textPrimary: '#18191C',
-    textSecondary: '#61666D',
-    textMuted: '#9499A0',
+    textPrimary: '#F1F2F3',
+    textSecondary: '#C9CCD0',
+    textMuted: '#8A8D93',
+    textOnPrimary: '#FFFFFF',
+    textOnMedia: '#FFFFFF',
 
-    divider: '#E3E5E7',
+    divider: '#24272D',
+    outline: '#383C44',
 
     primary: '#00AEEC',
-    primarySoft: '#E5F7FE',
+    primarySoft: '#082A38',
 
     shadow: '#000000',
 } as const;

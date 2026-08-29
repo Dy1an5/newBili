@@ -87,7 +87,7 @@ export default function FollowingGroupSelector({
 
                             {isMemberLoading ? (
                                 <ActivityIndicator
-                                    color={isSelected ? '#fff' : colors.primary}
+                                    color={colors.primary}
                                     size='small'
                                     style={styles.optionLoading}
                                 />
@@ -138,14 +138,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        borderColor: colors.divider,
+        borderColor: colors.outline,
         borderWidth: 1,
         borderRadius: radius.full,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceRaised,
     },
     selectedOption: {
         borderColor: colors.primary,
-        backgroundColor: colors.primary,
+        backgroundColor: colors.primarySoft,
     },
     pressedOption: {
         opacity: 0.75,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     selectedOptionText: {
-        color: '#fff',
+        color: colors.primary,
     },
     optionLoading: {
         marginLeft: spacing.xs,

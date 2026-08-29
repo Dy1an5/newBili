@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
         opacity: 0.75,
     },
     loginButtonText: {
-        color: colors.surface,
+        color: colors.textOnPrimary,
         fontSize: 16,
         fontWeight: '600',
     },

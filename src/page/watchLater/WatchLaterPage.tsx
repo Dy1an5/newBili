@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     retryButtonText: {
-        color: '#fff',
+        color: colors.textOnPrimary,
         fontSize: 14,
         fontWeight: '600',
     },

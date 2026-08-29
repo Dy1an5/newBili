@@ -303,19 +303,11 @@ const styles = StyleSheet.create({
 
         padding: spacing.md,
 
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceRaised,
 
+        borderWidth: 1,
+        borderColor: colors.outline,
         borderRadius: radius.lg,
-
-        shadowColor: colors.shadow,
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: spacing.sm,
-
-        elevation: 2,
     },
 
     contentContainer: {
@@ -432,7 +424,7 @@ const styles = StyleSheet.create({
 
     previewPage: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: colors.background,
     },
 
     previewList: {
@@ -468,7 +460,7 @@ const styles = StyleSheet.create({
     },
 
     previewCloseText: {
-        color: '#fff',
+        color: colors.textOnMedia,
         fontSize: 14,
         fontWeight: '600',
     },
@@ -487,7 +479,7 @@ const styles = StyleSheet.create({
     },
 
     previewCounterText: {
-        color: '#fff',
+        color: colors.textOnMedia,
         fontSize: 13,
         fontWeight: '600',
     },

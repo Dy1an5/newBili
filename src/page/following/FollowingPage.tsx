@@ -634,7 +634,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
             <View style={styles.emptyMessage}>
                 <Text style={styles.statusText}>
                     {selectedTagId === null
-                        ? '暂时没有识别到视频、图文或文字动态'
+                        ? '暂时没有识别到视频或图文动态'
                         : '该分组暂无可展示动态'}
                 </Text>
                 {selectedTagId === null && diagnostics ? (
@@ -718,13 +718,13 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 renderItem={({ item }) => {
                     const publishedTimeText = formatPublishedTime(item.publishedAt);
 
-                    if (item.kind === 'picture' || item.kind === 'text') {
+                    if (item.kind === 'picture') {
                         return (
                             <FollowingPictureCard
                                 authorName={item.author.name}
                                 avatarUrl={item.author.avatarUrl}
                                 contentText={item.contentText}
-                                imageUrls={item.kind === 'picture' ? item.imageUrls : []}
+                                imageUrls={item.imageUrls}
                                 publishedTimeText={publishedTimeText}
                             />
                         );
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     retryButtonText: {
-        color: '#fff',
+        color: colors.textOnPrimary,
         fontSize: 14,
         fontWeight: '600',
     },

@@ -22,12 +22,4 @@ export type FollowingPicture = {
     publishedAt: number;
 };
 
-export type FollowingText = {
-    kind: 'text';
-    dynamicId: string;
-    contentText: string;
-    author: VideoAuthor;
-    publishedAt: number;
-};
-
-export type FollowingItem = FollowingVideo | FollowingPicture | FollowingText;
+export type FollowingItem = FollowingVideo | FollowingPicture;

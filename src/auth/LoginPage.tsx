@@ -9,6 +9,7 @@ import {
 import CookieManager from '@preeternal/react-native-cookie-manager';
 import { WebView } from 'react-native-webview';
 
+import { colors } from '@/theme/colors';
 import { hasLoginCookie, saveLoginCookie } from './authCookie';
 
 const BILIBILI_LOGIN_URL = 'https://passport.bilibili.com/login';
@@ -86,7 +87,7 @@ export default function LoginPage({
                 startInLoadingState
                 renderLoading={() => (
                     <View style={styles.loading}>
-                        <ActivityIndicator size='large' />
+                        <ActivityIndicator color={colors.primary} size='large' />
                     </View>
                 )}
                 onLoad={() => {
@@ -103,7 +104,7 @@ export default function LoginPage({
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.background,
     },
     header: {
         minHeight: 52,
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 12,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#ddd',
+        borderBottomColor: colors.divider,
     },
     backButton: {
         paddingHorizontal: 8,
@@ -119,21 +120,22 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     backButtonText: {
-        color: '#1677ff',
+        color: colors.primary,
         fontSize: 16,
     },
     message: {
         flex: 1,
-        color: '#333',
+        color: colors.textPrimary,
         fontSize: 14,
     },
     webView: {
         flex: 1,
+        backgroundColor: colors.background,
     },
     loading: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: colors.background,
     },
 });

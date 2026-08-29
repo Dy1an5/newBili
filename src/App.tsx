@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import {
     SafeAreaProvider,
     SafeAreaView,
@@ -10,6 +10,7 @@ import LoginPage from './auth/LoginPage';
 import { getLoginCookie } from './auth/authCookie';
 import MainPage from './main/MainPage';
 import MainTabNavigator from './navigation/MainTabNavigator';
+import { colors } from './theme/colors';
 
 type AppScreen = 'checking' | 'main' | 'login' | 'authenticated';
 
@@ -45,7 +46,7 @@ export default function App() {
     if (screen === 'checking') {
         content = (
             <View style={styles.loadingPage}>
-                <ActivityIndicator size='large' />
+                <ActivityIndicator color={colors.primary} size='large' />
             </View>
         );
     } else if (screen === 'main') {
@@ -63,7 +64,19 @@ export default function App() {
         );
     } else {
         content = (
-            <NavigationContainer>
+            <NavigationContainer
+                theme={{
+                    ...DarkTheme,
+                    colors: {
+                        ...DarkTheme.colors,
+                        primary: colors.primary,
+                        background: colors.background,
+                        card: colors.surface,
+                        text: colors.textPrimary,
+                        border: colors.divider,
+                    },
+                }}
+            >
                 <MainTabNavigator />
             </NavigationContainer>
         );
@@ -71,7 +84,7 @@ export default function App() {
 
     return (
         <SafeAreaProvider>
-            <StatusBar barStyle='dark-content' backgroundColor='#fff' />
+            <StatusBar barStyle='light-content' backgroundColor={colors.background} />
             <SafeAreaView edges={['top']} style={styles.safeArea}>
                 {content}
             </SafeAreaView>
@@ -82,12 +95,12 @@ export default function App() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: colors.background,
     },
     loadingPage: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: colors.background,
     },
 });
