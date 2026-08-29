@@ -7,9 +7,14 @@ import {
     StyleSheet,
     Text,
     View,
+    type LayoutChangeEvent,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
+import AppLoadingIndicator from '@/components/common/AppLoadingIndicator';
+import AppRefreshControl from '@/components/common/AppRefreshControl';
 import FollowingGroupSelector from '@/components/following/FollowingGroupSelector';
 import FollowingPictureCard from '@/components/following/FollowingPictureCard';
 import FollowingVideoCard from '@/components/following/FollowingVideoCard';
@@ -22,6 +27,7 @@ import {
 } from '@/page/following/fetchFollowing';
 import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
+import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import type { FollowingGroup, FollowingItem } from '@/types/following';
 import type { VideoPlaybackTarget } from '@/types/video';
@@ -130,6 +136,9 @@ export default function FollowingPage({ onVideoPress }: Props) {
     const isFirstPageLoadingRef = useRef(false);
     const isLoadingMoreRef = useRef(false);
     const isGroupScanPausedRef = useRef(false);
+    const listViewportHeightRef = useRef(0);
+    const listContentHeightRef = useRef(0);
+    const listOffsetYRef = useRef(0);
     const firstPageControllerRef = useRef<AbortController | null>(null);
     const paginationControllerRef = useRef<AbortController | null>(null);
     const groupsControllerRef = useRef<AbortController | null>(null);
@@ -157,9 +166,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
         firstPageControllerRef.current = controller;
         isFirstPageLoadingRef.current = true;
 
-        if (refreshing) {
-            setIsRefreshing(true);
-        } else {
+        if (!refreshing) {
             setIsLoading(true);
         }
 
@@ -184,7 +191,6 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 firstPageControllerRef.current = null;
                 isFirstPageLoadingRef.current = false;
                 setIsLoading(false);
-                setIsRefreshing(false);
             }
         }
     }, [replaceFollowingPage]);
@@ -304,11 +310,10 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 scannedPageCount += 1;
 
                 if (
-                    memberMids === null ||
+                    memberMids !== null &&
                     hasGroupDynamic(newDynamics, memberMids)
                 ) {
-                    foundGroupDynamic = memberMids !== null;
-                    break;
+                    foundGroupDynamic = true;
                 }
             }
 
@@ -436,30 +441,46 @@ export default function FollowingPage({ onVideoPress }: Props) {
     }, [loadGroupMembers]);
 
     const refreshFollowing = useCallback(async () => {
+        setIsRefreshing(true);
         membersControllerRef.current?.abort();
         membersControllerRef.current = null;
-        memberMidsByTagIdRef.current = {};
-        setMemberMidsByTagId({});
-        setLoadingMemberTagId(selectedTagIdRef.current);
+        const currentTagId = selectedTagIdRef.current;
+        const currentCacheKey = currentTagId === null
+            ? null
+            : String(currentTagId);
+        const currentCachedMemberMids = currentCacheKey === null
+            ? undefined
+            : memberMidsByTagIdRef.current[currentCacheKey];
+        const retainedMemberCache: MemberMidsByTagId =
+            currentCacheKey && currentCachedMemberMids
+                ? { [currentCacheKey]: currentCachedMemberMids }
+                : {};
+
+        memberMidsByTagIdRef.current = retainedMemberCache;
+        setMemberMidsByTagId(retainedMemberCache);
         setMemberErrorMessage(null);
 
-        const [, refreshedGroups] = await Promise.all([
-            loadFirstPage(true),
-            loadGroups(),
-        ]);
-        const currentTagId = selectedTagIdRef.current;
+        try {
+            const [, refreshedGroups] = await Promise.all([
+                loadFirstPage(true),
+                loadGroups(),
+            ]);
+            const refreshedTagId = selectedTagIdRef.current;
 
-        if (currentTagId === null) {
-            return;
-        }
+            if (refreshedTagId === null) {
+                return;
+            }
 
-        const availableGroups = refreshedGroups ?? groupsRef.current;
-        const selectedGroup = availableGroups.find(
-            (group) => group.tagId === currentTagId,
-        );
+            const availableGroups = refreshedGroups ?? groupsRef.current;
+            const selectedGroup = availableGroups.find(
+                (group) => group.tagId === refreshedTagId,
+            );
 
-        if (selectedGroup) {
-            await loadGroupMembers(selectedGroup, true);
+            if (selectedGroup) {
+                await loadGroupMembers(selectedGroup, true);
+            }
+        } finally {
+            setIsRefreshing(false);
         }
     }, [loadFirstPage, loadGroupMembers, loadGroups]);
 
@@ -518,6 +539,45 @@ export default function FollowingPage({ onVideoPress }: Props) {
         );
     }, [loadMoreDynamics, selectedMemberMids]);
 
+    const requestMoreIfAtBottom = useCallback(() => {
+        const viewportHeight = listViewportHeightRef.current;
+        const contentHeight = listContentHeightRef.current;
+
+        if (viewportHeight <= 0 || contentHeight <= 0) {
+            return;
+        }
+
+        const distanceFromBottom =
+            contentHeight - viewportHeight - listOffsetYRef.current;
+
+        if (distanceFromBottom <= spacing.xl) {
+            requestMoreDynamics();
+        }
+    }, [requestMoreDynamics]);
+
+    const handleListLayout = useCallback((event: LayoutChangeEvent) => {
+        listViewportHeightRef.current = event.nativeEvent.layout.height;
+        requestMoreIfAtBottom();
+    }, [requestMoreIfAtBottom]);
+
+    const handleListContentSizeChange = useCallback((
+        _width: number,
+        height: number,
+    ) => {
+        listContentHeightRef.current = height;
+        requestMoreIfAtBottom();
+    }, [requestMoreIfAtBottom]);
+
+    const handleListScroll = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        listOffsetYRef.current = Math.max(
+            0,
+            event.nativeEvent.contentOffset.y,
+        );
+        requestMoreIfAtBottom();
+    }, [requestMoreIfAtBottom]);
+
     const continueLoadingDynamics = useCallback(() => {
         if (selectedMemberMids === undefined) {
             return;
@@ -561,11 +621,14 @@ export default function FollowingPage({ onVideoPress }: Props) {
     }
 
     const renderEmptyContent = () => {
+        if (isRefreshing) {
+            return null;
+        }
+
         if (selectedTagId !== null && loadingMemberTagId === selectedTagId) {
             return (
                 <View style={styles.emptyMessage}>
-                    <ActivityIndicator color={colors.primary} size='small' />
-                    <Text style={styles.statusText}>正在加载分组成员...</Text>
+                    <AppLoadingIndicator />
                 </View>
             );
         }
@@ -595,8 +658,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
         if (isLoadingMore) {
             return (
                 <View style={styles.emptyMessage}>
-                    <ActivityIndicator color={colors.primary} size='small' />
-                    <Text style={styles.statusText}>正在继续查找动态...</Text>
+                    <AppLoadingIndicator />
                 </View>
             );
         }
@@ -615,6 +677,30 @@ export default function FollowingPage({ onVideoPress }: Props) {
             );
         }
 
+        if (
+            selectedTagId !== null &&
+            isGroupScanPaused &&
+            hasMore
+        ) {
+            return (
+                <View style={styles.emptyMessage}>
+                    <Text style={styles.statusText}>
+                        接下来3页暂无该分组的新动态
+                    </Text>
+                    <Pressable
+                        accessibilityRole='button'
+                        onPress={continueLoadingDynamics}
+                        style={({ pressed }) => [
+                            styles.continueButton,
+                            pressed && styles.continueButtonPressed,
+                        ]}
+                    >
+                        <Text style={styles.continueButtonText}>继续加载</Text>
+                    </Pressable>
+                </View>
+            );
+        }
+
         if (hasMore) {
             return (
                 <View style={styles.emptyMessage}>
@@ -623,9 +709,6 @@ export default function FollowingPage({ onVideoPress }: Props) {
                             ? '当前页暂无可展示动态'
                             : '当前已加载范围内暂无该分组动态'}
                     </Text>
-                    <Pressable onPress={continueLoadingDynamics} style={styles.retryButton}>
-                        <Text style={styles.retryButtonText}>继续加载</Text>
-                    </Pressable>
                 </View>
             );
         }
@@ -653,8 +736,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
             <FollowingGroupSelector
                 errorMessage={groupsErrorMessage}
                 groups={groups}
-                isLoading={isGroupsLoading}
-                loadingMemberTagId={loadingMemberTagId}
+                isLoading={isGroupsLoading && !isRefreshing}
                 onRetry={() => void loadGroups()}
                 onSelect={handleGroupSelect}
                 selectedTagId={selectedTagId}
@@ -671,9 +753,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 ListFooterComponent={
                     visibleDynamics.length > 0 ? (
                         <View style={styles.footer}>
-                            {isLoadingMore ? (
-                                <ActivityIndicator color={colors.primary} size='small' />
-                            ) : null}
+                            {isLoadingMore ? <AppLoadingIndicator /> : null}
                             {paginationErrorMessage ? (
                                 <>
                                     <Text style={styles.inlineError}>
@@ -687,16 +767,28 @@ export default function FollowingPage({ onVideoPress }: Props) {
                                     </Pressable>
                                 </>
                             ) : null}
-                            {isGroupScanPaused && !paginationErrorMessage ? (
+                            {(
+                                selectedTagId !== null &&
+                                isGroupScanPaused &&
+                                hasMore &&
+                                !isLoadingMore &&
+                                !paginationErrorMessage
+                            ) ? (
                                 <>
                                     <Text style={styles.footerText}>
                                         接下来3页暂无该分组的新动态
                                     </Text>
                                     <Pressable
+                                        accessibilityRole='button'
                                         onPress={continueLoadingDynamics}
-                                        style={styles.footerRetryButton}
+                                        style={({ pressed }) => [
+                                            styles.continueButton,
+                                            pressed && styles.continueButtonPressed,
+                                        ]}
                                     >
-                                        <Text style={styles.footerRetryText}>继续加载</Text>
+                                        <Text style={styles.continueButtonText}>
+                                            继续加载
+                                        </Text>
                                     </Pressable>
                                 </>
                             ) : null}
@@ -711,10 +803,18 @@ export default function FollowingPage({ onVideoPress }: Props) {
                         <Text style={styles.inlineError}>{errorMessage}</Text>
                     ) : null
                 }
+                onContentSizeChange={handleListContentSizeChange}
                 onEndReached={requestMoreDynamics}
                 onEndReachedThreshold={0.4}
-                onRefresh={() => void refreshFollowing()}
-                refreshing={isRefreshing}
+                onLayout={handleListLayout}
+                onScroll={handleListScroll}
+                refreshControl={(
+                    <AppRefreshControl
+                        onRefresh={() => void refreshFollowing()}
+                        refreshing={isRefreshing}
+                    />
+                )}
+                scrollEventThrottle={32}
                 renderItem={({ item }) => {
                     const publishedTimeText = formatPublishedTime(item.publishedAt);
 
@@ -811,6 +911,25 @@ const styles = StyleSheet.create({
     retryButtonText: {
         color: colors.textOnPrimary,
         fontSize: 14,
+        fontWeight: '600',
+    },
+    continueButton: {
+        minHeight: 34,
+        marginTop: spacing.sm,
+        paddingHorizontal: spacing.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: colors.primary,
+        borderRadius: radius.full,
+        backgroundColor: colors.primarySoft,
+    },
+    continueButtonPressed: {
+        opacity: 0.75,
+    },
+    continueButtonText: {
+        color: colors.primary,
+        fontSize: 13,
         fontWeight: '600',
     },
     footer: {

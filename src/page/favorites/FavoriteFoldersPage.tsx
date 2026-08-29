@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
+import AppLoadingIndicator from '@/components/common/AppLoadingIndicator';
+import AppRefreshControl from '@/components/common/AppRefreshControl';
 import FavoriteFolderSelector from '@/components/favorites/FavoriteFolderSelector';
 import VideoListCard from '@/components/video/VideoListCard';
 import {
@@ -293,7 +295,7 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
             <FavoriteFolderSelector
                 errorMessage={foldersErrorMessage}
                 folders={folders}
-                isLoading={isFoldersLoading || isRefreshing}
+                isLoading={isFoldersLoading && !isRefreshing}
                 onRetry={() => void refreshFavorites()}
                 onSelect={selectFolder}
                 selectedFolderId={selectedFolderId}
@@ -338,9 +340,7 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
                     }
                     ListFooterComponent={
                         isLoadingMore ? (
-                            <ActivityIndicator
-                                color={colors.primary}
-                                size='small'
+                            <AppLoadingIndicator
                                 style={styles.footerLoading}
                             />
                         ) : null
@@ -365,8 +365,12 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
                         }
                     }}
                     onEndReachedThreshold={0.4}
-                    onRefresh={() => void refreshFavorites()}
-                    refreshing={isRefreshing}
+                    refreshControl={(
+                        <AppRefreshControl
+                            onRefresh={() => void refreshFavorites()}
+                            refreshing={isRefreshing}
+                        />
+                    )}
                     renderItem={({ item }) => (
                         <VideoListCard
                             metaText={formatFavoritedTime(item.favoritedAt)}
@@ -442,6 +446,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     footerLoading: {
-        paddingVertical: spacing.md,
+        alignSelf: 'center',
+        marginVertical: spacing.md,
     },
 });

@@ -17,7 +17,6 @@ type Props = {
     selectedTagId: number | null;
     isLoading: boolean;
     errorMessage: string | null;
-    loadingMemberTagId: number | null;
     onSelect: (tagId: number | null) => void;
     onRetry: () => void;
 };
@@ -33,7 +32,6 @@ export default function FollowingGroupSelector({
     selectedTagId,
     isLoading,
     errorMessage,
-    loadingMemberTagId,
     onSelect,
     onRetry,
 }: Props) {
@@ -59,8 +57,6 @@ export default function FollowingGroupSelector({
             >
                 {options.map((option) => {
                     const isSelected = option.tagId === selectedTagId;
-                    const isMemberLoading =
-                        option.tagId !== null && option.tagId === loadingMemberTagId;
 
                     return (
                         <Pressable
@@ -84,14 +80,6 @@ export default function FollowingGroupSelector({
                             >
                                 {option.label}
                             </Text>
-
-                            {isMemberLoading ? (
-                                <ActivityIndicator
-                                    color={colors.primary}
-                                    size='small'
-                                    style={styles.optionLoading}
-                                />
-                            ) : null}
                         </Pressable>
                     );
                 })}
@@ -158,9 +146,6 @@ const styles = StyleSheet.create({
     },
     selectedOptionText: {
         color: colors.primary,
-    },
-    optionLoading: {
-        marginLeft: spacing.xs,
     },
     groupsLoading: {
         marginHorizontal: spacing.sm,

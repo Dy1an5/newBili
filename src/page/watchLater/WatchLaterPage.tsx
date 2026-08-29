@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
+import AppLoadingIndicator from '@/components/common/AppLoadingIndicator';
+import AppRefreshControl from '@/components/common/AppRefreshControl';
 import VideoListCard from '@/components/video/VideoListCard';
 import WatchLaterToolbar from '@/components/watchLater/WatchLaterToolbar';
 import { colors } from '@/theme/colors';
@@ -220,8 +222,12 @@ export default function WatchLaterPage({
                         : styles.videoList,
                     { paddingBottom: bottomTabBarHeight + spacing.md },
                 ]}
-                refreshing={isRefreshing}
-                onRefresh={() => void loadVideoPage(1, true)}
+                refreshControl={(
+                    <AppRefreshControl
+                        onRefresh={() => void loadVideoPage(1, true)}
+                        refreshing={isRefreshing}
+                    />
+                )}
                 onEndReachedThreshold={0.4}
                 onEndReached={() => {
                     if (
@@ -244,9 +250,7 @@ export default function WatchLaterPage({
                 }
                 ListFooterComponent={
                     isLoadingMore ? (
-                        <ActivityIndicator
-                            color={colors.primary}
-                            size='small'
+                        <AppLoadingIndicator
                             style={styles.footerLoading}
                         />
                     ) : null
@@ -316,6 +320,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     footerLoading: {
-        paddingVertical: spacing.md,
+        alignSelf: 'center',
+        marginVertical: spacing.md,
     },
 });
