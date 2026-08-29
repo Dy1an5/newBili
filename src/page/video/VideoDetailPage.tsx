@@ -446,70 +446,71 @@ function VideoPlayer({
                     <Text style={styles.progressTimeText}>
                         {formatPlaybackTime(currentTime)} / {formatPlaybackTime(duration)}
                     </Text>
-                    <View
-                        accessibilityActions={[
-                            { name: 'decrement', label: '后退10秒' },
-                            { name: 'increment', label: '前进10秒' },
-                        ]}
-                        accessibilityLabel='视频进度'
-                        accessibilityRole='adjustable'
-                        accessibilityValue={{
-                            min: 0,
-                            max: Math.max(0, Math.round(duration)),
-                            now: Math.max(0, Math.round(currentTime)),
-                        }}
-                        onAccessibilityAction={(event) => {
-                            const offset = event.nativeEvent.actionName === 'increment'
-                                ? 10
-                                : -10;
-                            player.currentTime = Math.min(
-                                duration,
-                                Math.max(0, player.currentTime + offset),
-                            );
-                            showProgressControls();
-                        }}
-                        onLayout={(event) => {
-                            setProgressBarWidth(event.nativeEvent.layout.width);
-                        }}
-                        onMoveShouldSetResponder={() => true}
-                        onResponderGrant={(event) => {
-                            seekToTouchPosition(event);
-                            showProgressControls();
-                        }}
-                        onResponderMove={(event) => {
-                            seekToTouchPosition(event);
-                            showProgressControls();
-                        }}
-                        onResponderRelease={showProgressControls}
-                        onStartShouldSetResponder={() => true}
-                        style={styles.progressTouchArea}
-                    >
-                        <View style={styles.progressTrack}>
-                            <View
-                                style={[
-                                    styles.progressPlayed,
-                                    { width: `${playbackProgress * 100}%` },
-                                ]}
-                            />
+                    <View style={styles.progressControlsRow}>
+                        <View
+                            accessibilityActions={[
+                                { name: 'decrement', label: '后退10秒' },
+                                { name: 'increment', label: '前进10秒' },
+                            ]}
+                            accessibilityLabel='视频进度'
+                            accessibilityRole='adjustable'
+                            accessibilityValue={{
+                                min: 0,
+                                max: Math.max(0, Math.round(duration)),
+                                now: Math.max(0, Math.round(currentTime)),
+                            }}
+                            onAccessibilityAction={(event) => {
+                                const offset = event.nativeEvent.actionName === 'increment'
+                                    ? 10
+                                    : -10;
+                                player.currentTime = Math.min(
+                                    duration,
+                                    Math.max(0, player.currentTime + offset),
+                                );
+                                showProgressControls();
+                            }}
+                            onLayout={(event) => {
+                                setProgressBarWidth(event.nativeEvent.layout.width);
+                            }}
+                            onMoveShouldSetResponder={() => true}
+                            onResponderGrant={(event) => {
+                                seekToTouchPosition(event);
+                                showProgressControls();
+                            }}
+                            onResponderMove={(event) => {
+                                seekToTouchPosition(event);
+                                showProgressControls();
+                            }}
+                            onResponderRelease={showProgressControls}
+                            onStartShouldSetResponder={() => true}
+                            style={styles.progressTouchArea}
+                        >
+                            <View style={styles.progressTrack}>
+                                <View
+                                    style={[
+                                        styles.progressPlayed,
+                                        { width: `${playbackProgress * 100}%` },
+                                    ]}
+                                />
+                            </View>
                         </View>
+
+                        <Pressable
+                            accessibilityLabel={isFullscreen ? '退出全屏' : '进入全屏'}
+                            accessibilityRole='button'
+                            onPress={isFullscreen ? exitFullscreen : enterFullscreen}
+                            style={({ pressed }) => [
+                                styles.fullscreenButton,
+                                pressed && styles.fullscreenButtonPressed,
+                            ]}
+                        >
+                            <Text style={styles.fullscreenButtonText}>
+                                {isFullscreen ? '退出全屏' : '全屏'}
+                            </Text>
+                        </Pressable>
                     </View>
                 </View>
             ) : null}
-
-            <Pressable
-                accessibilityLabel={isFullscreen ? '退出全屏' : '进入全屏'}
-                accessibilityRole='button'
-                onPress={isFullscreen ? exitFullscreen : enterFullscreen}
-                style={({ pressed }) => [
-                    styles.fullscreenButton,
-                    pressed && styles.fullscreenButtonPressed,
-                ]}
-            >
-                <Text style={styles.fullscreenButtonText}>
-                    {isFullscreen ? '退出全屏' : '全屏'}
-                </Text>
-            </Pressable>
-
         </View>
     );
 }
@@ -854,7 +855,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '500',
     },
+    progressControlsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     progressTouchArea: {
+        flex: 1,
         height: 28,
         justifyContent: 'center',
     },
@@ -869,11 +875,9 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     fullscreenButton: {
-        position: 'absolute',
-        top: spacing.md,
-        right: spacing.md,
+        marginLeft: spacing.sm,
         minWidth: 52,
-        minHeight: 36,
+        minHeight: 28,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: spacing.sm,
