@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
     Image,
     Pressable,
@@ -33,7 +34,7 @@ function formatDuration(durationSeconds: number): string {
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-export default function VideoListCard({
+function VideoListCard({
     video,
     metaText,
     onPress,
@@ -71,6 +72,8 @@ export default function VideoListCard({
         </Pressable>
     );
 }
+
+export default memo(VideoListCard);
 
 const styles = StyleSheet.create({
     videoCard: {

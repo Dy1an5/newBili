@@ -8,6 +8,7 @@ import {
     Text,
     View,
     type LayoutChangeEvent,
+    type ListRenderItemInfo,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
 } from 'react-native';
@@ -80,6 +81,10 @@ function getErrorMessage(error: unknown): string {
 
 function isAbortError(error: unknown): boolean {
     return error instanceof Error && error.name === 'AbortError';
+}
+
+function getFollowingItemKey(item: FollowingItem): string {
+    return item.dynamicId;
 }
 
 function mergeFollowingItems(
@@ -597,6 +602,35 @@ export default function FollowingPage({ onVideoPress }: Props) {
         }
     }, [loadGroupMembers, selectedGroup]);
 
+    const renderFollowingItem = useCallback(({
+        item,
+    }: ListRenderItemInfo<FollowingItem>) => {
+        const publishedTimeText = formatPublishedTime(item.publishedAt);
+
+        if (item.kind === 'picture') {
+            return (
+                <FollowingPictureCard
+                    authorName={item.author.name}
+                    avatarUrl={item.author.avatarUrl}
+                    contentText={item.contentText}
+                    imageUrls={item.imageUrls}
+                    publishedTimeText={publishedTimeText}
+                />
+            );
+        }
+
+        return (
+            <FollowingVideoCard
+                authorName={item.author.name}
+                avatarUrl={item.author.avatarUrl}
+                coverUrl={item.coverUrl}
+                onPress={() => onVideoPress(createVideoPlaybackTarget(item))}
+                publishedTimeText={publishedTimeText}
+                title={item.title}
+            />
+        );
+    }, [onVideoPress]);
+
     if (isLoading && dynamics.length === 0) {
         return (
             <View style={styles.centered}>
@@ -748,7 +782,8 @@ export default function FollowingPage({ onVideoPress }: Props) {
                     { paddingBottom: bottomTabBarHeight + spacing.md },
                 ]}
                 data={visibleDynamics}
-                keyExtractor={(item) => item.dynamicId}
+                initialNumToRender={5}
+                keyExtractor={getFollowingItemKey}
                 ListEmptyComponent={renderEmptyContent}
                 ListFooterComponent={
                     visibleDynamics.length > 0 ? (
@@ -808,40 +843,19 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 onEndReachedThreshold={0.4}
                 onLayout={handleListLayout}
                 onScroll={handleListScroll}
+                maxToRenderPerBatch={5}
                 refreshControl={(
                     <AppRefreshControl
                         onRefresh={() => void refreshFollowing()}
                         refreshing={isRefreshing}
                     />
                 )}
+                removeClippedSubviews
+                renderItem={renderFollowingItem}
                 scrollEventThrottle={32}
-                renderItem={({ item }) => {
-                    const publishedTimeText = formatPublishedTime(item.publishedAt);
-
-                    if (item.kind === 'picture') {
-                        return (
-                            <FollowingPictureCard
-                                authorName={item.author.name}
-                                avatarUrl={item.author.avatarUrl}
-                                contentText={item.contentText}
-                                imageUrls={item.imageUrls}
-                                publishedTimeText={publishedTimeText}
-                            />
-                        );
-                    }
-
-                    return (
-                        <FollowingVideoCard
-                            authorName={item.author.name}
-                            avatarUrl={item.author.avatarUrl}
-                            coverUrl={item.coverUrl}
-                            onPress={() => onVideoPress(createVideoPlaybackTarget(item))}
-                            publishedTimeText={publishedTimeText}
-                            title={item.title}
-                        />
-                    );
-                }}
                 style={styles.listView}
+                updateCellsBatchingPeriod={50}
+                windowSize={7}
             />
         </View>
     );

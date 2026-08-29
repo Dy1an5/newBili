@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
     Image,
     Pressable,
@@ -19,7 +20,7 @@ type Props = {
     onPress?: () => void;
 };
 
-export default function FollowingVideoCard({
+function FollowingVideoCard({
     title,
     coverUrl,
     avatarUrl,
@@ -72,6 +73,8 @@ export default function FollowingVideoCard({
         </Pressable>
     );
 }
+
+export default memo(FollowingVideoCard);
 
 const styles = StyleSheet.create({
     card: {

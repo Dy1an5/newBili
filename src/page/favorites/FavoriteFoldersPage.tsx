@@ -7,6 +7,7 @@ import {
     StyleSheet,
     Text,
     View,
+    type ListRenderItemInfo,
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
@@ -52,6 +53,10 @@ function formatFavoritedTime(timestamp: number): string {
     const date = new Date(timestamp * 1000);
 
     return `收藏于${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getFavoriteVideoKey(video: FavoriteVideo): string {
+    return video.bvid;
 }
 
 export default function FavoriteFoldersPage({ onVideoPress }: Props) {
@@ -266,6 +271,16 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
         (folder) => folder.id === selectedFolderId,
     ) ?? null;
 
+    const renderFavoriteVideo = useCallback(({
+        item,
+    }: ListRenderItemInfo<FavoriteVideo>) => (
+        <VideoListCard
+            metaText={formatFavoritedTime(item.favoritedAt)}
+            onPress={() => onVideoPress(createVideoPlaybackTarget(item))}
+            video={item}
+        />
+    ), [onVideoPress]);
+
     if (isFoldersLoading && folders.length === 0) {
         return (
             <View style={styles.centeredPage}>
@@ -330,7 +345,8 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
                         { paddingBottom: bottomTabBarHeight + spacing.md },
                     ]}
                     data={videos}
-                    keyExtractor={(video) => video.bvid}
+                    initialNumToRender={8}
+                    keyExtractor={getFavoriteVideoKey}
                     ListEmptyComponent={
                         <Text style={styles.statusText}>
                             {selectedFolder
@@ -365,20 +381,18 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
                         }
                     }}
                     onEndReachedThreshold={0.4}
+                    maxToRenderPerBatch={8}
                     refreshControl={(
                         <AppRefreshControl
                             onRefresh={() => void refreshFavorites()}
                             refreshing={isRefreshing}
                         />
                     )}
-                    renderItem={({ item }) => (
-                        <VideoListCard
-                            metaText={formatFavoritedTime(item.favoritedAt)}
-                            onPress={() => onVideoPress(createVideoPlaybackTarget(item))}
-                            video={item}
-                        />
-                    )}
+                    removeClippedSubviews
+                    renderItem={renderFavoriteVideo}
                     style={styles.listView}
+                    updateCellsBatchingPeriod={50}
+                    windowSize={9}
                 />
             ) : null}
         </View>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import type {
     LayoutChangeEvent,
     NativeScrollEvent,
@@ -48,7 +48,7 @@ function getPictureColumnCount(pictureCount: number): number {
     return 3;
 }
 
-export default function FollowingPictureCard({
+function FollowingPictureCard({
     contentText,
     imageUrls,
     avatarUrl,
@@ -295,6 +295,8 @@ export default function FollowingPictureCard({
         </>
     );
 }
+
+export default memo(FollowingPictureCard);
 
 const styles = StyleSheet.create({
     card: {

@@ -7,6 +7,7 @@ import {
     StyleSheet,
     Text,
     View,
+    type ListRenderItemInfo,
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
@@ -49,6 +50,10 @@ function formatPublishedTime(timestamp: number): string {
     const date = new Date(timestamp * 1000);
 
     return `发布于${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getWatchLaterVideoKey(video: WatchLaterVideo): string {
+    return video.bvid;
 }
 
 export default function WatchLaterPage({
@@ -172,6 +177,18 @@ export default function WatchLaterPage({
         setAscending(nextAscending);
     }, [ascending, resetQuery]);
 
+    const renderWatchLaterVideo = useCallback(({
+        item,
+    }: ListRenderItemInfo<WatchLaterVideo>) => (
+        <VideoListCard
+            video={item}
+            metaText={formatPublishedTime(item.publishedAt)}
+            onPress={() => onVideoPress(
+                createVideoPlaybackTarget(item, item.cid),
+            )}
+        />
+    ), [onVideoPress]);
+
     const toolbar = (
         <WatchLaterToolbar
             ascending={ascending}
@@ -215,7 +232,8 @@ export default function WatchLaterPage({
             {toolbar}
             <FlatList
                 data={videos}
-                keyExtractor={(video) => video.bvid}
+                initialNumToRender={8}
+                keyExtractor={getWatchLaterVideoKey}
                 contentContainerStyle={[
                     videos.length === 0
                         ? styles.emptyList
@@ -229,6 +247,7 @@ export default function WatchLaterPage({
                     />
                 )}
                 onEndReachedThreshold={0.4}
+                maxToRenderPerBatch={8}
                 onEndReached={() => {
                     if (
                         hasMore &&
@@ -255,15 +274,10 @@ export default function WatchLaterPage({
                         />
                     ) : null
                 }
-                renderItem={({ item }) => (
-                    <VideoListCard
-                        video={item}
-                        metaText={formatPublishedTime(item.publishedAt)}
-                        onPress={() => onVideoPress(
-                            createVideoPlaybackTarget(item, item.cid),
-                        )}
-                    />
-                )}
+                removeClippedSubviews
+                renderItem={renderWatchLaterVideo}
+                updateCellsBatchingPeriod={50}
+                windowSize={9}
             />
         </View>
     );
