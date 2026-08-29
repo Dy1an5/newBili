@@ -21,6 +21,7 @@
         "expo": "57.0.16",
         "expo-blur": "~57.0.2",
         "expo-dev-client": "57.0.14",
+        "expo-screen-orientation": "~57.0.2",
         "expo-secure-store": "57.0.1",
         "expo-video": "~57.0.2",
         "react": "19.2.3",
