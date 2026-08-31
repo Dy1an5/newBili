@@ -9,9 +9,12 @@ import {
     useContext,
     useMemo,
     useRef,
+    useState,
 } from 'react';
 import { StyleSheet, type View } from 'react-native';
 
+import { useAgentSession } from '@/agent/session/AgentSessionContext';
+import ApiKeyInputModal from '@/agent/ui/ApiKeyInputModal';
 import FloatingTabBar from '@/components/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
 import FollowingPage from '@/page/following/FollowingPage';
@@ -79,7 +82,14 @@ function HomeScreen({
 function VideoDetailScreen({
     route,
 }: NativeStackScreenProps<HomeStackParamList, 'VideoDetail'>) {
-    return <VideoDetailPage target={route.params.target} />;
+    const { deepSeekApiKey } = useAgentSession();
+
+    return (
+        <VideoDetailPage
+            deepSeekApiKey={deepSeekApiKey}
+            target={route.params.target}
+        />
+    );
 }
 
 function HomeNavigator() {
@@ -108,7 +118,14 @@ function FavoriteFoldersScreen({
 function FavoriteVideoDetailScreen({
     route,
 }: NativeStackScreenProps<FavoritesStackParamList, 'VideoDetail'>) {
-    return <VideoDetailPage target={route.params.target} />;
+    const { deepSeekApiKey } = useAgentSession();
+
+    return (
+        <VideoDetailPage
+            deepSeekApiKey={deepSeekApiKey}
+            target={route.params.target}
+        />
+    );
 }
 
 function FavoritesNavigator() {
@@ -139,7 +156,14 @@ function WatchLaterListScreen({
 function WatchLaterVideoDetailScreen({
     route,
 }: NativeStackScreenProps<WatchLaterStackParamList, 'VideoDetail'>) {
-    return <VideoDetailPage target={route.params.target} />;
+    const { deepSeekApiKey } = useAgentSession();
+
+    return (
+        <VideoDetailPage
+            deepSeekApiKey={deepSeekApiKey}
+            target={route.params.target}
+        />
+    );
 }
 
 function WatchLaterNavigator() {
@@ -165,6 +189,12 @@ export default function MainTabNavigator() {
     const homeBlurTarget = useRef<View | null>(null);
     const favoritesBlurTarget = useRef<View | null>(null);
     const watchLaterBlurTarget = useRef<View | null>(null);
+    const [isApiKeyModalVisible, setIsApiKeyModalVisible] = useState(false);
+    const {
+        clearDeepSeekApiKey,
+        deepSeekApiKey,
+        setDeepSeekApiKey,
+    } = useAgentSession();
     const blurTargets = useMemo<BlurTargets>(() => ({
         HomeTab: homeBlurTarget,
         FavoritesTab: favoritesBlurTarget,
@@ -188,6 +218,8 @@ export default function MainTabNavigator() {
                         <FloatingTabBar
                             {...props}
                             blurTarget={blurTargets[routeName]}
+                            hasDeepSeekApiKey={deepSeekApiKey !== null}
+                            onAgentConfigPress={() => setIsApiKeyModalVisible(true)}
                         />
                     );
                 }}
@@ -211,6 +243,20 @@ export default function MainTabNavigator() {
                     options={{ title: '稍后再看' }}
                 />
             </Tab.Navigator>
+
+            <ApiKeyInputModal
+                hasApiKey={deepSeekApiKey !== null}
+                visible={isApiKeyModalVisible}
+                onCancel={() => setIsApiKeyModalVisible(false)}
+                onClear={() => {
+                    clearDeepSeekApiKey();
+                    setIsApiKeyModalVisible(false);
+                }}
+                onConfirm={(apiKey) => {
+                    setDeepSeekApiKey(apiKey);
+                    setIsApiKeyModalVisible(false);
+                }}
+            />
         </BlurTargetsContext.Provider>
     );
 }

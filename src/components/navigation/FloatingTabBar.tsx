@@ -13,6 +13,8 @@ import { spacing } from '@/theme/spacing';
 type TabIconName = 'dynamic' | 'favorites' | 'watchLater';
 type Props = BottomTabBarProps & {
     blurTarget: RefObject<View | null>;
+    hasDeepSeekApiKey: boolean;
+    onAgentConfigPress: () => void;
 };
 
 const TAB_ITEMS: Record<string, { icon: TabIconName; label: string }> = {
@@ -63,21 +65,14 @@ function TabIcon({
     );
 }
 
-function PlaceholderIcon() {
-    return (
-        <View style={styles.placeholderIcon}>
-            <View style={styles.placeholderIconCircle} />
-            <View style={styles.placeholderIconHandle} />
-        </View>
-    );
-}
-
 export default function FloatingTabBar({
     descriptors,
     insets,
     navigation,
     state,
     blurTarget,
+    hasDeepSeekApiKey,
+    onAgentConfigPress,
 }: Props) {
     const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
 
@@ -178,13 +173,23 @@ export default function FloatingTabBar({
                         tint='systemThinMaterialDark'
                     >
                         <Pressable
-                            accessibilityLabel='预留功能'
+                            accessibilityLabel='配置DeepSeek API key'
                             accessibilityRole='button'
-                            accessibilityState={{ disabled: true }}
-                            disabled
-                            style={styles.placeholderButton}
+                            accessibilityState={{ selected: hasDeepSeekApiKey }}
+                            onPress={onAgentConfigPress}
+                            style={({ pressed }) => [
+                                styles.placeholderButton,
+                                pressed && styles.pressed,
+                            ]}
                         >
-                            <PlaceholderIcon />
+                            <Text
+                                style={[
+                                    styles.agentButtonText,
+                                    hasDeepSeekApiKey && styles.agentButtonTextConfigured,
+                                ]}
+                            >
+                                AI
+                            </Text>
                         </Pressable>
                     </BlurView>
                 </View>
@@ -339,25 +344,12 @@ const styles = StyleSheet.create({
         transform: [{ rotate: '30deg' }],
         transformOrigin: 'left center',
     },
-    placeholderIcon: {
-        width: 25,
-        height: 25,
+    agentButtonText: {
+        color: colors.textSecondary,
+        fontSize: 16,
+        fontWeight: '800',
     },
-    placeholderIconCircle: {
-        width: 19,
-        height: 19,
-        borderWidth: 3,
-        borderColor: colors.textSecondary,
-        borderRadius: radius.full,
-    },
-    placeholderIconHandle: {
-        position: 'absolute',
-        right: 1,
-        bottom: 3,
-        width: 10,
-        height: 3,
-        borderRadius: radius.full,
-        backgroundColor: colors.textSecondary,
-        transform: [{ rotate: '45deg' }],
+    agentButtonTextConfigured: {
+        color: colors.primary,
     },
 });

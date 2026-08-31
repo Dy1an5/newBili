@@ -18,6 +18,8 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getLoginCookie } from '@/auth/authCookie';
+import type { VideoPartSummaryTarget } from '@/agent/domain/videoSummary';
+import VideoSummaryPanel from '@/agent/ui/VideoSummaryPage';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -32,6 +34,7 @@ import {
 
 type Props = {
     target: VideoPlaybackTarget;
+    deepSeekApiKey: string | null;
 };
 
 type PlayerProps = {
@@ -515,7 +518,7 @@ function VideoPlayer({
     );
 }
 
-export default function VideoDetailPage({ target }: Props) {
+export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const safeAreaInsets = useSafeAreaInsets();
     const [parts, setParts] = useState<VideoPart[]>([]);
@@ -526,11 +529,20 @@ export default function VideoDetailPage({ target }: Props) {
     const [isTitleExpanded, setIsTitleExpanded] = useState(false);
     const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
     const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
+    const [detailPageIndex, setDetailPageIndex] = useState(0);
+    const detailPagerRef = useRef<ScrollView>(null);
 
     useEffect(() => {
         setIsTitleExpanded(false);
         setIsTitleOverflowing(false);
     }, [target.title]);
+
+    useEffect(() => {
+        detailPagerRef.current?.scrollTo({
+            x: windowWidth * detailPageIndex,
+            animated: false,
+        });
+    }, [windowWidth]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -614,6 +626,19 @@ export default function VideoDetailPage({ target }: Props) {
 
     const selectedPartIndex = parts.findIndex((part) => part.cid === selectedCid);
     const selectedPart = selectedPartIndex >= 0 ? parts[selectedPartIndex] : null;
+    const summaryTarget: VideoPartSummaryTarget | null = selectedPart
+        ? {
+            identity: {
+                bvid: target.bvid,
+                cid: String(selectedPart.cid),
+            },
+            videoTitle: target.title,
+            authorName: target.authorName,
+            partTitle: selectedPart.title,
+            partNumber: selectedPart.page,
+            durationMs: selectedPart.durationSeconds * 1000,
+        }
+        : null;
     const playerHeight = getPlayerHeight(windowWidth, windowHeight, selectedPart);
     const fullscreenOrientation = getFullscreenOrientation(selectedPart);
 
@@ -626,6 +651,14 @@ export default function VideoDetailPage({ target }: Props) {
                 ? currentIsOverflowing
                 : nextIsOverflowing,
         );
+    };
+
+    const scrollToDetailPage = (pageIndex: number) => {
+        detailPagerRef.current?.scrollTo({
+            x: windowWidth * pageIndex,
+            animated: true,
+        });
+        setDetailPageIndex(pageIndex);
     };
 
     return (
@@ -670,14 +703,56 @@ export default function VideoDetailPage({ target }: Props) {
                 )}
             </View>
 
+            <View style={styles.detailTabs}>
+                {['简介', 'AI总结'].map((label, pageIndex) => {
+                    const isSelected = detailPageIndex === pageIndex;
+
+                    return (
+                        <Pressable
+                            key={label}
+                            accessibilityRole='tab'
+                            accessibilityState={{ selected: isSelected }}
+                            onPress={() => scrollToDetailPage(pageIndex)}
+                            style={styles.detailTab}
+                        >
+                            <Text
+                                style={[
+                                    styles.detailTabText,
+                                    isSelected && styles.detailTabTextSelected,
+                                ]}
+                            >
+                                {label}
+                            </Text>
+                            {isSelected ? <View style={styles.detailTabIndicator} /> : null}
+                        </Pressable>
+                    );
+                })}
+            </View>
+
             <ScrollView
-                contentContainerStyle={[
-                    styles.detailsContent,
-                    { paddingBottom: safeAreaInsets.bottom + spacing.xl },
-                ]}
-                style={styles.detailsScroll}
+                ref={detailPagerRef}
+                horizontal
+                onMomentumScrollEnd={(event) => {
+                    const pageIndex = Math.round(
+                        event.nativeEvent.contentOffset.x / windowWidth,
+                    );
+
+                    setDetailPageIndex(pageIndex);
+                }}
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.detailPagerContent}
+                style={styles.detailPager}
             >
-                <View style={styles.infoSection}>
+                <View style={[styles.detailPage, { width: windowWidth }]}>
+                    <ScrollView
+                        contentContainerStyle={[
+                            styles.detailsContent,
+                            { paddingBottom: safeAreaInsets.bottom + spacing.xl },
+                        ]}
+                        style={styles.detailsScroll}
+                    >
+                        <View style={styles.infoSection}>
                     <View style={styles.titleContainer}>
                         <Text
                             ellipsizeMode='tail'
@@ -739,10 +814,11 @@ export default function VideoDetailPage({ target }: Props) {
                             </Text>
                         </View>
                     ) : null}
-                </View>
 
-                {parts.length > 1 ? (
-                    <View style={styles.partsSection}>
+                        </View>
+
+                        {parts.length > 1 ? (
+                            <View style={styles.partsSection}>
                         <View style={styles.partsHeader}>
                             <Text style={styles.partsHeading}>视频选集</Text>
                             <Text numberOfLines={1} style={styles.partsSummary}>
@@ -801,8 +877,17 @@ export default function VideoDetailPage({ target }: Props) {
                                 );
                             })}
                         </ScrollView>
-                    </View>
-                ) : null}
+                            </View>
+                        ) : null}
+                    </ScrollView>
+                </View>
+
+                <View style={[styles.detailPage, { width: windowWidth }]}>
+                    <VideoSummaryPanel
+                        apiKey={deepSeekApiKey}
+                        target={summaryTarget}
+                    />
+                </View>
             </ScrollView>
         </View>
     );
@@ -812,6 +897,48 @@ const styles = StyleSheet.create({
     page: {
         flex: 1,
         backgroundColor: colors.background,
+    },
+    detailTabs: {
+        height: 46,
+        flexDirection: 'row',
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.divider,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.divider,
+        backgroundColor: colors.surface,
+    },
+    detailTab: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    detailTabText: {
+        color: colors.textMuted,
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    detailTabTextSelected: {
+        color: colors.primary,
+        fontWeight: '700',
+    },
+    detailTabIndicator: {
+        position: 'absolute',
+        bottom: 0,
+        width: 28,
+        height: 3,
+        borderRadius: radius.full,
+        backgroundColor: colors.primary,
+    },
+    detailPager: {
+        flex: 1,
+        backgroundColor: colors.surface,
+    },
+    detailPagerContent: {
+        alignItems: 'stretch',
+    },
+    detailPage: {
+        flex: 1,
+        backgroundColor: colors.surface,
     },
     detailsScroll: {
         flex: 1,

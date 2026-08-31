@@ -7,6 +7,7 @@ import {
 } from 'react-native-safe-area-context';
 
 import LoginPage from './auth/LoginPage';
+import { AgentSessionProvider } from './agent/session/AgentSessionContext';
 import { getLoginCookie } from './auth/authCookie';
 import MainPage from './main/MainPage';
 import MainTabNavigator from './navigation/MainTabNavigator';
@@ -64,21 +65,23 @@ export default function App() {
         );
     } else {
         content = (
-            <NavigationContainer
-                theme={{
-                    ...DarkTheme,
-                    colors: {
-                        ...DarkTheme.colors,
-                        primary: colors.primary,
-                        background: colors.background,
-                        card: colors.surface,
-                        text: colors.textPrimary,
-                        border: colors.divider,
-                    },
-                }}
-            >
-                <MainTabNavigator />
-            </NavigationContainer>
+            <AgentSessionProvider>
+                <NavigationContainer
+                    theme={{
+                        ...DarkTheme,
+                        colors: {
+                            ...DarkTheme.colors,
+                            primary: colors.primary,
+                            background: colors.background,
+                            card: colors.surface,
+                            text: colors.textPrimary,
+                            border: colors.divider,
+                        },
+                    }}
+                >
+                    <MainTabNavigator />
+                </NavigationContainer>
+            </AgentSessionProvider>
         );
     }
 
