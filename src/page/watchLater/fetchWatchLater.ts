@@ -1,4 +1,3 @@
-import type { WatchLaterVideo } from '@/types/watchLater';
 import {
     createWbiSignedQuery,
     WbiSigningError,
@@ -14,6 +13,26 @@ const DEFAULT_AVATAR_URL =
     'https://i0.hdslb.com/bfs/face/member/noface.jpg';
 
 const PAGE_SIZE = 20;
+
+export type WatchLaterVideo = {
+    aid?: number;
+    bvid: string;
+    title: string;
+    coverUrl: string;
+    cid?: number;
+    durationSeconds: number;
+    progressSeconds: number;
+    author: {
+        mid: string;
+        name: string;
+        avatarUrl: string;
+    };
+    publishedAt: number;
+    stats?: {
+        viewCount?: number;
+        danmakuCount?: number;
+    };
+};
 
 export type WatchLaterVideoPage = {
     videos: WatchLaterVideo[];

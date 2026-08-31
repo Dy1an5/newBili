@@ -1,10 +1,3 @@
-import type {
-    FollowingGroup,
-    FollowingItem,
-    FollowingPicture,
-    FollowingVideo,
-} from '@/types/following';
-
 const FOLLOWING_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
 const FOLLOWING_GROUPS_URL = 'https://api.bilibili.com/x/relation/tags';
 const FOLLOWING_GROUP_MEMBERS_URL = 'https://api.bilibili.com/x/relation/tag';
@@ -15,6 +8,45 @@ const USER_AGENT =
 const DEFAULT_AVATAR_URL = 'https://i0.hdslb.com/bfs/face/member/noface.jpg';
 
 type JsonRecord = Record<string, unknown>;
+
+type FollowingAuthor = {
+    mid: string;
+    name: string;
+    avatarUrl: string;
+};
+
+export type FollowingGroup = {
+    tagId: number;
+    name: string;
+    memberCount: number;
+    tip?: string;
+};
+
+export type FollowingVideo = {
+    kind: 'video';
+    dynamicId: string;
+    bvid: string;
+    title: string;
+    coverUrl: string;
+    durationText?: string;
+    author: FollowingAuthor;
+    publishedAt: number;
+    stats?: {
+        viewCount?: number;
+        danmakuCount?: number;
+    };
+};
+
+export type FollowingPicture = {
+    kind: 'picture';
+    dynamicId: string;
+    contentText: string;
+    imageUrls: string[];
+    author: FollowingAuthor;
+    publishedAt: number;
+};
+
+export type FollowingItem = FollowingVideo | FollowingPicture;
 
 type FollowingOpusData = {
     dynamicId: string;

@@ -1,7 +1,22 @@
-import type { VideoPlaybackTarget, VideoSummary } from '@/types/video';
+export type VideoPlaybackTarget = {
+    bvid: string;
+    initialCid?: number;
+    title: string;
+    authorName?: string;
+    authorAvatarUrl?: string;
+};
+
+type VideoPlaybackSource = {
+    bvid: string;
+    title: string;
+    author: {
+        name: string;
+        avatarUrl: string;
+    };
+};
 
 export function createVideoPlaybackTarget(
-    video: VideoSummary,
+    video: VideoPlaybackSource,
     initialCid?: number,
 ): VideoPlaybackTarget {
     return {

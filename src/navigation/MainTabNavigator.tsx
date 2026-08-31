@@ -19,8 +19,8 @@ import FloatingTabBar from '@/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
 import FollowingPage from '@/page/following/FollowingPage';
 import VideoDetailPage from '@/page/video/VideoDetailPage';
+import type { VideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import WatchLaterPage from '@/page/watchLater/WatchLaterPage';
-import type { VideoPlaybackTarget } from '@/types/video';
 
 type HomeStackParamList = {
     Home: undefined;

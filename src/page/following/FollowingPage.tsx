@@ -25,13 +25,16 @@ import {
     fetchFollowingGroups,
     fetchFollowingPage,
     FollowingRequestError,
+    type FollowingGroup,
+    type FollowingItem,
     type FollowingPageData,
 } from '@/page/following/fetchFollowing';
-import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
+import {
+    createVideoPlaybackTarget,
+    type VideoPlaybackTarget,
+} from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import type { FollowingGroup, FollowingItem } from '@/types/following';
-import type { VideoPlaybackTarget } from '@/types/video';
 
 const GROUP_FEED_SCAN_PAGE_LIMIT = 3;
 

@@ -1,5 +1,3 @@
-import type { FavoriteFolder, FavoriteVideo } from '@/types/favorites';
-
 const FAVORITE_FOLDERS_URL =
     'https://api.bilibili.com/x/v3/fav/folder/created/list-all';
 const FAVORITE_VIDEOS_URL =
@@ -11,6 +9,31 @@ const USER_AGENT =
 const DEFAULT_AVATAR_URL = 'https://i0.hdslb.com/bfs/face/member/noface.jpg';
 
 type JsonRecord = Record<string, unknown>;
+
+export type FavoriteFolder = {
+    id: number;
+    title: string;
+    mediaCount: number;
+};
+
+export type FavoriteVideo = {
+    aid?: number;
+    bvid: string;
+    title: string;
+    coverUrl: string;
+    durationSeconds: number;
+    author: {
+        mid: string;
+        name: string;
+        avatarUrl: string;
+    };
+    publishedAt: number;
+    favoritedAt: number;
+    stats?: {
+        viewCount?: number;
+        danmakuCount?: number;
+    };
+};
 
 export type FavoriteVideoPage = {
     videos: FavoriteVideo[];

@@ -79,7 +79,6 @@
 - `src/page/video`: 视频详情,分P选择和视频播放.
 - `src/agent`: 字幕获取,DeepSeek Provider,提示词,输出校验,视频总结界面和 SQLite 总结缓存.
 - `src/components`: 已被页面使用的通用组件和功能组件.
-- `src/types`: 跨组件或跨模块使用的业务类型.
 - `src/tool`: WBI 签名等独立工具.
 - `src/theme`: 颜色,间距和圆角等主题常量.
 

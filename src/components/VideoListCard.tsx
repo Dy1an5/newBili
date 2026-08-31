@@ -10,11 +10,20 @@ import {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import type { VideoWithDuration } from '@/types/video';
 import UserAvatar from '@/components/UserAvatar';
 
+type VideoListItem = {
+    title: string;
+    coverUrl: string;
+    durationSeconds: number;
+    author: {
+        name: string;
+        avatarUrl: string;
+    };
+};
+
 type Props = {
-    video: VideoWithDuration;
+    video: VideoListItem;
     metaText?: string;
     onPress: () => void;
 };

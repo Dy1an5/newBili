@@ -15,15 +15,17 @@ import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
 import VideoListCard from '@/components/VideoListCard';
 import WatchLaterToolbar from '@/page/watchLater/WatchLaterToolbar';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
-import type { VideoPlaybackTarget } from '@/types/video';
-import type { WatchLaterVideo } from '@/types/watchLater';
-import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import {
     fetchWatchLaterVideoPage,
     WatchLaterRequestError,
+    type WatchLaterVideo,
 } from '@/page/watchLater/fetchWatchLater';
+import {
+    createVideoPlaybackTarget,
+    type VideoPlaybackTarget,
+} from '@/page/video/videoPlaybackTarget';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;

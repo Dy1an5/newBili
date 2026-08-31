@@ -19,12 +19,15 @@ import {
     fetchFavoriteFolders,
     fetchFavoriteVideoPage,
     FavoritesRequestError,
+    type FavoriteFolder,
+    type FavoriteVideo,
 } from '@/page/favorites/fetchFavorites';
-import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
+import {
+    createVideoPlaybackTarget,
+    type VideoPlaybackTarget,
+} from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import type { FavoriteFolder, FavoriteVideo } from '@/types/favorites';
-import type { VideoPlaybackTarget } from '@/types/video';
 
 type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;

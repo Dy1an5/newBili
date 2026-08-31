@@ -24,7 +24,6 @@ import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import type { VideoPlaybackTarget } from '@/types/video';
 import {
     fetchVideoParts,
     fetchVideoPlayback,
@@ -32,6 +31,7 @@ import {
     type VideoPlayback,
     VideoPlaybackError,
 } from '@/page/video/fetchVideoPlayback';
+import type { VideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 
 type Props = {
     target: VideoPlaybackTarget;
