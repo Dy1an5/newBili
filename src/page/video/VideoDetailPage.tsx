@@ -3,7 +3,6 @@ import type { GestureResponderEvent, TextLayoutEvent } from 'react-native';
 import {
     ActivityIndicator,
     BackHandler,
-    Image,
     Pressable,
     ScrollView,
     StatusBar,
@@ -20,6 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getLoginCookie } from '@/auth/authCookie';
 import type { VideoPartSummaryTarget } from '@/agent/domain/videoSummary';
 import VideoSummaryPanel from '@/agent/ui/VideoSummaryPage';
+import AppButton from '@/components/AppButton';
+import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -687,17 +688,15 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                 ) : errorMessage ? (
                     <View style={styles.playerStatus}>
                         <Text style={styles.errorText}>{errorMessage}</Text>
-                        <Pressable
-                            accessibilityRole='button'
+                        <AppButton
                             onPress={() => setReloadKey((value) => value + 1)}
-                            style={styles.retryButton}
-                        >
-                            <Text style={styles.retryButtonText}>重新加载</Text>
-                        </Pressable>
+                            style={styles.actionButton}
+                            title='重新加载'
+                        />
                     </View>
                 ) : (
                     <View style={styles.playerStatus}>
-                        <ActivityIndicator color={colors.primary} size='large' />
+                        <ActivityIndicator color={colors.accentForeground} size='large' />
                         <Text style={styles.loadingText}>正在获取播放地址...</Text>
                     </View>
                 )}
@@ -797,18 +796,12 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
 
                     {target.authorName ? (
                         <View style={styles.authorRow}>
-                            {target.authorAvatarUrl ? (
-                                <Image
-                                    source={{ uri: target.authorAvatarUrl }}
-                                    style={styles.authorAvatar}
-                                />
-                            ) : (
-                                <View style={styles.authorAvatarPlaceholder}>
-                                    <Text style={styles.authorAvatarPlaceholderText}>
-                                        {target.authorName.slice(0, 1)}
-                                    </Text>
-                                </View>
-                            )}
+                            <UserAvatar
+                                name={target.authorName}
+                                size={38}
+                                style={styles.authorAvatar}
+                                uri={target.authorAvatarUrl}
+                            />
                             <Text numberOfLines={1} style={styles.authorName}>
                                 {target.authorName}
                             </Text>
@@ -896,16 +889,16 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     detailTabs: {
         height: 46,
         flexDirection: 'row',
         borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: colors.divider,
+        borderTopColor: colors.surfaceBorder,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.divider,
-        backgroundColor: colors.surface,
+        borderBottomColor: colors.surfaceBorder,
+        backgroundColor: colors.pageBackground,
     },
     detailTab: {
         flex: 1,
@@ -913,12 +906,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     detailTabText: {
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 15,
         fontWeight: '600',
     },
     detailTabTextSelected: {
-        color: colors.primary,
+        color: colors.accentForeground,
         fontWeight: '700',
     },
     detailTabIndicator: {
@@ -927,31 +920,31 @@ const styles = StyleSheet.create({
         width: 28,
         height: 3,
         borderRadius: radius.full,
-        backgroundColor: colors.primary,
+        backgroundColor: colors.accentForeground,
     },
     detailPager: {
         flex: 1,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.pageBackground,
     },
     detailPagerContent: {
         alignItems: 'stretch',
     },
     detailPage: {
         flex: 1,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.pageBackground,
     },
     detailsScroll: {
         flex: 1,
         borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: colors.divider,
-        backgroundColor: colors.surface,
+        borderTopColor: colors.surfaceBorder,
+        backgroundColor: colors.pageBackground,
     },
     detailsContent: {
         paddingBottom: spacing.xl,
     },
     playerContainer: {
         width: '100%',
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     playerContainerFullscreen: {
         position: 'absolute',
@@ -968,7 +961,7 @@ const styles = StyleSheet.create({
     },
     playerSurface: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     progressControls: {
         position: 'absolute',
@@ -978,7 +971,7 @@ const styles = StyleSheet.create({
     },
     progressTimeText: {
         alignSelf: 'flex-end',
-        color: colors.textOnMedia,
+        color: colors.primaryText,
         fontSize: 12,
         fontWeight: '500',
     },
@@ -995,11 +988,11 @@ const styles = StyleSheet.create({
         height: 3,
         overflow: 'hidden',
         borderRadius: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.38)',
+        backgroundColor: colors.mediaProgressTrack,
     },
     progressPlayed: {
         height: '100%',
-        backgroundColor: colors.primary,
+        backgroundColor: colors.accentForeground,
     },
     fullscreenButton: {
         marginLeft: spacing.sm,
@@ -1009,13 +1002,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: spacing.sm,
         borderRadius: radius.md,
-        backgroundColor: 'rgba(0, 0, 0, 0.62)',
+        backgroundColor: colors.mediaOverlayBackground,
     },
     fullscreenButtonPressed: {
         opacity: 0.72,
     },
     fullscreenButtonText: {
-        color: colors.textOnMedia,
+        color: colors.primaryText,
         fontSize: 13,
         fontWeight: '600',
     },
@@ -1027,38 +1020,29 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: spacing.sm,
-        color: colors.textOnMedia,
+        color: colors.primaryText,
         fontSize: 14,
     },
     errorText: {
-        color: colors.textOnMedia,
+        color: colors.primaryText,
         fontSize: 14,
         textAlign: 'center',
     },
-    retryButton: {
+    actionButton: {
         marginTop: spacing.md,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: 8,
-        backgroundColor: colors.primary,
-    },
-    retryButtonText: {
-        color: colors.textOnPrimary,
-        fontSize: 14,
-        fontWeight: '600',
     },
     infoSection: {
         paddingHorizontal: spacing.lg,
         paddingTop: spacing.lg,
         paddingBottom: spacing.md,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.divider,
+        borderBottomColor: colors.surfaceBorder,
     },
     titleContainer: {
         position: 'relative',
     },
     title: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 20,
         lineHeight: 28,
         fontWeight: '700',
@@ -1080,7 +1064,7 @@ const styles = StyleSheet.create({
         opacity: 0.68,
     },
     titleToggleText: {
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 14,
         fontWeight: '600',
     },
@@ -1090,29 +1074,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     authorAvatar: {
-        width: 38,
-        height: 38,
         marginRight: spacing.sm,
-        borderRadius: radius.full,
-        backgroundColor: colors.surfaceRaised,
-    },
-    authorAvatarPlaceholder: {
-        width: 38,
-        height: 38,
-        marginRight: spacing.sm,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: radius.full,
-        backgroundColor: colors.surfaceRaised,
-    },
-    authorAvatarPlaceholderText: {
-        color: colors.textSecondary,
-        fontSize: 14,
-        fontWeight: '600',
     },
     authorName: {
         flex: 1,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 15,
         fontWeight: '600',
     },
@@ -1120,7 +1086,7 @@ const styles = StyleSheet.create({
         paddingTop: spacing.lg,
         paddingBottom: spacing.lg,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.divider,
+        borderBottomColor: colors.surfaceBorder,
     },
     partsHeader: {
         flexDirection: 'row',
@@ -1129,14 +1095,14 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
     },
     partsHeading: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 17,
         fontWeight: '700',
     },
     partsSummary: {
         flex: 1,
         marginLeft: spacing.md,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 12,
         textAlign: 'right',
     },
@@ -1151,31 +1117,31 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderWidth: 1,
-        borderColor: colors.outline,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.sm,
-        backgroundColor: colors.surfaceRaised,
+        backgroundColor: colors.surfaceBackground,
     },
     partButtonSelected: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primarySoft,
+        borderColor: colors.accentForeground,
+        backgroundColor: colors.accentBackground,
     },
     partButtonPressed: {
         opacity: 0.76,
     },
     partTitle: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 14,
         fontWeight: '600',
     },
     partTitleSelected: {
-        color: colors.primary,
+        color: colors.accentForeground,
     },
     partDuration: {
         marginTop: spacing.xs,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 12,
     },
     partDurationSelected: {
-        color: colors.primary,
+        color: colors.accentForeground,
     },
 });

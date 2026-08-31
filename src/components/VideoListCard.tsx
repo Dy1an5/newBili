@@ -11,6 +11,7 @@ import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import type { VideoWithDuration } from '@/types/video';
+import UserAvatar from '@/components/UserAvatar';
 
 type Props = {
     video: VideoWithDuration;
@@ -62,7 +63,12 @@ function VideoListCard({
             <View style={styles.videoInfo}>
                 <Text numberOfLines={2} style={styles.videoTitle}>{video.title}</Text>
                 <View style={styles.authorRow}>
-                    <Image source={{ uri: video.author.avatarUrl }} style={styles.avatar} />
+                    <UserAvatar
+                        name={video.author.name}
+                        size={22}
+                        style={styles.avatar}
+                        uri={video.author.avatarUrl}
+                    />
                     <Text numberOfLines={1} style={styles.authorName}>{video.author.name}</Text>
                 </View>
                 {metaText ? (
@@ -82,9 +88,9 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
         padding: spacing.sm,
         borderWidth: 1,
-        borderColor: colors.outline,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.md,
-        backgroundColor: colors.surfaceRaised,
+        backgroundColor: colors.surfaceBackground,
     },
     videoCardPressed: {
         opacity: 0.8,
@@ -94,7 +100,7 @@ const styles = StyleSheet.create({
         aspectRatio: 16 / 10,
         overflow: 'hidden',
         borderRadius: radius.sm,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     cover: {
         width: '100%',
@@ -107,10 +113,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.xs,
         paddingVertical: 2,
         borderRadius: 4,
-        backgroundColor: 'rgba(0,0,0,0.68)',
+        backgroundColor: colors.mediaOverlayBackground,
     },
     durationText: {
-        color: colors.textOnMedia,
+        color: colors.primaryText,
         fontSize: 11,
         fontWeight: '600',
     },
@@ -120,7 +126,7 @@ const styles = StyleSheet.create({
         marginLeft: spacing.md,
     },
     videoTitle: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 14,
         lineHeight: 20,
         fontWeight: '600',
@@ -131,20 +137,16 @@ const styles = StyleSheet.create({
         marginTop: spacing.sm,
     },
     avatar: {
-        width: 22,
-        height: 22,
         marginRight: spacing.xs,
-        borderRadius: radius.full,
-        backgroundColor: colors.background,
     },
     authorName: {
         flex: 1,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 12,
     },
     metaText: {
         marginTop: spacing.xs,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 11,
     },
 });

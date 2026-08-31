@@ -20,6 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import AppButton from '@/components/AppButton';
+import UserAvatar from '@/components/UserAvatar';
 
 const MAX_PICTURE_COUNT = 9;
 const COLLAPSED_CONTENT_LINE_COUNT = 2;
@@ -210,9 +212,11 @@ function FollowingPictureCard({
 
                 <View style={styles.footer}>
                     <View style={styles.authorContainer}>
-                        <Image
-                            source={{ uri: avatarUrl }}
+                        <UserAvatar
+                            name={authorName}
+                            size={34}
                             style={styles.avatar}
+                            uri={avatarUrl}
                         />
 
                         <Text
@@ -272,17 +276,12 @@ function FollowingPictureCard({
                             style={styles.previewList}
                         />
 
-                        <Pressable
+                        <AppButton
                             accessibilityLabel='关闭图片预览'
-                            accessibilityRole='button'
                             onPress={closePicturePreview}
-                            style={({ pressed }) => [
-                                styles.previewCloseButton,
-                                pressed && styles.previewButtonPressed,
-                            ]}
-                        >
-                            <Text style={styles.previewCloseText}>关闭</Text>
-                        </Pressable>
+                            style={styles.previewCloseButton}
+                            title='关闭'
+                        />
 
                         <View pointerEvents='none' style={styles.previewCounter}>
                             <Text style={styles.previewCounterText}>
@@ -305,10 +304,10 @@ const styles = StyleSheet.create({
 
         padding: spacing.md,
 
-        backgroundColor: colors.surfaceRaised,
+        backgroundColor: colors.surfaceBackground,
 
         borderWidth: 1,
-        borderColor: colors.outline,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.lg,
     },
 
@@ -326,7 +325,7 @@ const styles = StyleSheet.create({
 
         fontWeight: '700',
 
-        color: colors.textPrimary,
+        color: colors.primaryText,
     },
 
     contentMeasurement: {
@@ -349,7 +348,7 @@ const styles = StyleSheet.create({
     },
 
     contentToggleText: {
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 14,
         fontWeight: '600',
     },
@@ -365,7 +364,7 @@ const styles = StyleSheet.create({
         aspectRatio: 1,
         overflow: 'hidden',
         borderRadius: radius.sm,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
 
     singlePictureTile: {
@@ -399,14 +398,7 @@ const styles = StyleSheet.create({
     },
 
     avatar: {
-        width: 34,
-        height: 34,
-
-        borderRadius: radius.full,
-
         marginRight: spacing.sm,
-
-        backgroundColor: colors.background,
     },
 
     author: {
@@ -415,18 +407,18 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
 
-        color: colors.textSecondary,
+        color: colors.secondaryText,
     },
 
     time: {
         fontSize: 13,
 
-        color: colors.textMuted,
+        color: colors.mutedText,
     },
 
     previewPage: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
 
     previewList: {
@@ -448,23 +440,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: spacing.md,
         right: spacing.md,
-
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-
-        borderRadius: radius.full,
-
-        backgroundColor: 'rgba(0,0,0,0.68)',
-    },
-
-    previewButtonPressed: {
-        opacity: 0.72,
-    },
-
-    previewCloseText: {
-        color: colors.textOnMedia,
-        fontSize: 14,
-        fontWeight: '600',
     },
 
     previewCounter: {
@@ -477,11 +452,11 @@ const styles = StyleSheet.create({
 
         borderRadius: radius.full,
 
-        backgroundColor: 'rgba(0,0,0,0.68)',
+        backgroundColor: colors.mediaOverlayBackground,
     },
 
     previewCounterText: {
-        color: colors.textOnMedia,
+        color: colors.primaryText,
         fontSize: 13,
         fontWeight: '600',
     },

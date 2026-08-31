@@ -1,8 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import AppButton from '@/components/AppButton';
 import { colors } from '@/theme/colors';
-import { radius } from '@/theme/radius';
-import { spacing } from '@/theme/spacing';
 
 type Props = {
     onLoginPress: () => void;
@@ -11,16 +10,10 @@ type Props = {
 export default function MainPage({ onLoginPress }: Props) {
     return (
         <View style={styles.page}>
-            <Pressable
-                accessibilityRole='button'
+            <AppButton
                 onPress={onLoginPress}
-                style={({ pressed }) => [
-                    styles.loginButton,
-                    pressed && styles.loginButtonPressed,
-                ]}
-            >
-                <Text style={styles.loginButtonText}>登录</Text>
-            </Pressable>
+                title='登录'
+            />
         </View>
     );
 }
@@ -30,20 +23,6 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: colors.background,
-    },
-    loginButton: {
-        paddingHorizontal: spacing.xl,
-        paddingVertical: spacing.md,
-        borderRadius: radius.md,
-        backgroundColor: colors.primary,
-    },
-    loginButtonPressed: {
-        opacity: 0.75,
-    },
-    loginButtonText: {
-        color: colors.textOnPrimary,
-        fontSize: 16,
-        fontWeight: '600',
+        backgroundColor: colors.pageBackground,
     },
 });

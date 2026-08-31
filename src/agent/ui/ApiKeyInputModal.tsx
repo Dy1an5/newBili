@@ -10,6 +10,7 @@ import {
     View,
 } from 'react-native';
 
+import AppButton from '@/components/AppButton';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -77,7 +78,7 @@ export default function ApiKeyInputModal({
                         onChangeText={setApiKey}
                         onSubmitEditing={handleConfirm}
                         placeholder={hasApiKey ? '已配置,输入新key可替换' : '请输入API key'}
-                        placeholderTextColor={colors.textMuted}
+                        placeholderTextColor={colors.mutedText}
                         returnKeyType='done'
                         secureTextEntry
                         style={styles.input}
@@ -117,19 +118,12 @@ export default function ApiKeyInputModal({
                             <Text style={styles.cancelText}>取消</Text>
                         </Pressable>
 
-                        <Pressable
-                            accessibilityRole='button'
-                            accessibilityState={{ disabled: !isApiKeyValid }}
+                        <AppButton
                             disabled={!isApiKeyValid}
                             onPress={handleConfirm}
-                            style={({ pressed }) => [
-                                styles.confirmButton,
-                                !isApiKeyValid && styles.confirmButtonDisabled,
-                                pressed && styles.pressed,
-                            ]}
-                        >
-                            <Text style={styles.confirmText}>确定</Text>
-                        </Pressable>
+                            style={styles.confirmButtonLayout}
+                            title='确定'
+                        />
                     </View>
                 </View>
             </KeyboardAvoidingView>
@@ -143,25 +137,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: spacing.xl,
-        backgroundColor: 'rgba(0, 0, 0, 0.72)',
+        backgroundColor: colors.modalBackdrop,
     },
     dialog: {
         width: '100%',
         maxWidth: 440,
         padding: spacing.lg,
         borderWidth: 1,
-        borderColor: colors.outline,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.lg,
-        backgroundColor: colors.surfaceRaised,
+        backgroundColor: colors.surfaceBackground,
     },
     title: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 19,
         fontWeight: '700',
     },
     description: {
         marginTop: spacing.sm,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 13,
         lineHeight: 20,
     },
@@ -170,15 +164,15 @@ const styles = StyleSheet.create({
         height: 48,
         paddingHorizontal: spacing.md,
         borderWidth: 1,
-        borderColor: colors.outline,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.sm,
-        color: colors.textPrimary,
-        backgroundColor: colors.background,
+        color: colors.primaryText,
+        backgroundColor: colors.pageBackground,
         fontSize: 15,
     },
     validationText: {
         marginTop: spacing.sm,
-        color: '#FFB86B',
+        color: colors.alertText,
         fontSize: 12,
         lineHeight: 18,
     },
@@ -196,30 +190,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
     },
     clearText: {
-        color: '#FF7474',
+        color: colors.alertText,
         fontSize: 14,
         fontWeight: '600',
     },
     cancelText: {
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 14,
         fontWeight: '600',
     },
-    confirmButton: {
-        minHeight: 40,
-        justifyContent: 'center',
+    confirmButtonLayout: {
         marginLeft: spacing.sm,
-        paddingHorizontal: spacing.lg,
-        borderRadius: radius.sm,
-        backgroundColor: colors.primary,
-    },
-    confirmButtonDisabled: {
-        opacity: 0.4,
-    },
-    confirmText: {
-        color: colors.textOnPrimary,
-        fontSize: 14,
-        fontWeight: '700',
     },
     pressed: {
         opacity: 0.7,

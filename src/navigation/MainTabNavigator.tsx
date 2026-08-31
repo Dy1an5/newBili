@@ -15,7 +15,7 @@ import { StyleSheet, type View } from 'react-native';
 
 import { useAgentSession } from '@/agent/session/AgentSessionContext';
 import ApiKeyInputModal from '@/agent/ui/ApiKeyInputModal';
-import FloatingTabBar from '@/components/navigation/FloatingTabBar';
+import FloatingTabBar from '@/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
 import FollowingPage from '@/page/following/FollowingPage';
 import VideoDetailPage from '@/page/video/VideoDetailPage';

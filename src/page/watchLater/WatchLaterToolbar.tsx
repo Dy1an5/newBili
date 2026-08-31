@@ -72,8 +72,8 @@ export default function WatchLaterToolbar({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.background,
-        borderBottomColor: colors.divider,
+        backgroundColor: colors.pageBackground,
+        borderBottomColor: colors.surfaceBorder,
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
     toolbar: {
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     title: {
         flexShrink: 1,
         marginRight: spacing.md,
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 16,
         fontWeight: '600',
     },
@@ -96,9 +96,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: colors.outline,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.full,
-        backgroundColor: colors.surfaceRaised,
+        backgroundColor: colors.surfaceBackground,
         overflow: 'hidden',
     },
     sortOption: {
@@ -109,17 +109,17 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
     },
     selectedSortOption: {
-        backgroundColor: colors.primarySoft,
+        backgroundColor: colors.accentBackground,
     },
     pressedOption: {
         opacity: 0.75,
     },
     sortText: {
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 13,
         fontWeight: '600',
     },
     selectedSortText: {
-        color: colors.primary,
+        color: colors.accentForeground,
     },
 });

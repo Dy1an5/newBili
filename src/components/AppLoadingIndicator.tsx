@@ -16,7 +16,7 @@ type Props = {
 export default function AppLoadingIndicator({ style }: Props) {
     return (
         <View style={[styles.container, style]}>
-            <ActivityIndicator color={colors.primary} size='small' />
+            <ActivityIndicator color={colors.accentForeground} size='small' />
         </View>
     );
 }
@@ -28,6 +28,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: radius.full,
-        backgroundColor: colors.primarySoft,
+        backgroundColor: colors.accentBackground,
     },
 });

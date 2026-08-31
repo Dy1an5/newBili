@@ -3,7 +3,6 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
     ActivityIndicator,
     FlatList,
-    Pressable,
     StyleSheet,
     Text,
     View,
@@ -11,12 +10,12 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
-import AppLoadingIndicator from '@/components/common/AppLoadingIndicator';
-import AppRefreshControl from '@/components/common/AppRefreshControl';
-import VideoListCard from '@/components/video/VideoListCard';
-import WatchLaterToolbar from '@/components/watchLater/WatchLaterToolbar';
+import AppButton from '@/components/AppButton';
+import AppLoadingIndicator from '@/components/AppLoadingIndicator';
+import AppRefreshControl from '@/components/AppRefreshControl';
+import VideoListCard from '@/components/VideoListCard';
+import WatchLaterToolbar from '@/page/watchLater/WatchLaterToolbar';
 import { colors } from '@/theme/colors';
-import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import type { VideoPlaybackTarget } from '@/types/video';
 import type { WatchLaterVideo } from '@/types/watchLater';
@@ -202,7 +201,7 @@ export default function WatchLaterPage({
             <View style={styles.page}>
                 {toolbar}
                 <View style={styles.centered}>
-                    <ActivityIndicator color={colors.primary} size='large' />
+                    <ActivityIndicator color={colors.accentForeground} size='large' />
                     <Text style={styles.statusText}>正在加载稍后再看...</Text>
                 </View>
             </View>
@@ -215,13 +214,11 @@ export default function WatchLaterPage({
                 {toolbar}
                 <View style={styles.centered}>
                     <Text style={styles.errorText}>{errorMessage}</Text>
-                    <Pressable
-                        accessibilityRole='button'
+                    <AppButton
                         onPress={() => void loadVideoPage(1, false)}
-                        style={styles.retryButton}
-                    >
-                        <Text style={styles.retryButtonText}>重新加载</Text>
-                    </Pressable>
+                        style={styles.actionButton}
+                        title='重新加载'
+                    />
                 </View>
             </View>
         );
@@ -286,7 +283,7 @@ export default function WatchLaterPage({
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     centered: {
         flex: 1,
@@ -305,33 +302,24 @@ const styles = StyleSheet.create({
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 14,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginHorizontal: spacing.md,
         marginBottom: spacing.md,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 13,
         textAlign: 'center',
     },
-    retryButton: {
+    actionButton: {
         marginTop: spacing.md,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.sm,
-        backgroundColor: colors.primary,
-    },
-    retryButtonText: {
-        color: colors.textOnPrimary,
-        fontSize: 14,
-        fontWeight: '600',
     },
     footerLoading: {
         alignSelf: 'center',

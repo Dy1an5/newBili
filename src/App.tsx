@@ -47,7 +47,7 @@ export default function App() {
     if (screen === 'checking') {
         content = (
             <View style={styles.loadingPage}>
-                <ActivityIndicator color={colors.primary} size='large' />
+                <ActivityIndicator color={colors.accentForeground} size='large' />
             </View>
         );
     } else if (screen === 'main') {
@@ -71,11 +71,11 @@ export default function App() {
                         ...DarkTheme,
                         colors: {
                             ...DarkTheme.colors,
-                            primary: colors.primary,
-                            background: colors.background,
-                            card: colors.surface,
-                            text: colors.textPrimary,
-                            border: colors.divider,
+                            primary: colors.accentForeground,
+                            background: colors.pageBackground,
+                            card: colors.pageBackground,
+                            text: colors.primaryText,
+                            border: colors.surfaceBorder,
                         },
                     }}
                 >
@@ -87,7 +87,7 @@ export default function App() {
 
     return (
         <SafeAreaProvider>
-            <StatusBar barStyle='light-content' backgroundColor={colors.background} />
+            <StatusBar barStyle='light-content' backgroundColor={colors.pageBackground} />
             <SafeAreaView edges={['top']} style={styles.safeArea}>
                 {content}
             </SafeAreaView>
@@ -98,12 +98,12 @@ export default function App() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     loadingPage: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
 });

@@ -87,7 +87,7 @@ export default function LoginPage({
                 startInLoadingState
                 renderLoading={() => (
                     <View style={styles.loading}>
-                        <ActivityIndicator color={colors.primary} size='large' />
+                        <ActivityIndicator color={colors.accentForeground} size='large' />
                     </View>
                 )}
                 onLoad={() => {
@@ -104,7 +104,7 @@ export default function LoginPage({
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     header: {
         minHeight: 52,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 12,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.divider,
+        borderBottomColor: colors.surfaceBorder,
     },
     backButton: {
         paddingHorizontal: 8,
@@ -120,22 +120,22 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     backButtonText: {
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 16,
     },
     message: {
         flex: 1,
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 14,
     },
     webView: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     loading: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
 });

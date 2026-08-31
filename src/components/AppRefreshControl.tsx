@@ -21,11 +21,11 @@ export default function AppRefreshControl({
     return (
         <RefreshControl
             {...refreshControlProps}
-            colors={[colors.primary]}
+            colors={[colors.accentForeground]}
             onRefresh={onRefresh}
-            progressBackgroundColor={colors.primarySoft}
+            progressBackgroundColor={colors.accentBackground}
             refreshing={refreshing}
-            tintColor={colors.primary}
+            tintColor={colors.accentForeground}
         />
     );
 }

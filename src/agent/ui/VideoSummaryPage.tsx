@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -34,6 +33,7 @@ import {
     VideoPartSummaryStorageError,
 } from '../storage/videoPartSummaryRepository';
 import { getLoginCookie } from '@/auth/authCookie';
+import AppButton from '@/components/AppButton';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -460,7 +460,7 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
         <View style={styles.page}>
             {state.status === 'checking-cache' ? (
                 <View style={styles.centerState}>
-                    <ActivityIndicator color={colors.primary} size='small' />
+                    <ActivityIndicator color={colors.accentForeground} size='small' />
                     <Text style={styles.stateDescription}>正在查找本地总结...</Text>
                 </View>
             ) : state.status === 'idle' ? (
@@ -471,23 +471,16 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
                             ? `将根据P${target.partNumber} ${target.partTitle}的B站字幕生成总结`
                             : '正在等待当前分P信息'}
                     </Text>
-                    <Pressable
-                        accessibilityRole='button'
-                        accessibilityState={{ disabled: target === null }}
+                    <AppButton
                         disabled={target === null}
                         onPress={startSummary}
-                        style={({ pressed }) => [
-                            styles.generateButton,
-                            target === null && styles.generateButtonDisabled,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <Text style={styles.generateButtonText}>开始生成</Text>
-                    </Pressable>
+                        style={styles.actionButton}
+                        title='开始生成'
+                    />
                 </View>
             ) : state.status === 'loading' ? (
                 <View style={styles.centerState}>
-                    <ActivityIndicator color={colors.primary} size='large' />
+                    <ActivityIndicator color={colors.accentForeground} size='large' />
                     <Text style={styles.stateTitle}>正在生成总结...</Text>
                     <Text style={styles.stateDescription}>
                         正在获取当前分P字幕并请求DeepSeek
@@ -499,31 +492,21 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
                     <Text style={styles.stateDescription}>
                         没有字幕时不会调用模型
                     </Text>
-                    <Pressable
-                        accessibilityRole='button'
+                    <AppButton
                         onPress={startSummary}
-                        style={({ pressed }) => [
-                            styles.retryButton,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <Text style={styles.retryButtonText}>重新检查</Text>
-                    </Pressable>
+                        style={styles.actionButton}
+                        title='重新检查'
+                    />
                 </View>
             ) : state.status === 'error' ? (
                 <View style={styles.centerState}>
                     <Text style={styles.errorTitle}>总结失败</Text>
                     <Text style={styles.stateDescription}>{state.message}</Text>
-                    <Pressable
-                        accessibilityRole='button'
+                    <AppButton
                         onPress={startSummary}
-                        style={({ pressed }) => [
-                            styles.retryButton,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <Text style={styles.retryButtonText}>重新生成</Text>
-                    </Pressable>
+                        style={styles.actionButton}
+                        title='重新生成'
+                    />
                 </View>
             ) : (
                 <ScrollView
@@ -533,16 +516,11 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
                     ]}
                 >
                     <View style={styles.resultHeader}>
-                        <Pressable
-                            accessibilityRole='button'
+                        <AppButton
                             onPress={startSummary}
-                            style={({ pressed }) => [
-                                styles.regenerateButton,
-                                pressed && styles.pressed,
-                            ]}
-                        >
-                            <Text style={styles.regenerateButtonText}>重新生成总结</Text>
-                        </Pressable>
+                            style={styles.resultActionButton}
+                            title='重新生成总结'
+                        />
 
                         <Text style={styles.videoTitle}>{state.target.videoTitle}</Text>
                         <Text style={styles.metaText}>
@@ -623,7 +601,7 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     centerState: {
         flex: 1,
@@ -633,52 +611,25 @@ const styles = StyleSheet.create({
     },
     stateTitle: {
         marginTop: spacing.md,
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 18,
         fontWeight: '700',
         textAlign: 'center',
     },
     errorTitle: {
-        color: '#FF7474',
+        color: colors.alertText,
         fontSize: 18,
         fontWeight: '700',
     },
     stateDescription: {
         marginTop: spacing.sm,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 14,
         lineHeight: 21,
         textAlign: 'center',
     },
-    generateButton: {
-        minWidth: 132,
-        minHeight: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
+    actionButton: {
         marginTop: spacing.lg,
-        paddingHorizontal: spacing.xl,
-        borderRadius: radius.sm,
-        backgroundColor: colors.primary,
-    },
-    generateButtonDisabled: {
-        opacity: 0.4,
-    },
-    generateButtonText: {
-        color: colors.textOnPrimary,
-        fontSize: 15,
-        fontWeight: '700',
-    },
-    retryButton: {
-        marginTop: spacing.lg,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.sm,
-        backgroundColor: colors.primary,
-    },
-    retryButtonText: {
-        color: colors.textOnPrimary,
-        fontSize: 14,
-        fontWeight: '700',
     },
     content: {
         padding: spacing.lg,
@@ -686,36 +637,24 @@ const styles = StyleSheet.create({
     resultHeader: {
         alignItems: 'stretch',
     },
-    regenerateButton: {
+    resultActionButton: {
         alignSelf: 'flex-end',
-        minHeight: 36,
-        justifyContent: 'center',
         marginBottom: spacing.md,
-        paddingHorizontal: spacing.md,
-        borderWidth: 1,
-        borderColor: colors.primary,
-        borderRadius: radius.sm,
-        backgroundColor: colors.primarySoft,
-    },
-    regenerateButtonText: {
-        color: colors.primary,
-        fontSize: 13,
-        fontWeight: '700',
     },
     videoTitle: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 19,
         lineHeight: 27,
         fontWeight: '700',
     },
     metaText: {
         marginTop: spacing.xs,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 13,
     },
     storageWarningText: {
         marginTop: spacing.xs,
-        color: '#FFB86B',
+        color: colors.alertText,
         fontSize: 12,
         lineHeight: 18,
     },
@@ -723,18 +662,18 @@ const styles = StyleSheet.create({
         marginTop: spacing.xl,
         padding: spacing.lg,
         borderWidth: 1,
-        borderColor: colors.divider,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.md,
-        backgroundColor: colors.surfaceRaised,
+        backgroundColor: colors.surfaceBackground,
     },
     sectionTitle: {
         marginBottom: spacing.md,
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 17,
         fontWeight: '700',
     },
     bodyText: {
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 15,
         lineHeight: 23,
     },
@@ -744,7 +683,7 @@ const styles = StyleSheet.create({
     },
     listIndex: {
         width: 28,
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 15,
         fontWeight: '700',
     },
@@ -753,7 +692,7 @@ const styles = StyleSheet.create({
     },
     timeText: {
         marginTop: spacing.xs,
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 12,
     },
     chapter: {
@@ -761,23 +700,20 @@ const styles = StyleSheet.create({
     },
     chapterTitle: {
         marginBottom: spacing.xs,
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 14,
         fontWeight: '700',
     },
     limitationText: {
         marginBottom: spacing.sm,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 14,
         lineHeight: 21,
     },
     usageText: {
         marginTop: spacing.lg,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 12,
         textAlign: 'center',
-    },
-    pressed: {
-        opacity: 0.7,
     },
 });

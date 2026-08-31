@@ -14,11 +14,12 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
-import AppLoadingIndicator from '@/components/common/AppLoadingIndicator';
-import AppRefreshControl from '@/components/common/AppRefreshControl';
-import FollowingGroupSelector from '@/components/following/FollowingGroupSelector';
-import FollowingPictureCard from '@/components/following/FollowingPictureCard';
-import FollowingVideoCard from '@/components/following/FollowingVideoCard';
+import AppButton from '@/components/AppButton';
+import AppLoadingIndicator from '@/components/AppLoadingIndicator';
+import AppRefreshControl from '@/components/AppRefreshControl';
+import SelectionBar from '@/components/SelectionBar';
+import FollowingPictureCard from '@/page/following/FollowingPictureCard';
+import FollowingVideoCard from '@/page/following/FollowingVideoCard';
 import {
     fetchFollowingGroupMemberMids,
     fetchFollowingGroups,
@@ -28,7 +29,6 @@ import {
 } from '@/page/following/fetchFollowing';
 import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
-import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import type { FollowingGroup, FollowingItem } from '@/types/following';
 import type { VideoPlaybackTarget } from '@/types/video';
@@ -634,7 +634,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
     if (isLoading && dynamics.length === 0) {
         return (
             <View style={styles.centered}>
-                <ActivityIndicator color={colors.primary} size='large' />
+                <ActivityIndicator color={colors.accentForeground} size='large' />
                 <Text style={styles.statusText}>正在加载动态...</Text>
             </View>
         );
@@ -644,12 +644,11 @@ export default function FollowingPage({ onVideoPress }: Props) {
         return (
             <View style={styles.centered}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
-                <Pressable
+                <AppButton
                     onPress={() => void loadFirstPage(false)}
-                    style={styles.retryButton}
-                >
-                    <Text style={styles.retryButtonText}>重新加载</Text>
-                </Pressable>
+                    style={styles.actionButton}
+                    title='重新加载'
+                />
             </View>
         );
     }
@@ -671,12 +670,11 @@ export default function FollowingPage({ onVideoPress }: Props) {
             return (
                 <View style={styles.emptyMessage}>
                     <Text style={styles.errorText}>{memberErrorMessage}</Text>
-                    <Pressable
+                    <AppButton
                         onPress={retrySelectedGroupMembers}
-                        style={styles.retryButton}
-                    >
-                        <Text style={styles.retryButtonText}>重试</Text>
-                    </Pressable>
+                        style={styles.actionButton}
+                        title='重试'
+                    />
                 </View>
             );
         }
@@ -701,12 +699,11 @@ export default function FollowingPage({ onVideoPress }: Props) {
             return (
                 <View style={styles.emptyMessage}>
                     <Text style={styles.errorText}>{paginationErrorMessage}</Text>
-                    <Pressable
+                    <AppButton
                         onPress={continueLoadingDynamics}
-                        style={styles.retryButton}
-                    >
-                        <Text style={styles.retryButtonText}>重试</Text>
-                    </Pressable>
+                        style={styles.actionButton}
+                        title='重试'
+                    />
                 </View>
             );
         }
@@ -721,16 +718,11 @@ export default function FollowingPage({ onVideoPress }: Props) {
                     <Text style={styles.statusText}>
                         接下来3页暂无该分组的新动态
                     </Text>
-                    <Pressable
-                        accessibilityRole='button'
+                    <AppButton
                         onPress={continueLoadingDynamics}
-                        style={({ pressed }) => [
-                            styles.continueButton,
-                            pressed && styles.continueButtonPressed,
-                        ]}
-                    >
-                        <Text style={styles.continueButtonText}>继续加载</Text>
-                    </Pressable>
+                        style={styles.actionButton}
+                        title='继续加载'
+                    />
                 </View>
             );
         }
@@ -767,13 +759,24 @@ export default function FollowingPage({ onVideoPress }: Props) {
 
     return (
         <View style={styles.page}>
-            <FollowingGroupSelector
+            <SelectionBar
                 errorMessage={groupsErrorMessage}
-                groups={groups}
                 isLoading={isGroupsLoading && !isRefreshing}
                 onRetry={() => void loadGroups()}
                 onSelect={handleGroupSelect}
-                selectedTagId={selectedTagId}
+                options={[
+                    {
+                        value: null,
+                        label: '全部',
+                        accessibilityLabel: '全部关注动态',
+                    },
+                    ...groups.map((group) => ({
+                        value: group.tagId,
+                        label: `${group.name}(${group.memberCount})`,
+                        accessibilityLabel: `${group.name},${group.memberCount}位UP主`,
+                    })),
+                ]}
+                selectedValue={selectedTagId}
             />
 
             <FlatList
@@ -813,18 +816,11 @@ export default function FollowingPage({ onVideoPress }: Props) {
                                     <Text style={styles.footerText}>
                                         接下来3页暂无该分组的新动态
                                     </Text>
-                                    <Pressable
-                                        accessibilityRole='button'
+                                    <AppButton
                                         onPress={continueLoadingDynamics}
-                                        style={({ pressed }) => [
-                                            styles.continueButton,
-                                            pressed && styles.continueButtonPressed,
-                                        ]}
-                                    >
-                                        <Text style={styles.continueButtonText}>
-                                            继续加载
-                                        </Text>
-                                    </Pressable>
+                                        style={styles.actionButton}
+                                        title='继续加载'
+                                    />
                                 </>
                             ) : null}
                             {!hasMore && !isLoadingMore && !paginationErrorMessage ? (
@@ -864,7 +860,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     listView: {
         flex: 1,
@@ -874,22 +870,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: spacing.lg,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     list: {
         paddingVertical: spacing.md,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     emptyList: {
         flexGrow: 1,
         alignItems: 'center',
         justifyContent: 'center',
         padding: spacing.lg,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 14,
         textAlign: 'center',
     },
@@ -898,53 +894,25 @@ const styles = StyleSheet.create({
     },
     diagnosticText: {
         marginTop: spacing.md,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 12,
         lineHeight: 18,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginHorizontal: spacing.md,
         marginVertical: spacing.sm,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 13,
         textAlign: 'center',
     },
-    retryButton: {
+    actionButton: {
         marginTop: spacing.md,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: 8,
-        backgroundColor: colors.primary,
-    },
-    retryButtonText: {
-        color: colors.textOnPrimary,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    continueButton: {
-        minHeight: 34,
-        marginTop: spacing.sm,
-        paddingHorizontal: spacing.md,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: colors.primary,
-        borderRadius: radius.full,
-        backgroundColor: colors.primarySoft,
-    },
-    continueButtonPressed: {
-        opacity: 0.75,
-    },
-    continueButtonText: {
-        color: colors.primary,
-        fontSize: 13,
-        fontWeight: '600',
     },
     footer: {
         minHeight: 48,
@@ -954,7 +922,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     footerText: {
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 12,
     },
     footerRetryButton: {
@@ -962,7 +930,7 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.xs,
     },
     footerRetryText: {
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 13,
         fontWeight: '600',
     },

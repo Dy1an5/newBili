@@ -3,7 +3,6 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
     ActivityIndicator,
     FlatList,
-    Pressable,
     StyleSheet,
     Text,
     View,
@@ -11,10 +10,11 @@ import {
 } from 'react-native';
 
 import { getLoginCookie } from '@/auth/authCookie';
-import AppLoadingIndicator from '@/components/common/AppLoadingIndicator';
-import AppRefreshControl from '@/components/common/AppRefreshControl';
-import FavoriteFolderSelector from '@/components/favorites/FavoriteFolderSelector';
-import VideoListCard from '@/components/video/VideoListCard';
+import AppButton from '@/components/AppButton';
+import AppLoadingIndicator from '@/components/AppLoadingIndicator';
+import AppRefreshControl from '@/components/AppRefreshControl';
+import SelectionBar from '@/components/SelectionBar';
+import VideoListCard from '@/components/VideoListCard';
 import {
     fetchFavoriteFolders,
     fetchFavoriteVideoPage,
@@ -22,7 +22,6 @@ import {
 } from '@/page/favorites/fetchFavorites';
 import { createVideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
-import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import type { FavoriteFolder, FavoriteVideo } from '@/types/favorites';
 import type { VideoPlaybackTarget } from '@/types/video';
@@ -284,7 +283,7 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
     if (isFoldersLoading && folders.length === 0) {
         return (
             <View style={styles.centeredPage}>
-                <ActivityIndicator color={colors.primary} size='large' />
+                <ActivityIndicator color={colors.accentForeground} size='large' />
                 <Text style={styles.statusText}>正在加载收藏夹...</Text>
             </View>
         );
@@ -294,31 +293,39 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
         return (
             <View style={styles.centeredPage}>
                 <Text style={styles.errorText}>{foldersErrorMessage}</Text>
-                <Pressable
-                    accessibilityRole='button'
+                <AppButton
                     onPress={() => void initializeFavorites()}
-                    style={styles.retryButton}
-                >
-                    <Text style={styles.retryButtonText}>重新加载</Text>
-                </Pressable>
+                    style={styles.actionButton}
+                    title='重新加载'
+                />
             </View>
         );
     }
 
     return (
         <View style={styles.page}>
-            <FavoriteFolderSelector
+            <SelectionBar
                 errorMessage={foldersErrorMessage}
-                folders={folders}
                 isLoading={isFoldersLoading && !isRefreshing}
                 onRetry={() => void refreshFavorites()}
-                onSelect={selectFolder}
-                selectedFolderId={selectedFolderId}
+                onSelect={(folderId) => {
+                    const folder = folders.find((item) => item.id === folderId);
+
+                    if (folder) {
+                        selectFolder(folder);
+                    }
+                }}
+                options={folders.map((folder) => ({
+                    value: folder.id,
+                    label: `${folder.title}(${folder.mediaCount})`,
+                    accessibilityLabel: `${folder.title},${folder.mediaCount}个视频`,
+                }))}
+                selectedValue={selectedFolderId}
             />
 
             {isVideosLoading && videos.length === 0 ? (
                 <View style={styles.centeredContent}>
-                    <ActivityIndicator color={colors.primary} size='large' />
+                    <ActivityIndicator color={colors.accentForeground} size='large' />
                     <Text style={styles.statusText}>正在加载收藏视频...</Text>
                 </View>
             ) : null}
@@ -327,13 +334,11 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
                 <View style={styles.centeredContent}>
                     <Text style={styles.errorText}>{videosErrorMessage}</Text>
                     {selectedFolder ? (
-                        <Pressable
-                            accessibilityRole='button'
+                        <AppButton
                             onPress={() => void loadVideoPage(selectedFolder, 1, 'initial')}
-                            style={styles.retryButton}
-                        >
-                            <Text style={styles.retryButtonText}>重新加载</Text>
-                        </Pressable>
+                            style={styles.actionButton}
+                            title='重新加载'
+                        />
                     ) : null}
                 </View>
             ) : null}
@@ -402,7 +407,7 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     listView: {
         flex: 1,
@@ -412,7 +417,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: spacing.lg,
-        backgroundColor: colors.background,
+        backgroundColor: colors.pageBackground,
     },
     centeredContent: {
         flex: 1,
@@ -431,33 +436,24 @@ const styles = StyleSheet.create({
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 14,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.textPrimary,
+        color: colors.primaryText,
         fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginHorizontal: spacing.md,
         marginBottom: spacing.md,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 13,
         textAlign: 'center',
     },
-    retryButton: {
+    actionButton: {
         marginTop: spacing.md,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.sm,
-        backgroundColor: colors.primary,
-    },
-    retryButtonText: {
-        color: colors.textOnPrimary,
-        fontSize: 14,
-        fontWeight: '600',
     },
     footerLoading: {
         alignSelf: 'center',

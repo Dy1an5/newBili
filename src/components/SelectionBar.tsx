@@ -10,25 +10,32 @@ import {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import type { FavoriteFolder } from '@/types/favorites';
 
-type Props = {
-    folders: FavoriteFolder[];
-    selectedFolderId: number | null;
+type SelectionValue = string | number | null;
+
+export type SelectionOption<Value extends SelectionValue = SelectionValue> = {
+    value: Value;
+    label: string;
+    accessibilityLabel: string;
+};
+
+type Props<Value extends SelectionValue> = {
+    options: SelectionOption<Value>[];
+    selectedValue: Value;
     isLoading: boolean;
     errorMessage: string | null;
-    onSelect: (folder: FavoriteFolder) => void;
+    onSelect: (value: Value) => void;
     onRetry: () => void;
 };
 
-export default function FavoriteFolderSelector({
-    folders,
-    selectedFolderId,
+export default function SelectionBar<Value extends SelectionValue>({
+    options,
+    selectedValue,
     isLoading,
     errorMessage,
     onSelect,
     onRetry,
-}: Props) {
+}: Props<Value>) {
     return (
         <View style={styles.container}>
             <ScrollView
@@ -36,16 +43,16 @@ export default function FavoriteFolderSelector({
                 horizontal
                 showsHorizontalScrollIndicator={false}
             >
-                {folders.map((folder) => {
-                    const isSelected = folder.id === selectedFolderId;
+                {options.map((option) => {
+                    const isSelected = option.value === selectedValue;
 
                     return (
                         <Pressable
-                            accessibilityLabel={`${folder.title},${folder.mediaCount}个视频`}
+                            accessibilityLabel={option.accessibilityLabel}
                             accessibilityRole='button'
                             accessibilityState={{ selected: isSelected }}
-                            key={folder.id}
-                            onPress={() => onSelect(folder)}
+                            key={`${typeof option.value}:${String(option.value)}`}
+                            onPress={() => onSelect(option.value)}
                             style={({ pressed }) => [
                                 styles.option,
                                 isSelected && styles.selectedOption,
@@ -59,7 +66,7 @@ export default function FavoriteFolderSelector({
                                     isSelected && styles.selectedOptionText,
                                 ]}
                             >
-                                {folder.title}({folder.mediaCount})
+                                {option.label}
                             </Text>
                         </Pressable>
                     );
@@ -67,7 +74,7 @@ export default function FavoriteFolderSelector({
 
                 {isLoading ? (
                     <ActivityIndicator
-                        color={colors.primary}
+                        color={colors.accentForeground}
                         size='small'
                         style={styles.loadingIndicator}
                     />
@@ -90,8 +97,8 @@ export default function FavoriteFolderSelector({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.background,
-        borderBottomColor: colors.divider,
+        backgroundColor: colors.pageBackground,
+        borderBottomColor: colors.surfaceBorder,
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
     options: {
@@ -107,25 +114,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: colors.outline,
+        borderColor: colors.surfaceBorder,
         borderRadius: radius.full,
-        backgroundColor: colors.surfaceRaised,
+        backgroundColor: colors.surfaceBackground,
     },
     selectedOption: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primarySoft,
+        borderColor: colors.accentForeground,
+        backgroundColor: colors.accentBackground,
     },
     pressedOption: {
         opacity: 0.75,
     },
     optionText: {
         flexShrink: 1,
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 14,
         fontWeight: '600',
     },
     selectedOptionText: {
-        color: colors.primary,
+        color: colors.accentForeground,
     },
     loadingIndicator: {
         marginHorizontal: spacing.sm,
@@ -138,7 +145,7 @@ const styles = StyleSheet.create({
     },
     errorText: {
         flex: 1,
-        color: colors.textMuted,
+        color: colors.mutedText,
         fontSize: 12,
     },
     retryButton: {
@@ -147,7 +154,7 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.xs,
     },
     retryText: {
-        color: colors.primary,
+        color: colors.accentForeground,
         fontSize: 13,
         fontWeight: '600',
     },

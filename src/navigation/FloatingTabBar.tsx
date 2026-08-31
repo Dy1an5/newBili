@@ -109,8 +109,8 @@ export default function FloatingTabBar({
                             const isFocused = state.index === index;
                             const options = descriptors[route.key].options;
                             const color = isFocused
-                                ? colors.primary
-                                : colors.textSecondary;
+                                ? colors.accentForeground
+                                : colors.secondaryText;
 
                             const handlePress = () => {
                                 const event = navigation.emit({
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
         left: 0,
         paddingTop: spacing.sm,
         paddingHorizontal: spacing.lg,
-        backgroundColor: 'transparent',
+        backgroundColor: colors.tabBarTransparent,
     },
     row: {
         height: 56,
@@ -218,9 +218,9 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 56,
         borderRadius: radius.full,
-        backgroundColor: 'rgba(0, 0, 0, 0.12)',
+        backgroundColor: colors.tabBarShadowBackground,
         elevation: 10,
-        shadowColor: colors.shadow,
+        shadowColor: colors.pageBackground,
         shadowOffset: {
             width: 0,
             height: 5,
@@ -234,10 +234,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: spacing.xs,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.26)',
+        borderColor: colors.tabBarBorder,
         borderRadius: radius.full,
         overflow: 'hidden',
-        backgroundColor: 'rgba(255, 255, 255, 0.07)',
+        backgroundColor: colors.tabBarBackground,
     },
     tabItem: {
         flex: 1,
@@ -250,8 +250,8 @@ const styles = StyleSheet.create({
     },
     tabItemSelected: {
         borderWidth: 1,
-        borderColor: 'rgba(92, 216, 255, 0.48)',
-        backgroundColor: 'rgba(0, 174, 236, 0.18)',
+        borderColor: colors.tabBarSelectedBorder,
+        backgroundColor: colors.tabBarSelectedBackground,
     },
     pressed: {
         opacity: 0.7,
@@ -267,9 +267,9 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: radius.full,
-        backgroundColor: 'rgba(0, 0, 0, 0.12)',
+        backgroundColor: colors.tabBarShadowBackground,
         elevation: 10,
-        shadowColor: colors.shadow,
+        shadowColor: colors.pageBackground,
         shadowOffset: {
             width: 0,
             height: 5,
@@ -280,10 +280,10 @@ const styles = StyleSheet.create({
     placeholderGlass: {
         flex: 1,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.26)',
+        borderColor: colors.tabBarBorder,
         borderRadius: radius.full,
         overflow: 'hidden',
-        backgroundColor: 'rgba(255, 255, 255, 0.07)',
+        backgroundColor: colors.tabBarBackground,
     },
     placeholderButton: {
         flex: 1,
@@ -315,9 +315,9 @@ const styles = StyleSheet.create({
         borderLeftWidth: 4,
         borderRightWidth: 4,
         borderTopWidth: 4,
-        borderLeftColor: 'transparent',
-        borderRightColor: 'transparent',
-        backgroundColor: colors.surface,
+        borderLeftColor: colors.tabBarTransparent,
+        borderRightColor: colors.tabBarTransparent,
+        backgroundColor: colors.pageBackground,
         transform: [{ rotate: '180deg' }],
     },
     watchLaterIcon: {
@@ -345,11 +345,11 @@ const styles = StyleSheet.create({
         transformOrigin: 'left center',
     },
     agentButtonText: {
-        color: colors.textSecondary,
+        color: colors.secondaryText,
         fontSize: 16,
         fontWeight: '800',
     },
     agentButtonTextConfigured: {
-        color: colors.primary,
+        color: colors.accentForeground,
     },
 });
