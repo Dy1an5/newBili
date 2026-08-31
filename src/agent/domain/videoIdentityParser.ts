@@ -2,6 +2,7 @@ import type {
     VideoIdentity,
     VideoPartIdentity,
 } from './videoIdentity';
+import { readPositiveId } from '@/tool/bilibiliApi';
 
 export function readBvid(value: unknown): string | null {
     if (typeof value !== 'string') {
@@ -15,24 +16,6 @@ export function readBvid(value: unknown): string | null {
     }
 
     return bvid;
-}
-
-export function readPositiveId(value: unknown): string | null {
-    if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) {
-        return String(value);
-    }
-
-    if (typeof value !== 'string') {
-        return null;
-    }
-
-    const id = value.trim();
-
-    if (!/^[1-9]\d*$/.test(id)) {
-        return null;
-    }
-
-    return id;
 }
 
 export function parseVideoIdentity(

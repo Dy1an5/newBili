@@ -7,14 +7,17 @@ import {
     createWbiSignedQuery,
     WbiSigningError,
 } from '@/tool/wbi';
+import {
+    asRecord,
+    BILIBILI_REFERER,
+    BILIBILI_USER_AGENT as USER_AGENT,
+    getCookiePair,
+    readNonEmptyString as readString,
+    readNumber,
+    type JsonRecord,
+} from '@/tool/bilibiliApi';
 
 const PLAYER_INFO_URL = 'https://api.bilibili.com/x/player/wbi/v2';
-const BILIBILI_REFERER = 'https://www.bilibili.com/';
-const USER_AGENT =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-    '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
-type JsonRecord = Record<string, unknown>;
 
 export type BilibiliSubtitleTrack = {
     language: string;
@@ -51,38 +54,6 @@ export class BilibiliSubtitleError extends Error {
     }
 }
 
-function asRecord(value: unknown): JsonRecord | null {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        return null;
-    }
-
-    return value as JsonRecord;
-}
-
-function readString(value: unknown): string | null {
-    if (typeof value !== 'string' || !value.trim()) {
-        return null;
-    }
-
-    return value.trim();
-}
-
-function readNumber(value: unknown): number | null {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
-    }
-
-    if (typeof value === 'string' && value.trim()) {
-        const number = Number(value);
-
-        if (Number.isFinite(number)) {
-            return number;
-        }
-    }
-
-    return null;
-}
-
 function normalizeUrl(value: unknown): string | null {
     const url = readString(value);
 
@@ -102,20 +73,10 @@ function normalizeUrl(value: unknown): string | null {
 }
 
 function getSessdataPair(cookie: string): string {
-    for (const part of cookie.split(';')) {
-        const trimmedPart = part.trim();
-        const separatorIndex = trimmedPart.indexOf('=');
+    const sessdata = getCookiePair(cookie, 'SESSDATA');
 
-        if (separatorIndex < 0) {
-            continue;
-        }
-
-        const name = trimmedPart.slice(0, separatorIndex).trim();
-        const value = trimmedPart.slice(separatorIndex + 1).trim();
-
-        if (name === 'SESSDATA' && value) {
-            return trimmedPart;
-        }
+    if (sessdata) {
+        return sessdata;
     }
 
     throw new BilibiliSubtitleError('登录信息中没有有效的 SESSDATA');

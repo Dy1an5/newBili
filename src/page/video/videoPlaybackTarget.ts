@@ -1,6 +1,6 @@
 export type VideoPlaybackTarget = {
     bvid: string;
-    initialCid?: number;
+    initialCid?: string;
     title: string;
     authorName?: string;
     authorAvatarUrl?: string;
@@ -17,7 +17,7 @@ type VideoPlaybackSource = {
 
 export function createVideoPlaybackTarget(
     video: VideoPlaybackSource,
-    initialCid?: number,
+    initialCid?: string,
 ): VideoPlaybackTarget {
     return {
         bvid: video.bvid,

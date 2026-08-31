@@ -120,7 +120,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
     const [groups, setGroups] = useState<FollowingGroup[]>([]);
     const [memberMidsByTagId, setMemberMidsByTagId] =
         useState<MemberMidsByTagId>({});
-    const [selectedTagId, setSelectedTagId] = useState<number | null>(null);
+    const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
     const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
     const [hasMore, setHasMore] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -128,7 +128,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [isGroupScanPaused, setIsGroupScanPaused] = useState(false);
     const [isGroupsLoading, setIsGroupsLoading] = useState(true);
-    const [loadingMemberTagId, setLoadingMemberTagId] = useState<number | null>(null);
+    const [loadingMemberTagId, setLoadingMemberTagId] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [paginationErrorMessage, setPaginationErrorMessage] =
         useState<string | null>(null);
@@ -138,7 +138,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
     const dynamicsRef = useRef<FollowingItem[]>([]);
     const groupsRef = useRef<FollowingGroup[]>([]);
     const memberMidsByTagIdRef = useRef<MemberMidsByTagId>({});
-    const selectedTagIdRef = useRef<number | null>(null);
+    const selectedTagIdRef = useRef<string | null>(null);
     const offsetRef = useRef<string | null>(null);
     const hasMoreRef = useRef(false);
     const isFirstPageLoadingRef = useRef(false);
@@ -418,7 +418,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
         }
     }, [loadMoreDynamics]);
 
-    const handleGroupSelect = useCallback((tagId: number | null) => {
+    const handleGroupSelect = useCallback((tagId: string | null) => {
         if (tagId === selectedTagIdRef.current) {
             return;
         }

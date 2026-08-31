@@ -1,14 +1,22 @@
+import {
+    asRecord,
+    BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
+    BILIBILI_REFERER,
+    BILIBILI_USER_AGENT as USER_AGENT,
+    getCookiePair,
+    getCookieValue,
+    normalizeImageUrl,
+    readNonEmptyString,
+    readNumber,
+    readPositiveId,
+    readString,
+    type JsonRecord,
+} from '@/tool/bilibiliApi';
+
 const FOLLOWING_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
 const FOLLOWING_GROUPS_URL = 'https://api.bilibili.com/x/relation/tags';
 const FOLLOWING_GROUP_MEMBERS_URL = 'https://api.bilibili.com/x/relation/tag';
 const FOLLOWING_GROUP_MEMBER_PAGE_SIZE = 20;
-const USER_AGENT =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-    '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const DEFAULT_AVATAR_URL = 'https://i0.hdslb.com/bfs/face/member/noface.jpg';
-
-type JsonRecord = Record<string, unknown>;
-
 type FollowingAuthor = {
     mid: string;
     name: string;
@@ -16,7 +24,7 @@ type FollowingAuthor = {
 };
 
 export type FollowingGroup = {
-    tagId: number;
+    tagId: string;
     name: string;
     memberCount: number;
     tip?: string;
@@ -28,13 +36,8 @@ export type FollowingVideo = {
     bvid: string;
     title: string;
     coverUrl: string;
-    durationText?: string;
     author: FollowingAuthor;
     publishedAt: number;
-    stats?: {
-        viewCount?: number;
-        danmakuCount?: number;
-    };
 };
 
 export type FollowingPicture = {
@@ -77,36 +80,6 @@ export class FollowingRequestError extends Error {
     }
 }
 
-function asRecord(value: unknown): JsonRecord | null {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        return null;
-    }
-
-    return value as JsonRecord;
-}
-
-function readString(value: unknown): string | null {
-    if (typeof value === 'string') {
-        return value;
-    }
-
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return String(value);
-    }
-
-    return null;
-}
-
-function readNonEmptyString(value: unknown): string | null {
-    const text = readString(value)?.trim();
-
-    if (!text) {
-        return null;
-    }
-
-    return text;
-}
-
 function readContentText(value: unknown): string | null {
     const text = readNonEmptyString(value);
 
@@ -123,64 +96,20 @@ function readContentText(value: unknown): string | null {
     return normalizedText.length > 0 ? normalizedText : null;
 }
 
-function readNumber(value: unknown): number | null {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
+function readFollowingTagId(value: unknown): string | null {
+    const positiveId = readPositiveId(value);
+
+    if (positiveId) {
+        return positiveId;
     }
 
-    if (typeof value === 'string' && value.trim().length > 0) {
-        const number = Number(value);
+    const tagId = readString(value)?.trim();
 
-        if (Number.isFinite(number)) {
-            return number;
-        }
-    }
-
-    return null;
-}
-
-function normalizeImageUrl(value: unknown): string | null {
-    const url = readString(value)?.trim();
-
-    if (!url) {
-        return null;
-    }
-
-    if (url.startsWith('//')) {
-        return `https:${url}`;
-    }
-
-    return url;
-}
-
-function getCookiePair(cookie: string, cookieName: string): string | null {
-    for (const part of cookie.split(';')) {
-        const trimmedPart = part.trim();
-        const separatorIndex = trimmedPart.indexOf('=');
-
-        if (separatorIndex < 0) {
-            continue;
-        }
-
-        const name = trimmedPart.slice(0, separatorIndex).trim();
-        const value = trimmedPart.slice(separatorIndex + 1).trim();
-
-        if (name === cookieName && value.length > 0) {
-            return trimmedPart;
-        }
+    if (tagId === '0' || tagId === '-10' || tagId === '-2') {
+        return tagId;
     }
 
     return null;
-}
-
-function getCookieValue(cookie: string, cookieName: string): string | null {
-    const pair = getCookiePair(cookie, cookieName);
-
-    if (!pair) {
-        return null;
-    }
-
-    return pair.slice(pair.indexOf('=') + 1);
 }
 
 function getSessdataPair(cookie: string): string {
@@ -215,7 +144,7 @@ async function requestFollowingJson(
         headers: {
             Accept: 'application/json',
             Cookie: sessdata,
-            Referer: 'https://www.bilibili.com/',
+            Referer: BILIBILI_REFERER,
             'User-Agent': USER_AGENT,
         },
         signal,
@@ -242,10 +171,10 @@ async function requestFollowingJson(
 
 function parseFollowingGroup(value: unknown): FollowingGroup | null {
     const group = asRecord(value);
-    const tagId = readNumber(group?.tagid);
+    const tagId = readFollowingTagId(group?.tagid);
     const name = readNonEmptyString(group?.name);
 
-    if (tagId === null || !Number.isInteger(tagId) || !name) {
+    if (tagId === null || !name) {
         return null;
     }
 
@@ -290,7 +219,7 @@ export async function fetchFollowingGroupMemberMids(
     while (true) {
         const parameters = new URLSearchParams({
             mid,
-            tagid: String(group.tagId),
+            tagid: group.tagId,
             pn: String(pageNumber),
             ps: String(FOLLOWING_GROUP_MEMBER_PAGE_SIZE),
         });
@@ -349,9 +278,7 @@ function parseFollowingVideo(value: unknown): FollowingVideo | null {
         return null;
     }
 
-    const archiveStats = asRecord(archive?.stat);
     const dynamicId = readNonEmptyString(item.id_str) ?? bvid;
-    const durationText = readString(archive?.duration_text);
     const authorMid = readString(author.mid) ?? '';
     const authorName = readString(author.name) ?? '未知UP主';
     const authorAvatarUrl = normalizeImageUrl(author.face) ?? DEFAULT_AVATAR_URL;
@@ -363,17 +290,12 @@ function parseFollowingVideo(value: unknown): FollowingVideo | null {
         bvid,
         title,
         coverUrl,
-        durationText: durationText ?? undefined,
         author: {
             mid: authorMid,
             name: authorName,
             avatarUrl: authorAvatarUrl,
         },
         publishedAt,
-        stats: {
-            viewCount: readNumber(archiveStats?.play) ?? undefined,
-            danmakuCount: readNumber(archiveStats?.danmaku) ?? undefined,
-        },
     };
 }
 

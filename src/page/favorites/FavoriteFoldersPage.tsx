@@ -64,7 +64,7 @@ function getFavoriteVideoKey(video: FavoriteVideo): string {
 export default function FavoriteFoldersPage({ onVideoPress }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [folders, setFolders] = useState<FavoriteFolder[]>([]);
-    const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
     const [videos, setVideos] = useState<FavoriteVideo[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const [hasMore, setHasMore] = useState(false);
@@ -77,7 +77,7 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
     const [videosErrorMessage, setVideosErrorMessage] =
         useState<string | null>(null);
     const foldersRef = useRef<FavoriteFolder[]>([]);
-    const selectedFolderIdRef = useRef<number | null>(null);
+    const selectedFolderIdRef = useRef<string | null>(null);
     const foldersControllerRef = useRef<AbortController | null>(null);
     const videosControllerRef = useRef<AbortController | null>(null);
 

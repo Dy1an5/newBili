@@ -122,14 +122,6 @@ function createCuePreview(
     }));
 }
 
-function createFullTranscript(
-    cues: VideoPartKnowledgeDocument['cues'],
-): string {
-    return cues.map((cue) => (
-        `[${formatTime(cue.startMs)}-${formatTime(cue.endMs)}] ${cue.text}`
-    )).join('\n');
-}
-
 export default function VideoSummaryPanel({ target, apiKey }: Props) {
     const safeAreaInsets = useSafeAreaInsets();
     const requestIdRef = useRef(0);
@@ -296,10 +288,6 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
                         ? '仅显示开头3条和结尾3条字幕'
                         : '字幕较短,已显示全部字幕条目',
                 });
-                logAgentDebug('获取到的完整字幕', {
-                    transcript: createFullTranscript(subtitle.cues),
-                });
-
                 const lastCue = subtitle.cues[subtitle.cues.length - 1];
                 const durationMs = Math.max(
                     requestTarget.durationMs,

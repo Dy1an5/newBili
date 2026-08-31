@@ -3,24 +3,28 @@ import {
     createWbiSignedQuery,
     WbiSigningError,
 } from '@/tool/wbi';
+import {
+    asRecord,
+    BILIBILI_REFERER,
+    BILIBILI_USER_AGENT as USER_AGENT,
+    getCookiePair,
+    readNonEmptyString as readString,
+    readNumber,
+    readPositiveId,
+    type JsonRecord,
+} from '@/tool/bilibiliApi';
 
 const VIDEO_VIEW_URL = 'https://api.bilibili.com/x/web-interface/view';
 const VIDEO_PLAY_URL = 'https://api.bilibili.com/x/player/wbi/playurl';
-const BILIBILI_REFERER = 'https://www.bilibili.com/';
-const USER_AGENT =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-    '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
-type JsonRecord = Record<string, unknown>;
 
 export type VideoPlayback = {
-    cid: number;
+    cid: string;
     url: string;
     headers: Record<string, string>;
 };
 
 export type VideoPart = {
-    cid: number;
+    cid: string;
     page: number;
     title: string;
     durationSeconds: number;
@@ -36,38 +40,6 @@ export class VideoPlaybackError extends Error {
         this.name = 'VideoPlaybackError';
         this.code = code;
     }
-}
-
-function asRecord(value: unknown): JsonRecord | null {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        return null;
-    }
-
-    return value as JsonRecord;
-}
-
-function readString(value: unknown): string | null {
-    if (typeof value === 'string' && value.length > 0) {
-        return value;
-    }
-
-    return null;
-}
-
-function readNumber(value: unknown): number | null {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
-    }
-
-    if (typeof value === 'string' && value.trim().length > 0) {
-        const number = Number(value);
-
-        if (Number.isFinite(number)) {
-            return number;
-        }
-    }
-
-    return null;
 }
 
 function readVideoDimension(value: unknown): Pick<VideoPart, 'width' | 'height'> {
@@ -101,20 +73,10 @@ function normalizeUrl(value: unknown): string | null {
 }
 
 function getSessdataPair(cookie: string): string {
-    for (const part of cookie.split(';')) {
-        const trimmedPart = part.trim();
-        const separatorIndex = trimmedPart.indexOf('=');
+    const sessdata = getCookiePair(cookie, 'SESSDATA');
 
-        if (separatorIndex < 0) {
-            continue;
-        }
-
-        const name = trimmedPart.slice(0, separatorIndex).trim();
-        const value = trimmedPart.slice(separatorIndex + 1).trim();
-
-        if (name === 'SESSDATA' && value.length > 0) {
-            return trimmedPart;
-        }
+    if (sessdata) {
+        return sessdata;
     }
 
     throw new VideoPlaybackError('登录信息中没有有效的 SESSDATA');
@@ -172,9 +134,9 @@ export async function fetchVideoParts(
     const pages = Array.isArray(data?.pages) ? data.pages : [];
     const videoParts = pages.flatMap((value, index): VideoPart[] => {
         const page = asRecord(value);
-        const cid = readNumber(page?.cid);
+        const cid = readPositiveId(page?.cid);
 
-        if (cid === null || cid <= 0) {
+        if (cid === null) {
             return [];
         }
 
@@ -200,9 +162,9 @@ export async function fetchVideoParts(
         return videoParts;
     }
 
-    const directCid = readNumber(data?.cid);
+    const directCid = readPositiveId(data?.cid);
 
-    if (directCid === null || directCid <= 0) {
+    if (directCid === null) {
         throw new VideoPlaybackError('视频详情中没有找到可播放的cid');
     }
 
@@ -217,7 +179,7 @@ export async function fetchVideoParts(
 
 async function fetchProgressiveUrl(
     bvid: string,
-    cid: number,
+    cid: string,
     sessdata: string,
     signal?: AbortSignal,
 ): Promise<string> {
@@ -285,7 +247,7 @@ async function fetchProgressiveUrl(
 
 export async function fetchVideoPlayback(
     bvid: string,
-    cid: number,
+    cid: string,
     cookie: string,
     signal?: AbortSignal,
 ): Promise<VideoPlayback> {
