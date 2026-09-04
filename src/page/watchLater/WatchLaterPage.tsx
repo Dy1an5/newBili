@@ -29,6 +29,7 @@ import { spacing } from '@/theme/spacing';
 
 type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
+    refreshRequestId: number;
 };
 
 function isAbortError(error: unknown): boolean {
@@ -59,6 +60,7 @@ function getWatchLaterVideoKey(video: WatchLaterVideo): string {
 
 export default function WatchLaterPage({
     onVideoPress,
+    refreshRequestId,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [videos, setVideos] = useState<WatchLaterVideo[]>([]);
@@ -73,6 +75,9 @@ export default function WatchLaterPage({
 
     const requestControllerRef =
         useRef<AbortController | null>(null);
+    const isRefreshingRef = useRef(false);
+    const handledRefreshRequestIdRef = useRef(refreshRequestId);
+    const listRef = useRef<FlatList<WatchLaterVideo> | null>(null);
 
     const loadVideoPage = useCallback(async (
         targetPage: number,
@@ -149,6 +154,33 @@ export default function WatchLaterPage({
             }
         }
     }, [ascending]);
+
+    const refreshWatchLater = useCallback(async () => {
+        if (isRefreshingRef.current) {
+            return;
+        }
+
+        isRefreshingRef.current = true;
+
+        try {
+            await loadVideoPage(1, true);
+        } finally {
+            isRefreshingRef.current = false;
+        }
+    }, [loadVideoPage]);
+
+    useEffect(() => {
+        if (handledRefreshRequestIdRef.current === refreshRequestId) {
+            return;
+        }
+
+        handledRefreshRequestIdRef.current = refreshRequestId;
+        listRef.current?.scrollToOffset({
+            animated: false,
+            offset: 0,
+        });
+        void refreshWatchLater();
+    }, [refreshRequestId, refreshWatchLater]);
 
     useEffect(() => {
         void loadVideoPage(1, false);
@@ -230,6 +262,7 @@ export default function WatchLaterPage({
         <View style={styles.page}>
             {toolbar}
             <FlatList
+                ref={listRef}
                 data={videos}
                 initialNumToRender={8}
                 keyExtractor={getWatchLaterVideoKey}
@@ -241,7 +274,7 @@ export default function WatchLaterPage({
                 ]}
                 refreshControl={(
                     <AppRefreshControl
-                        onRefresh={() => void loadVideoPage(1, true)}
+                        onRefresh={() => void refreshWatchLater()}
                         refreshing={isRefreshing}
                     />
                 )}

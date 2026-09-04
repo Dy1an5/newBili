@@ -11,6 +11,7 @@ import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import UserAvatar from '@/components/UserAvatar';
+import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
 
 type Props = {
     title: string;
@@ -46,7 +47,10 @@ function FollowingVideoCard({
 
             <View style={styles.coverContainer}>
                 <Image
-                    source={{ uri: coverUrl }}
+                    source={{
+                        uri: coverUrl,
+                        headers: BILIBILI_IMAGE_HEADERS,
+                    }}
                     style={styles.cover}
                     resizeMode='cover'
                 />

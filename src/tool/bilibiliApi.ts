@@ -2,6 +2,10 @@ export const BILIBILI_REFERER = 'https://www.bilibili.com/';
 export const BILIBILI_USER_AGENT =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
     '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+export const BILIBILI_IMAGE_HEADERS = {
+    Referer: BILIBILI_REFERER,
+    'User-Agent': BILIBILI_USER_AGENT,
+};
 export const BILIBILI_DEFAULT_AVATAR_URL =
     'https://i0.hdslb.com/bfs/face/member/noface.jpg';
 
@@ -64,7 +68,11 @@ export function normalizeImageUrl(value: unknown): string | null {
         return null;
     }
 
-    return url.startsWith('//') ? `https:${url}` : url;
+    if (url.startsWith('//')) {
+        return `https:${url}`;
+    }
+
+    return url.replace(/^http:\/\//i, 'https://');
 }
 
 export function getCookiePair(cookie: string, cookieName: string): string | null {

@@ -31,6 +31,7 @@ import { spacing } from '@/theme/spacing';
 
 type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
+    refreshRequestId: number;
 };
 
 type VideoRequestMode = 'initial' | 'refresh' | 'more';
@@ -61,7 +62,10 @@ function getFavoriteVideoKey(video: FavoriteVideo): string {
     return video.bvid;
 }
 
-export default function FavoriteFoldersPage({ onVideoPress }: Props) {
+export default function FavoriteFoldersPage({
+    onVideoPress,
+    refreshRequestId,
+}: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [folders, setFolders] = useState<FavoriteFolder[]>([]);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -78,6 +82,9 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
         useState<string | null>(null);
     const foldersRef = useRef<FavoriteFolder[]>([]);
     const selectedFolderIdRef = useRef<string | null>(null);
+    const isRefreshingRef = useRef(false);
+    const handledRefreshRequestIdRef = useRef(refreshRequestId);
+    const listRef = useRef<FlatList<FavoriteVideo> | null>(null);
     const foldersControllerRef = useRef<AbortController | null>(null);
     const videosControllerRef = useRef<AbortController | null>(null);
 
@@ -223,6 +230,11 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
     }, [loadFolders, loadVideoPage]);
 
     const refreshFavorites = useCallback(async () => {
+        if (isRefreshingRef.current) {
+            return;
+        }
+
+        isRefreshingRef.current = true;
         videosControllerRef.current?.abort();
         videosControllerRef.current = null;
         setIsRefreshing(true);
@@ -254,9 +266,23 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
 
             await loadVideoPage(selectedFolder, 1, 'refresh');
         } finally {
+            isRefreshingRef.current = false;
             setIsRefreshing(false);
         }
     }, [loadFolders, loadVideoPage]);
+
+    useEffect(() => {
+        if (handledRefreshRequestIdRef.current === refreshRequestId) {
+            return;
+        }
+
+        handledRefreshRequestIdRef.current = refreshRequestId;
+        listRef.current?.scrollToOffset({
+            animated: false,
+            offset: 0,
+        });
+        void refreshFavorites();
+    }, [refreshFavorites, refreshRequestId]);
 
     useEffect(() => {
         void initializeFavorites();
@@ -348,6 +374,7 @@ export default function FavoriteFoldersPage({ onVideoPress }: Props) {
 
             {!isVideosLoading && !(videosErrorMessage && videos.length === 0) ? (
                 <FlatList
+                    ref={listRef}
                     contentContainerStyle={[
                         videos.length === 0 ? styles.emptyList : styles.videoList,
                         { paddingBottom: bottomTabBarHeight + spacing.md },

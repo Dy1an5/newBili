@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useLayoutEffect, useMemo, useState } from 'react';
 import type {
     LayoutChangeEvent,
     NativeScrollEvent,
@@ -20,8 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import AppButton from '@/components/AppButton';
 import UserAvatar from '@/components/UserAvatar';
+import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
 
 const MAX_PICTURE_COUNT = 9;
 const COLLAPSED_CONTENT_LINE_COUNT = 2;
@@ -77,7 +77,7 @@ function FollowingPictureCard({
         ? Math.max(0, (pictureGridWidth - pictureGapWidth) / pictureColumnCount)
         : 0;
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         setIsContentExpanded(false);
         setIsContentOverflowing(false);
     }, [contentText]);
@@ -157,6 +157,7 @@ function FollowingPictureCard({
                         <Text
                             accessibilityElementsHidden
                             importantForAccessibility='no-hide-descendants'
+                            key={contentText}
                             onTextLayout={handleContentTextLayout}
                             pointerEvents='none'
                             style={[styles.contentText, styles.contentMeasurement]}
@@ -202,7 +203,10 @@ function FollowingPictureCard({
                             >
                                 <Image
                                     resizeMode='cover'
-                                    source={{ uri: imageUrl }}
+                                    source={{
+                                        uri: imageUrl,
+                                        headers: BILIBILI_IMAGE_HEADERS,
+                                    }}
                                     style={styles.picture}
                                 />
                             </Pressable>
@@ -266,7 +270,10 @@ function FollowingPictureCard({
                                 >
                                     <Image
                                         resizeMode='contain'
-                                        source={{ uri: imageUrl }}
+                                        source={{
+                                            uri: imageUrl,
+                                            headers: BILIBILI_IMAGE_HEADERS,
+                                        }}
                                         style={styles.previewPicture}
                                     />
                                 </View>
@@ -274,13 +281,6 @@ function FollowingPictureCard({
                             scrollEnabled={validImageUrls.length > 1}
                             showsHorizontalScrollIndicator={false}
                             style={styles.previewList}
-                        />
-
-                        <AppButton
-                            accessibilityLabel='关闭图片预览'
-                            onPress={closePicturePreview}
-                            style={styles.previewCloseButton}
-                            title='关闭'
                         />
 
                         <View pointerEvents='none' style={styles.previewCounter}>
@@ -434,12 +434,6 @@ const styles = StyleSheet.create({
     previewPicture: {
         width: '100%',
         height: '100%',
-    },
-
-    previewCloseButton: {
-        position: 'absolute',
-        top: spacing.md,
-        right: spacing.md,
     },
 
     previewCounter: {

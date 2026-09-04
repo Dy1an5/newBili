@@ -11,6 +11,7 @@ import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import UserAvatar from '@/components/UserAvatar';
+import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
 
 type VideoListItem = {
     title: string;
@@ -61,7 +62,14 @@ function VideoListCard({
             ]}
         >
             <View style={styles.coverContainer}>
-                <Image source={{ uri: video.coverUrl }} resizeMode='cover' style={styles.cover} />
+                <Image
+                    source={{
+                        uri: video.coverUrl,
+                        headers: BILIBILI_IMAGE_HEADERS,
+                    }}
+                    resizeMode='cover'
+                    style={styles.cover}
+                />
                 {duration ? (
                     <View style={styles.durationBadge}>
                         <Text style={styles.durationText}>{duration}</Text>

@@ -43,6 +43,7 @@ type MemberMidsByTagId = Record<string, string[]>;
 
 type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
+    refreshRequestId: number;
 };
 
 function formatPublishedTime(timestamp: number): string {
@@ -114,7 +115,10 @@ function hasGroupDynamic(
     return dynamics.some((item) => memberMids.has(item.author.mid));
 }
 
-export default function FollowingPage({ onVideoPress }: Props) {
+export default function FollowingPage({
+    onVideoPress,
+    refreshRequestId,
+}: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [dynamics, setDynamics] = useState<FollowingItem[]>([]);
     const [groups, setGroups] = useState<FollowingGroup[]>([]);
@@ -144,6 +148,9 @@ export default function FollowingPage({ onVideoPress }: Props) {
     const isFirstPageLoadingRef = useRef(false);
     const isLoadingMoreRef = useRef(false);
     const isGroupScanPausedRef = useRef(false);
+    const isRefreshingRef = useRef(false);
+    const handledRefreshRequestIdRef = useRef(refreshRequestId);
+    const listRef = useRef<FlatList<FollowingItem> | null>(null);
     const listViewportHeightRef = useRef(0);
     const listContentHeightRef = useRef(0);
     const listOffsetYRef = useRef(0);
@@ -449,6 +456,11 @@ export default function FollowingPage({ onVideoPress }: Props) {
     }, [loadGroupMembers]);
 
     const refreshFollowing = useCallback(async () => {
+        if (isRefreshingRef.current) {
+            return;
+        }
+
+        isRefreshingRef.current = true;
         setIsRefreshing(true);
         membersControllerRef.current?.abort();
         membersControllerRef.current = null;
@@ -488,9 +500,23 @@ export default function FollowingPage({ onVideoPress }: Props) {
                 await loadGroupMembers(selectedGroup, true);
             }
         } finally {
+            isRefreshingRef.current = false;
             setIsRefreshing(false);
         }
     }, [loadFirstPage, loadGroupMembers, loadGroups]);
+
+    useEffect(() => {
+        if (handledRefreshRequestIdRef.current === refreshRequestId) {
+            return;
+        }
+
+        handledRefreshRequestIdRef.current = refreshRequestId;
+        listRef.current?.scrollToOffset({
+            animated: false,
+            offset: 0,
+        });
+        void refreshFollowing();
+    }, [refreshFollowing, refreshRequestId]);
 
     useEffect(() => {
         void loadFirstPage(false);
@@ -783,6 +809,7 @@ export default function FollowingPage({ onVideoPress }: Props) {
             />
 
             <FlatList
+                ref={listRef}
                 contentContainerStyle={[
                     visibleDynamics.length === 0 ? styles.emptyList : styles.list,
                     { paddingBottom: bottomTabBarHeight + spacing.md },

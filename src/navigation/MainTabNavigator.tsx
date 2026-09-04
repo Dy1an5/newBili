@@ -1,4 +1,8 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+    createBottomTabNavigator,
+    type BottomTabNavigationProp,
+    type BottomTabScreenProps,
+} from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -7,6 +11,7 @@ import {
     createContext,
     type RefObject,
     useContext,
+    useEffect,
     useMemo,
     useRef,
     useState,
@@ -36,6 +41,10 @@ type MainTabParamList = {
 };
 
 type BlurTargets = Record<keyof MainTabParamList, RefObject<View | null>>;
+
+type RefreshRequestProps = {
+    refreshRequestId: number;
+};
 
 type FavoritesStackParamList = {
     FavoriteFolders: undefined;
@@ -67,14 +76,30 @@ function useBlurTarget(tabName: keyof MainTabParamList) {
     return blurTargets[tabName];
 }
 
+function useTabRefreshRequest(
+    navigation: BottomTabNavigationProp<MainTabParamList>,
+) {
+    const [refreshRequestId, setRefreshRequestId] = useState(0);
+
+    useEffect(() => navigation.addListener('tabPress', () => {
+        if (navigation.isFocused()) {
+            setRefreshRequestId((currentId) => currentId + 1);
+        }
+    }), [navigation]);
+
+    return refreshRequestId;
+}
+
 function HomeScreen({
     navigation,
-}: NativeStackScreenProps<HomeStackParamList, 'Home'>) {
+    refreshRequestId,
+}: NativeStackScreenProps<HomeStackParamList, 'Home'> & RefreshRequestProps) {
     return (
         <FollowingPage
             onVideoPress={(target) => {
                 navigation.navigate('VideoDetail', { target });
             }}
+            refreshRequestId={refreshRequestId}
         />
     );
 }
@@ -92,13 +117,23 @@ function VideoDetailScreen({
     );
 }
 
-function HomeNavigator() {
+function HomeNavigator({
+    navigation,
+}: BottomTabScreenProps<MainTabParamList, 'HomeTab'>) {
     const blurTarget = useBlurTarget('HomeTab');
+    const refreshRequestId = useTabRefreshRequest(navigation);
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
             <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-                <HomeStack.Screen name='Home' component={HomeScreen} />
+                <HomeStack.Screen name='Home'>
+                    {(props) => (
+                        <HomeScreen
+                            {...props}
+                            refreshRequestId={refreshRequestId}
+                        />
+                    )}
+                </HomeStack.Screen>
                 <HomeStack.Screen name='VideoDetail' component={VideoDetailScreen} />
             </HomeStack.Navigator>
         </BlurTargetView>
@@ -107,10 +142,12 @@ function HomeNavigator() {
 
 function FavoriteFoldersScreen({
     navigation,
-}: NativeStackScreenProps<FavoritesStackParamList, 'FavoriteFolders'>) {
+    refreshRequestId,
+}: NativeStackScreenProps<FavoritesStackParamList, 'FavoriteFolders'> & RefreshRequestProps) {
     return (
         <FavoriteFoldersPage
             onVideoPress={(target) => navigation.navigate('VideoDetail', { target })}
+            refreshRequestId={refreshRequestId}
         />
     );
 }
@@ -128,13 +165,23 @@ function FavoriteVideoDetailScreen({
     );
 }
 
-function FavoritesNavigator() {
+function FavoritesNavigator({
+    navigation,
+}: BottomTabScreenProps<MainTabParamList, 'FavoritesTab'>) {
     const blurTarget = useBlurTarget('FavoritesTab');
+    const refreshRequestId = useTabRefreshRequest(navigation);
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
             <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
-                <FavoritesStack.Screen name='FavoriteFolders' component={FavoriteFoldersScreen} />
+                <FavoritesStack.Screen name='FavoriteFolders'>
+                    {(props) => (
+                        <FavoriteFoldersScreen
+                            {...props}
+                            refreshRequestId={refreshRequestId}
+                        />
+                    )}
+                </FavoritesStack.Screen>
                 <FavoritesStack.Screen name='VideoDetail' component={FavoriteVideoDetailScreen} />
             </FavoritesStack.Navigator>
         </BlurTargetView>
@@ -143,12 +190,14 @@ function FavoritesNavigator() {
 
 function WatchLaterListScreen({
     navigation,
-}: NativeStackScreenProps<WatchLaterStackParamList, 'WatchLaterList'>) {
+    refreshRequestId,
+}: NativeStackScreenProps<WatchLaterStackParamList, 'WatchLaterList'> & RefreshRequestProps) {
     return (
         <WatchLaterPage
             onVideoPress={(target) => {
                 navigation.navigate('VideoDetail', { target });
             }}
+            refreshRequestId={refreshRequestId}
         />
     );
 }
@@ -166,16 +215,23 @@ function WatchLaterVideoDetailScreen({
     );
 }
 
-function WatchLaterNavigator() {
+function WatchLaterNavigator({
+    navigation,
+}: BottomTabScreenProps<MainTabParamList, 'WatchLaterTab'>) {
     const blurTarget = useBlurTarget('WatchLaterTab');
+    const refreshRequestId = useTabRefreshRequest(navigation);
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
             <WatchLaterStack.Navigator screenOptions={{ headerShown: false }}>
-                <WatchLaterStack.Screen
-                    name='WatchLaterList'
-                    component={WatchLaterListScreen}
-                />
+                <WatchLaterStack.Screen name='WatchLaterList'>
+                    {(props) => (
+                        <WatchLaterListScreen
+                            {...props}
+                            refreshRequestId={refreshRequestId}
+                        />
+                    )}
+                </WatchLaterStack.Screen>
                 <WatchLaterStack.Screen
                     name='VideoDetail'
                     component={WatchLaterVideoDetailScreen}

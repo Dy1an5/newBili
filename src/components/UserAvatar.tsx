@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { colors } from '@/theme/colors';
+import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
 
 type Props = {
     uri?: string;
@@ -45,7 +46,10 @@ export default function UserAvatar({
             {shouldShowImage ? (
                 <Image
                     onError={() => setFailedUri(normalizedUri)}
-                    source={{ uri: normalizedUri }}
+                    source={{
+                        uri: normalizedUri,
+                        headers: BILIBILI_IMAGE_HEADERS,
+                    }}
                     style={styles.image}
                 />
             ) : (
