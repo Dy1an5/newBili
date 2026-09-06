@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import type { TextLayoutEvent } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    TextLayoutEvent,
+} from 'react-native';
 import {
     ActivityIndicator,
+    Animated,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -27,6 +32,7 @@ import {
     VideoPlaybackError,
 } from '@/page/video/fetchVideoPlayback';
 import VideoCommentsPanel from '@/page/video/VideoCommentsPanel';
+import type { CollapsiblePageScrollHandle } from '@/page/video/collapsibleVideoScroll';
 import VideoPlayer, {
     type FullscreenOrientation,
 } from '@/page/video/VideoPlayer';
@@ -43,6 +49,8 @@ const NEAR_SQUARE_ASPECT_RATIO_MIN = 0.8;
 const NEAR_SQUARE_ASPECT_RATIO_MAX = 1.2;
 const NEAR_SQUARE_PLAYER_HEIGHT_RATIO = 0.42;
 const VERTICAL_PLAYER_HEIGHT_RATIO = 0.48;
+const DETAIL_TAB_HEIGHT = 46;
+const DETAIL_PAGE_COUNT = 3;
 
 function isAbortError(error: unknown): boolean {
     return error instanceof Error && error.name === 'AbortError';
@@ -140,6 +148,16 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const [detailPageIndex, setDetailPageIndex] = useState(0);
     const [commentCount, setCommentCount] = useState<number | null>(null);
     const detailPagerRef = useRef<ScrollView>(null);
+    const introScrollRef = useRef<ScrollView>(null);
+    const commentsScrollRef = useRef<CollapsiblePageScrollHandle>(null);
+    const summaryScrollRef = useRef<CollapsiblePageScrollHandle>(null);
+    const headerScrollOffset = useRef(new Animated.Value(0)).current;
+    const pageOffsetsRef = useRef<number[]>(
+        Array.from({ length: DETAIL_PAGE_COUNT }, () => 0),
+    );
+    const detailPageIndexRef = useRef(detailPageIndex);
+    const isPlayerFullscreenRef = useRef(isPlayerFullscreen);
+    const collapseDistanceRef = useRef(0);
 
     useEffect(() => {
         setIsTitleExpanded(false);
@@ -251,13 +269,96 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
             durationMs: selectedPart.durationSeconds * 1000,
         }
         : null;
-    const playerHeight = getPlayerHeight(windowWidth, windowHeight, selectedPart);
+    const collapsedPlayerHeight = windowWidth / DEFAULT_VIDEO_ASPECT_RATIO;
+    const playerHeight = Math.max(
+        getPlayerHeight(windowWidth, windowHeight, selectedPart),
+        collapsedPlayerHeight,
+    );
+    const collapseDistance = playerHeight - collapsedPlayerHeight;
+    const headerSpacerHeight = playerHeight + DETAIL_TAB_HEIGHT;
+    const minimumContentHeight = windowHeight + collapseDistance;
     const fullscreenOrientation = getFullscreenOrientation(selectedPart);
     const detailTabs = [
         '简介',
         commentCount === null ? '评论' : `评论 ${formatCommentCount(commentCount)}`,
         'AI总结',
     ];
+
+    detailPageIndexRef.current = detailPageIndex;
+    isPlayerFullscreenRef.current = isPlayerFullscreen;
+    collapseDistanceRef.current = collapseDistance;
+
+    const animatedPlayerHeight = headerScrollOffset.interpolate({
+        inputRange: [0, Math.max(collapseDistance, 1)],
+        outputRange: [
+            playerHeight,
+            collapseDistance > 0 ? collapsedPlayerHeight : playerHeight,
+        ],
+        extrapolate: 'clamp',
+    });
+
+    const handlePageScroll = useCallback((
+        pageIndex: number,
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        const offset = Math.max(0, event.nativeEvent.contentOffset.y);
+        pageOffsetsRef.current[pageIndex] = offset;
+
+        if (
+            detailPageIndexRef.current === pageIndex
+            && !isPlayerFullscreenRef.current
+        ) {
+            headerScrollOffset.setValue(
+                Math.min(offset, collapseDistanceRef.current),
+            );
+        }
+    }, [headerScrollOffset]);
+
+    const handleIntroScroll = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        handlePageScroll(0, event);
+    }, [handlePageScroll]);
+
+    const handleCommentsScroll = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        handlePageScroll(1, event);
+    }, [handlePageScroll]);
+
+    const handleSummaryScroll = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        handlePageScroll(2, event);
+    }, [handlePageScroll]);
+
+    const scrollPageToOffset = useCallback((
+        pageIndex: number,
+        offset: number,
+        animated = false,
+    ) => {
+        pageOffsetsRef.current[pageIndex] = offset;
+
+        if (pageIndex === 0) {
+            introScrollRef.current?.scrollTo({ y: offset, animated });
+        } else if (pageIndex === 1) {
+            commentsScrollRef.current?.scrollToOffset(offset, animated);
+        } else {
+            summaryScrollRef.current?.scrollToOffset(offset, animated);
+        }
+    }, []);
+
+    useEffect(() => {
+        pageOffsetsRef.current = Array.from(
+            { length: DETAIL_PAGE_COUNT },
+            () => 0,
+        );
+        headerScrollOffset.setValue(0);
+
+        for (let pageIndex = 0; pageIndex < DETAIL_PAGE_COUNT; pageIndex += 1) {
+            scrollPageToOffset(pageIndex, 0);
+        }
+    }, [headerScrollOffset, scrollPageToOffset, selectedCid, target.bvid]);
 
     const handleTitleTextLayout = (event: TextLayoutEvent) => {
         const nextIsOverflowing =
@@ -271,6 +372,20 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     };
 
     const scrollToDetailPage = (pageIndex: number) => {
+        const currentOffset = pageOffsetsRef.current[detailPageIndex] ?? 0;
+        const currentCollapseOffset = Math.min(currentOffset, collapseDistance);
+        const targetOffset = currentCollapseOffset < collapseDistance
+            ? currentCollapseOffset
+            : Math.max(
+                pageOffsetsRef.current[pageIndex] ?? 0,
+                collapseDistance,
+            );
+
+        detailPageIndexRef.current = pageIndex;
+        scrollPageToOffset(pageIndex, targetOffset);
+        headerScrollOffset.setValue(
+            Math.min(targetOffset, collapseDistance),
+        );
         detailPagerRef.current?.scrollTo({
             x: windowWidth * pageIndex,
             animated: true,
@@ -280,12 +395,12 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
 
     return (
         <View style={styles.page}>
-            <View
+            <Animated.View
                 style={[
                     styles.playerContainer,
                     isPlayerFullscreen
                         ? styles.playerContainerFullscreen
-                        : { height: playerHeight },
+                        : { height: animatedPlayerHeight },
                 ]}
             >
                 {playback ? (
@@ -316,9 +431,14 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                         <Text style={styles.loadingText}>正在获取播放地址...</Text>
                     </View>
                 )}
-            </View>
+            </Animated.View>
 
-            <View style={styles.detailTabs}>
+            <Animated.View
+                style={[
+                    styles.detailTabs,
+                    { top: animatedPlayerHeight },
+                ]}
+            >
                 {detailTabs.map((label, pageIndex) => {
                     const isSelected = detailPageIndex === pageIndex;
 
@@ -342,7 +462,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                         </Pressable>
                     );
                 })}
-            </View>
+            </Animated.View>
 
             <ScrollView
                 ref={detailPagerRef}
@@ -355,10 +475,17 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
             >
                 <View style={[styles.detailPage, { width: windowWidth }]}>
                     <ScrollView
+                        ref={introScrollRef}
                         contentContainerStyle={[
                             styles.detailsContent,
-                            { paddingBottom: safeAreaInsets.bottom + spacing.xl },
+                            {
+                                minHeight: minimumContentHeight,
+                                paddingTop: headerSpacerHeight,
+                                paddingBottom: safeAreaInsets.bottom + spacing.xl,
+                            },
                         ]}
+                        onScroll={handleIntroScroll}
+                        scrollEventThrottle={16}
                         style={styles.detailsScroll}
                     >
                         <View style={styles.infoSection}>
@@ -487,15 +614,23 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
 
                 <View style={[styles.detailPage, { width: windowWidth }]}>
                     <VideoCommentsPanel
+                        ref={commentsScrollRef}
                         active={detailPageIndex === 1}
                         aid={videoAid}
+                        headerSpacerHeight={headerSpacerHeight}
+                        minimumContentHeight={minimumContentHeight}
+                        onScroll={handleCommentsScroll}
                         onTotalCountChange={setCommentCount}
                     />
                 </View>
 
                 <View style={[styles.detailPage, { width: windowWidth }]}>
                     <VideoSummaryPanel
+                        ref={summaryScrollRef}
                         apiKey={deepSeekApiKey}
+                        headerSpacerHeight={headerSpacerHeight}
+                        minimumContentHeight={minimumContentHeight}
+                        onScroll={handleSummaryScroll}
                         target={summaryTarget}
                     />
                 </View>
@@ -510,7 +645,12 @@ const styles = StyleSheet.create({
         backgroundColor: colors.pageBackground,
     },
     detailTabs: {
-        height: 46,
+        position: 'absolute',
+        right: 0,
+        left: 0,
+        zIndex: 3,
+        elevation: 3,
+        height: DETAIL_TAB_HEIGHT,
         flexDirection: 'row',
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: colors.surfaceBorder,
@@ -561,7 +701,14 @@ const styles = StyleSheet.create({
         paddingBottom: spacing.xl,
     },
     playerContainer: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        left: 0,
+        zIndex: 2,
+        elevation: 2,
         width: '100%',
+        overflow: 'hidden',
         backgroundColor: colors.pageBackground,
     },
     playerContainerFullscreen: {
