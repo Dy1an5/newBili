@@ -833,7 +833,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: spacing.sm,
         borderRadius: radius.md,
-        backgroundColor: colors.mediaOverlayBackground,
     },
     fullscreenButtonPressed: {
         opacity: 0.72,
