@@ -1,22 +1,17 @@
 import { memo, useLayoutEffect, useMemo, useState } from 'react';
 import type {
     LayoutChangeEvent,
-    NativeScrollEvent,
-    NativeSyntheticEvent,
     TextLayoutEvent,
 } from 'react-native';
 import {
-    FlatList,
-    Modal,
     Pressable,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BilibiliImage from '@/components/BilibiliImage';
+import FullscreenImageViewer from '@/components/FullscreenImageViewer';
 import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
@@ -56,7 +51,6 @@ function FollowingPictureCard({
     authorName,
     publishedTimeText,
 }: Props) {
-    const { width: previewWidth } = useWindowDimensions();
     const [pictureGridWidth, setPictureGridWidth] = useState(0);
     const [previewPictureIndex, setPreviewPictureIndex] = useState(0);
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
@@ -87,24 +81,6 @@ function FollowingPictureCard({
         if (nextWidth > 0 && nextWidth !== pictureGridWidth) {
             setPictureGridWidth(nextWidth);
         }
-    };
-
-    const handlePreviewScrollEnd = (
-        event: NativeSyntheticEvent<NativeScrollEvent>,
-    ) => {
-        if (previewWidth <= 0 || validImageUrls.length <= 1) {
-            return;
-        }
-
-        const nextIndex = Math.round(
-            event.nativeEvent.contentOffset.x / previewWidth,
-        );
-        const clampedIndex = Math.max(
-            0,
-            Math.min(nextIndex, validImageUrls.length - 1),
-        );
-
-        setPreviewPictureIndex(clampedIndex);
     };
 
     const openPicturePreview = (index: number) => {
@@ -240,58 +216,12 @@ function FollowingPictureCard({
                 </View>
             </View>
 
-            {isPreviewVisible ? (
-                <Modal
-                    animationType='fade'
-                    onRequestClose={closePicturePreview}
-                    statusBarTranslucent
-                    visible
-                >
-                    <SafeAreaView edges={['top', 'bottom']} style={styles.previewPage}>
-                        <FlatList
-                            data={validImageUrls}
-                            horizontal
-                            pagingEnabled
-                            bounces={false}
-                            decelerationRate='fast'
-                            getItemLayout={(_, index) => ({
-                                index,
-                                length: previewWidth,
-                                offset: previewWidth * index,
-                            })}
-                            initialScrollIndex={previewPictureIndex}
-                            keyExtractor={(imageUrl, index) => `preview:${imageUrl}:${index}`}
-                            onMomentumScrollEnd={handlePreviewScrollEnd}
-                            renderItem={({ item: imageUrl, index }) => (
-                                <View
-                                    accessibilityLabel={`图片,第${index + 1}张,共${validImageUrls.length}张`}
-                                    accessible
-                                    style={[
-                                        styles.previewPictureContainer,
-                                        { width: previewWidth },
-                                    ]}
-                                >
-                                    <BilibiliImage
-                                        contentFit='contain'
-                                        priority='high'
-                                        style={styles.previewPicture}
-                                        uri={imageUrl}
-                                    />
-                                </View>
-                            )}
-                            scrollEnabled={validImageUrls.length > 1}
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.previewList}
-                        />
-
-                        <View pointerEvents='none' style={styles.previewCounter}>
-                            <Text style={styles.previewCounterText}>
-                                {previewPictureIndex + 1}/{validImageUrls.length}
-                            </Text>
-                        </View>
-                    </SafeAreaView>
-                </Modal>
-            ) : null}
+            <FullscreenImageViewer
+                imageUrls={validImageUrls}
+                initialIndex={previewPictureIndex}
+                onClose={closePicturePreview}
+                visible={isPreviewVisible}
+            />
         </>
     );
 }
@@ -417,42 +347,4 @@ const styles = StyleSheet.create({
         color: colors.mutedText,
     },
 
-    previewPage: {
-        flex: 1,
-        backgroundColor: colors.pageBackground,
-    },
-
-    previewList: {
-        flex: 1,
-    },
-
-    previewPictureContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-    previewPicture: {
-        width: '100%',
-        height: '100%',
-    },
-
-    previewCounter: {
-        position: 'absolute',
-        bottom: spacing.lg,
-        alignSelf: 'center',
-
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-
-        borderRadius: radius.full,
-
-        backgroundColor: colors.mediaOverlayBackground,
-    },
-
-    previewCounterText: {
-        color: colors.primaryText,
-        fontSize: 13,
-        fontWeight: '600',
-    },
 });

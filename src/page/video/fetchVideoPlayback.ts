@@ -32,6 +32,11 @@ export type VideoPart = {
     height?: number;
 };
 
+export type VideoDetail = {
+    aid: string;
+    parts: VideoPart[];
+};
+
 export class VideoPlaybackError extends Error {
     readonly code?: number;
 
@@ -117,11 +122,11 @@ async function requestBilibili(
     return body;
 }
 
-export async function fetchVideoParts(
+export async function fetchVideoDetail(
     bvid: string,
     cookie: string,
     signal?: AbortSignal,
-): Promise<VideoPart[]> {
+): Promise<VideoDetail> {
     const sessdata = getSessdataPair(cookie);
     const parameters = new URLSearchParams({ bvid });
     const body = await requestBilibili(
@@ -130,6 +135,12 @@ export async function fetchVideoParts(
         signal,
     );
     const data = asRecord(body.data);
+    const aid = readPositiveId(data?.aid);
+
+    if (aid === null) {
+        throw new VideoPlaybackError('视频详情中没有找到aid');
+    }
+
     const videoDimension = readVideoDimension(data?.dimension);
     const pages = Array.isArray(data?.pages) ? data.pages : [];
     const videoParts = pages.flatMap((value, index): VideoPart[] => {
@@ -159,7 +170,10 @@ export async function fetchVideoParts(
     });
 
     if (videoParts.length > 0) {
-        return videoParts;
+        return {
+            aid,
+            parts: videoParts,
+        };
     }
 
     const directCid = readPositiveId(data?.cid);
@@ -168,13 +182,16 @@ export async function fetchVideoParts(
         throw new VideoPlaybackError('视频详情中没有找到可播放的cid');
     }
 
-    return [{
-        cid: directCid,
-        page: 1,
-        title: '正片',
-        durationSeconds: readNumber(data?.duration) ?? 0,
-        ...videoDimension,
-    }];
+    return {
+        aid,
+        parts: [{
+            cid: directCid,
+            page: 1,
+            title: '正片',
+            durationSeconds: readNumber(data?.duration) ?? 0,
+            ...videoDimension,
+        }],
+    };
 }
 
 async function fetchProgressiveUrl(

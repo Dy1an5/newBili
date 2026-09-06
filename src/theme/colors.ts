@@ -15,6 +15,9 @@ export const colors = {
     accentForeground: '#00AEEC',
     accentBackground: '#082A38',
 
+    // 业务身份强调色.
+    upAuthorText: '#FB7299',
+
     // 错误与警告.
     alertText: '#FF7474',
 

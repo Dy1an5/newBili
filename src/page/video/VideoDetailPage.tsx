@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TextLayoutEvent } from 'react-native';
 import {
     ActivityIndicator,
@@ -20,12 +20,13 @@ import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import {
-    fetchVideoParts,
+    fetchVideoDetail,
     fetchVideoPlayback,
     type VideoPart,
     type VideoPlayback,
     VideoPlaybackError,
 } from '@/page/video/fetchVideoPlayback';
+import VideoCommentsPanel from '@/page/video/VideoCommentsPanel';
 import VideoPlayer, {
     type FullscreenOrientation,
 } from '@/page/video/VideoPlayer';
@@ -73,6 +74,15 @@ function formatDuration(durationSeconds: number): string {
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
+function formatCommentCount(count: number): string {
+    if (count < 10000) {
+        return String(count);
+    }
+
+    const value = count / 10000;
+    return `${value >= 100 ? Math.floor(value) : value.toFixed(1).replace(/\.0$/, '')}万`;
+}
+
 function getPlayerHeight(
     windowWidth: number,
     windowHeight: number,
@@ -118,6 +128,7 @@ function getFullscreenOrientation(
 export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const safeAreaInsets = useSafeAreaInsets();
+    const [videoAid, setVideoAid] = useState<string | null>(null);
     const [parts, setParts] = useState<VideoPart[]>([]);
     const [selectedCid, setSelectedCid] = useState<string | null>(null);
     const [playback, setPlayback] = useState<VideoPlayback | null>(null);
@@ -127,6 +138,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
     const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
     const [detailPageIndex, setDetailPageIndex] = useState(0);
+    const [commentCount, setCommentCount] = useState<number | null>(null);
     const detailPagerRef = useRef<ScrollView>(null);
 
     useEffect(() => {
@@ -144,7 +156,8 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     useEffect(() => {
         const controller = new AbortController();
 
-        const loadParts = async () => {
+        const loadVideoDetail = async () => {
+            setVideoAid(null);
             setParts([]);
             setSelectedCid(null);
             setPlayback(null);
@@ -157,15 +170,17 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                     throw new VideoPlaybackError('登录信息不存在,请重新登录');
                 }
 
-                const nextParts = await fetchVideoParts(
+                const nextVideoDetail = await fetchVideoDetail(
                     target.bvid,
                     cookie,
                     controller.signal,
                 );
+                const nextParts = nextVideoDetail.parts;
                 const initialPart = target.initialCid === undefined
                     ? undefined
                     : nextParts.find((part) => part.cid === target.initialCid);
 
+                setVideoAid(nextVideoDetail.aid);
                 setParts(nextParts);
                 setSelectedCid(initialPart?.cid ?? nextParts[0].cid);
             } catch (error) {
@@ -175,7 +190,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
             }
         };
 
-        void loadParts();
+        void loadVideoDetail();
 
         return () => {
             controller.abort();
@@ -238,6 +253,11 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
         : null;
     const playerHeight = getPlayerHeight(windowWidth, windowHeight, selectedPart);
     const fullscreenOrientation = getFullscreenOrientation(selectedPart);
+    const detailTabs = [
+        '简介',
+        commentCount === null ? '评论' : `评论 ${formatCommentCount(commentCount)}`,
+        'AI总结',
+    ];
 
     const handleTitleTextLayout = (event: TextLayoutEvent) => {
         const nextIsOverflowing =
@@ -299,12 +319,12 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
             </View>
 
             <View style={styles.detailTabs}>
-                {['简介', 'AI总结'].map((label, pageIndex) => {
+                {detailTabs.map((label, pageIndex) => {
                     const isSelected = detailPageIndex === pageIndex;
 
                     return (
                         <Pressable
-                            key={label}
+                            key={pageIndex}
                             accessibilityRole='tab'
                             accessibilityState={{ selected: isSelected }}
                             onPress={() => scrollToDetailPage(pageIndex)}
@@ -463,6 +483,14 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                             </View>
                         ) : null}
                     </ScrollView>
+                </View>
+
+                <View style={[styles.detailPage, { width: windowWidth }]}>
+                    <VideoCommentsPanel
+                        active={detailPageIndex === 1}
+                        aid={videoAid}
+                        onTotalCountChange={setCommentCount}
+                    />
                 </View>
 
                 <View style={[styles.detailPage, { width: windowWidth }]}>
