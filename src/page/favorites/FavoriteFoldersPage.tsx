@@ -15,6 +15,8 @@ import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
 import SelectionBar from '@/components/SelectionBar';
 import VideoListCard from '@/components/VideoListCard';
+import FollowedCollectionsPage from '@/page/favorites/FollowedCollectionsPage';
+import type { FollowedCollection } from '@/page/favorites/fetchFollowedCollections';
 import {
     fetchFavoriteFolders,
     fetchFavoriteVideoPage,
@@ -30,11 +32,14 @@ import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
 type Props = {
+    onCollectionPress: (collection: FollowedCollection) => void;
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
 };
 
 type VideoRequestMode = 'initial' | 'refresh' | 'more';
+
+const COLLECTIONS_OPTION_VALUE = 'followed-collections';
 
 function isAbortError(error: unknown): boolean {
     return error instanceof Error && error.name === 'AbortError';
@@ -63,12 +68,18 @@ function getFavoriteVideoKey(video: FavoriteVideo): string {
 }
 
 export default function FavoriteFoldersPage({
+    onCollectionPress,
     onVideoPress,
     refreshRequestId,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [folders, setFolders] = useState<FavoriteFolder[]>([]);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+    const [selectedOptionValue, setSelectedOptionValue] =
+        useState<string | null>(null);
+    const [hasOpenedCollections, setHasOpenedCollections] = useState(false);
+    const [collectionsRefreshRequestId, setCollectionsRefreshRequestId] =
+        useState(0);
     const [videos, setVideos] = useState<FavoriteVideo[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const [hasMore, setHasMore] = useState(false);
@@ -82,6 +93,7 @@ export default function FavoriteFoldersPage({
         useState<string | null>(null);
     const foldersRef = useRef<FavoriteFolder[]>([]);
     const selectedFolderIdRef = useRef<string | null>(null);
+    const selectedOptionValueRef = useRef<string | null>(null);
     const isRefreshingRef = useRef(false);
     const handledRefreshRequestIdRef = useRef(refreshRequestId);
     const listRef = useRef<FlatList<FavoriteVideo> | null>(null);
@@ -197,6 +209,9 @@ export default function FavoriteFoldersPage({
     }, []);
 
     const selectFolder = useCallback((folder: FavoriteFolder) => {
+        selectedOptionValueRef.current = folder.id;
+        setSelectedOptionValue(folder.id);
+
         if (folder.id === selectedFolderIdRef.current) {
             return;
         }
@@ -213,6 +228,12 @@ export default function FavoriteFoldersPage({
         void loadVideoPage(folder, 1, 'initial');
     }, [loadVideoPage]);
 
+    const selectCollections = useCallback(() => {
+        selectedOptionValueRef.current = COLLECTIONS_OPTION_VALUE;
+        setSelectedOptionValue(COLLECTIONS_OPTION_VALUE);
+        setHasOpenedCollections(true);
+    }, []);
+
     const initializeFavorites = useCallback(async () => {
         const nextFolders = await loadFolders(true);
         const firstFolder = nextFolders?.[0];
@@ -221,11 +242,23 @@ export default function FavoriteFoldersPage({
             selectedFolderIdRef.current = null;
             setSelectedFolderId(null);
             setVideos([]);
+
+            if (selectedOptionValueRef.current !== COLLECTIONS_OPTION_VALUE) {
+                selectedOptionValueRef.current = null;
+                setSelectedOptionValue(null);
+            }
+
             return;
         }
 
         selectedFolderIdRef.current = firstFolder.id;
         setSelectedFolderId(firstFolder.id);
+
+        if (selectedOptionValueRef.current !== COLLECTIONS_OPTION_VALUE) {
+            selectedOptionValueRef.current = firstFolder.id;
+            setSelectedOptionValue(firstFolder.id);
+        }
+
         await loadVideoPage(firstFolder, 1, 'initial');
     }, [loadFolders, loadVideoPage]);
 
@@ -253,6 +286,12 @@ export default function FavoriteFoldersPage({
                 setVideos([]);
                 setCurrentPage(0);
                 setHasMore(false);
+
+                if (selectedOptionValueRef.current !== COLLECTIONS_OPTION_VALUE) {
+                    selectedOptionValueRef.current = null;
+                    setSelectedOptionValue(null);
+                }
+
                 return;
             }
 
@@ -262,6 +301,11 @@ export default function FavoriteFoldersPage({
                 setVideos([]);
                 setCurrentPage(0);
                 setHasMore(false);
+
+                if (selectedOptionValueRef.current !== COLLECTIONS_OPTION_VALUE) {
+                    selectedOptionValueRef.current = selectedFolder.id;
+                    setSelectedOptionValue(selectedFolder.id);
+                }
             }
 
             await loadVideoPage(selectedFolder, 1, 'refresh');
@@ -277,6 +321,12 @@ export default function FavoriteFoldersPage({
         }
 
         handledRefreshRequestIdRef.current = refreshRequestId;
+
+        if (selectedOptionValueRef.current === COLLECTIONS_OPTION_VALUE) {
+            setCollectionsRefreshRequestId((currentId) => currentId + 1);
+            return;
+        }
+
         listRef.current?.scrollToOffset({
             animated: false,
             offset: 0,
@@ -309,18 +359,18 @@ export default function FavoriteFoldersPage({
         />
     ), [onVideoPress]);
 
+    let favoriteContent;
+
     if (isFoldersLoading && folders.length === 0) {
-        return (
-            <View style={styles.centeredPage}>
+        favoriteContent = (
+            <View style={styles.centeredContent}>
                 <ActivityIndicator color={colors.accentForeground} size='large' />
                 <Text style={styles.statusText}>正在加载收藏夹...</Text>
             </View>
         );
-    }
-
-    if (foldersErrorMessage && folders.length === 0) {
-        return (
-            <View style={styles.centeredPage}>
+    } else if (foldersErrorMessage && folders.length === 0) {
+        favoriteContent = (
+            <View style={styles.centeredContent}>
                 <Text style={styles.errorText}>{foldersErrorMessage}</Text>
                 <AppButton
                     onPress={() => void initializeFavorites()}
@@ -329,106 +379,142 @@ export default function FavoriteFoldersPage({
                 />
             </View>
         );
+    } else if (isVideosLoading && videos.length === 0) {
+        favoriteContent = (
+            <View style={styles.centeredContent}>
+                <ActivityIndicator color={colors.accentForeground} size='large' />
+                <Text style={styles.statusText}>正在加载收藏视频...</Text>
+            </View>
+        );
+    } else if (videosErrorMessage && videos.length === 0) {
+        favoriteContent = (
+            <View style={styles.centeredContent}>
+                <Text style={styles.errorText}>{videosErrorMessage}</Text>
+                {selectedFolder ? (
+                    <AppButton
+                        onPress={() => void loadVideoPage(selectedFolder, 1, 'initial')}
+                        style={styles.actionButton}
+                        title='重新加载'
+                    />
+                ) : null}
+            </View>
+        );
+    } else {
+        favoriteContent = (
+            <FlatList
+                ref={listRef}
+                contentContainerStyle={[
+                    videos.length === 0 ? styles.emptyList : styles.videoList,
+                    { paddingBottom: bottomTabBarHeight + spacing.md },
+                ]}
+                data={videos}
+                initialNumToRender={8}
+                keyExtractor={getFavoriteVideoKey}
+                ListEmptyComponent={(
+                    <Text style={styles.statusText}>
+                        {selectedFolder
+                            ? '该收藏夹暂时没有可显示的视频'
+                            : '暂时没有收藏夹'}
+                    </Text>
+                )}
+                ListFooterComponent={isLoadingMore ? (
+                    <AppLoadingIndicator style={styles.footerLoading} />
+                ) : null}
+                ListHeaderComponent={videosErrorMessage ? (
+                    <Text style={styles.inlineError}>{videosErrorMessage}</Text>
+                ) : null}
+                onEndReached={() => {
+                    if (
+                        selectedFolder &&
+                        hasMore &&
+                        !isLoadingMore &&
+                        !videosControllerRef.current
+                    ) {
+                        void loadVideoPage(
+                            selectedFolder,
+                            currentPage + 1,
+                            'more',
+                        );
+                    }
+                }}
+                onEndReachedThreshold={0.4}
+                maxToRenderPerBatch={8}
+                refreshControl={(
+                    <AppRefreshControl
+                        onRefresh={() => void refreshFavorites()}
+                        refreshing={isRefreshing}
+                    />
+                )}
+                removeClippedSubviews
+                renderItem={renderFavoriteVideo}
+                style={styles.listView}
+                updateCellsBatchingPeriod={50}
+                windowSize={9}
+            />
+        );
     }
+
+    const isCollectionsSelected =
+        selectedOptionValue === COLLECTIONS_OPTION_VALUE;
 
     return (
         <View style={styles.page}>
             <SelectionBar
-                errorMessage={foldersErrorMessage}
-                isLoading={isFoldersLoading && !isRefreshing}
+                errorMessage={
+                    isCollectionsSelected || folders.length === 0
+                        ? null
+                        : foldersErrorMessage
+                }
+                isLoading={
+                    !isCollectionsSelected &&
+                    isFoldersLoading &&
+                    !isRefreshing
+                }
                 onRetry={() => void refreshFavorites()}
-                onSelect={(folderId) => {
-                    const folder = folders.find((item) => item.id === folderId);
+                onSelect={(optionValue) => {
+                    if (optionValue === COLLECTIONS_OPTION_VALUE) {
+                        selectCollections();
+                        return;
+                    }
+
+                    const folder = folders.find((item) => item.id === optionValue);
 
                     if (folder) {
                         selectFolder(folder);
                     }
                 }}
-                options={folders.map((folder) => ({
-                    value: folder.id,
-                    label: `${folder.title}(${folder.mediaCount})`,
-                    accessibilityLabel: `${folder.title},${folder.mediaCount}个视频`,
-                }))}
-                selectedValue={selectedFolderId}
+                options={[
+                    {
+                        value: COLLECTIONS_OPTION_VALUE,
+                        label: '合集',
+                        accessibilityLabel: '已关注的合集',
+                    },
+                    ...folders.map((folder) => ({
+                        value: folder.id,
+                        label: `${folder.title}(${folder.mediaCount})`,
+                        accessibilityLabel: `${folder.title},${folder.mediaCount}个视频`,
+                    })),
+                ]}
+                selectedValue={selectedOptionValue}
             />
 
-            {isVideosLoading && videos.length === 0 ? (
-                <View style={styles.centeredContent}>
-                    <ActivityIndicator color={colors.accentForeground} size='large' />
-                    <Text style={styles.statusText}>正在加载收藏视频...</Text>
-                </View>
-            ) : null}
+            <View style={[
+                styles.content,
+                isCollectionsSelected && styles.hiddenContent,
+            ]}>
+                {favoriteContent}
+            </View>
 
-            {!isVideosLoading && videosErrorMessage && videos.length === 0 ? (
-                <View style={styles.centeredContent}>
-                    <Text style={styles.errorText}>{videosErrorMessage}</Text>
-                    {selectedFolder ? (
-                        <AppButton
-                            onPress={() => void loadVideoPage(selectedFolder, 1, 'initial')}
-                            style={styles.actionButton}
-                            title='重新加载'
-                        />
-                    ) : null}
+            {hasOpenedCollections ? (
+                <View style={[
+                    styles.content,
+                    !isCollectionsSelected && styles.hiddenContent,
+                ]}>
+                    <FollowedCollectionsPage
+                        onCollectionPress={onCollectionPress}
+                        refreshRequestId={collectionsRefreshRequestId}
+                    />
                 </View>
-            ) : null}
-
-            {!isVideosLoading && !(videosErrorMessage && videos.length === 0) ? (
-                <FlatList
-                    ref={listRef}
-                    contentContainerStyle={[
-                        videos.length === 0 ? styles.emptyList : styles.videoList,
-                        { paddingBottom: bottomTabBarHeight + spacing.md },
-                    ]}
-                    data={videos}
-                    initialNumToRender={8}
-                    keyExtractor={getFavoriteVideoKey}
-                    ListEmptyComponent={
-                        <Text style={styles.statusText}>
-                            {selectedFolder
-                                ? '该收藏夹暂时没有可显示的视频'
-                                : '暂时没有收藏夹'}
-                        </Text>
-                    }
-                    ListFooterComponent={
-                        isLoadingMore ? (
-                            <AppLoadingIndicator
-                                style={styles.footerLoading}
-                            />
-                        ) : null
-                    }
-                    ListHeaderComponent={
-                        videosErrorMessage ? (
-                            <Text style={styles.inlineError}>{videosErrorMessage}</Text>
-                        ) : null
-                    }
-                    onEndReached={() => {
-                        if (
-                            selectedFolder &&
-                            hasMore &&
-                            !isLoadingMore &&
-                            !videosControllerRef.current
-                        ) {
-                            void loadVideoPage(
-                                selectedFolder,
-                                currentPage + 1,
-                                'more',
-                            );
-                        }
-                    }}
-                    onEndReachedThreshold={0.4}
-                    maxToRenderPerBatch={8}
-                    refreshControl={(
-                        <AppRefreshControl
-                            onRefresh={() => void refreshFavorites()}
-                            refreshing={isRefreshing}
-                        />
-                    )}
-                    removeClippedSubviews
-                    renderItem={renderFavoriteVideo}
-                    style={styles.listView}
-                    updateCellsBatchingPeriod={50}
-                    windowSize={9}
-                />
             ) : null}
         </View>
     );
@@ -442,12 +528,11 @@ const styles = StyleSheet.create({
     listView: {
         flex: 1,
     },
-    centeredPage: {
+    content: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: spacing.lg,
-        backgroundColor: colors.pageBackground,
+    },
+    hiddenContent: {
+        display: 'none',
     },
     centeredContent: {
         flex: 1,

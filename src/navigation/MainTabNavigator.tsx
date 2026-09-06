@@ -22,6 +22,8 @@ import { useAgentSession } from '@/agent/session/AgentSessionContext';
 import ApiKeyInputModal from '@/agent/ui/ApiKeyInputModal';
 import FloatingTabBar from '@/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
+import FollowedCollectionDetailPage from '@/page/favorites/FollowedCollectionDetailPage';
+import type { FollowedCollection } from '@/page/favorites/fetchFollowedCollections';
 import FollowingPage from '@/page/following/FollowingPage';
 import VideoDetailPage from '@/page/video/VideoDetailPage';
 import type { VideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
@@ -47,7 +49,10 @@ type RefreshRequestProps = {
 };
 
 type FavoritesStackParamList = {
-    FavoriteFolders: undefined;
+    FavoritesHome: undefined;
+    CollectionDetail: {
+        collection: FollowedCollection;
+    };
     VideoDetail: {
         target: VideoPlaybackTarget;
     };
@@ -140,14 +145,30 @@ function HomeNavigator({
     );
 }
 
-function FavoriteFoldersScreen({
+function FavoritesHomeScreen({
     navigation,
     refreshRequestId,
-}: NativeStackScreenProps<FavoritesStackParamList, 'FavoriteFolders'> & RefreshRequestProps) {
+}: NativeStackScreenProps<FavoritesStackParamList, 'FavoritesHome'> & RefreshRequestProps) {
     return (
         <FavoriteFoldersPage
+            onCollectionPress={(collection) => {
+                navigation.navigate('CollectionDetail', { collection });
+            }}
             onVideoPress={(target) => navigation.navigate('VideoDetail', { target })}
             refreshRequestId={refreshRequestId}
+        />
+    );
+}
+
+function FollowedCollectionDetailScreen({
+    navigation,
+    route,
+}: NativeStackScreenProps<FavoritesStackParamList, 'CollectionDetail'>) {
+    return (
+        <FollowedCollectionDetailPage
+            initialCollection={route.params.collection}
+            onBack={() => navigation.goBack()}
+            onVideoPress={(target) => navigation.navigate('VideoDetail', { target })}
         />
     );
 }
@@ -174,14 +195,18 @@ function FavoritesNavigator({
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
             <FavoritesStack.Navigator screenOptions={{ headerShown: false }}>
-                <FavoritesStack.Screen name='FavoriteFolders'>
+                <FavoritesStack.Screen name='FavoritesHome'>
                     {(props) => (
-                        <FavoriteFoldersScreen
+                        <FavoritesHomeScreen
                             {...props}
                             refreshRequestId={refreshRequestId}
                         />
                     )}
                 </FavoritesStack.Screen>
+                <FavoritesStack.Screen
+                    name='CollectionDetail'
+                    component={FollowedCollectionDetailScreen}
+                />
                 <FavoritesStack.Screen name='VideoDetail' component={FavoriteVideoDetailScreen} />
             </FavoritesStack.Navigator>
         </BlurTargetView>
@@ -264,7 +289,10 @@ export default function MainTabNavigator() {
                     const activeRoute = props.state.routes[props.state.index];
                     const nestedRouteName = getFocusedRouteNameFromRoute(activeRoute);
 
-                    if (nestedRouteName === 'VideoDetail') {
+                    if (
+                        nestedRouteName === 'CollectionDetail' ||
+                        nestedRouteName === 'VideoDetail'
+                    ) {
                         return null;
                     }
 

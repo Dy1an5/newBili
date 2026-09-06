@@ -13,8 +13,8 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
+import VideoListSortToolbar from '@/components/VideoListSortToolbar';
 import VideoListCard from '@/components/VideoListCard';
-import WatchLaterToolbar from '@/page/watchLater/WatchLaterToolbar';
 import {
     fetchWatchLaterVideoPage,
     WatchLaterRequestError,
@@ -223,10 +223,12 @@ export default function WatchLaterPage({
     ), [onVideoPress]);
 
     const toolbar = (
-        <WatchLaterToolbar
+        <VideoListSortToolbar
             ascending={ascending}
+            ascendingLabel='最早添加'
+            descendingLabel='最近添加'
             onSortChange={selectSort}
-            totalCount={totalCount}
+            title={`稍后再看(${totalCount})`}
         />
     );
 

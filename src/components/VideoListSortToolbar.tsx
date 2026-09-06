@@ -11,32 +11,33 @@ import { spacing } from '@/theme/spacing';
 
 type Props = {
     ascending: boolean;
-    totalCount: number;
+    ascendingLabel: string;
+    descendingLabel: string;
     onSortChange: (ascending: boolean) => void;
+    title: string;
 };
 
-const SORT_OPTIONS: Array<{
-    ascending: boolean;
-    label: string;
-}> = [
-    { ascending: false, label: '最近添加' },
-    { ascending: true, label: '最早添加' },
-];
-
-export default function WatchLaterToolbar({
+export default function VideoListSortToolbar({
     ascending,
-    totalCount,
+    ascendingLabel,
+    descendingLabel,
     onSortChange,
+    title,
 }: Props) {
+    const options = [
+        { ascending: false, label: descendingLabel },
+        { ascending: true, label: ascendingLabel },
+    ];
+
     return (
         <View style={styles.container}>
             <View style={styles.toolbar}>
                 <Text numberOfLines={1} style={styles.title}>
-                    稍后再看({totalCount})
+                    {title}
                 </Text>
 
                 <View style={styles.sortControl}>
-                    {SORT_OPTIONS.map((option) => {
+                    {options.map((option) => {
                         const isSelected = option.ascending === ascending;
 
                         return (
