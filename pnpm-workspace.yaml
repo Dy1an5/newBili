@@ -1,0 +1,2 @@
+allowBuilds:
+    'react-native-volume-manager@https://codeload.github.com/hirbod/react-native-volume-manager/tar.gz/db5674c1efec5d271a303a32f68d41f4cdb08fb1': true
