@@ -1,4 +1,13 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    forwardRef,
+    memo,
+    useCallback,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import {
     FlatList,
     Pressable,
@@ -23,11 +32,15 @@ import {
     type VideoComment,
     VideoCommentsError,
 } from '@/page/video/fetchVideoComments';
+import type {
+    CollapsiblePageScrollHandle,
+    CollapsiblePageScrollProps,
+} from '@/page/video/collapsibleVideoScroll';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 
-type Props = {
+type Props = CollapsiblePageScrollProps & {
     active: boolean;
     aid: string | null;
     onTotalCountChange: (count: number | null) => void;
@@ -320,12 +333,19 @@ function CommentCard({
     );
 }
 
-export default function VideoCommentsPanel({
+const VideoCommentsPanel = forwardRef<CollapsiblePageScrollHandle, Props>(
+function VideoCommentsPanel({
     active,
     aid,
+    headerSpacerHeight,
+    minimumContentHeight,
+    onScroll,
     onTotalCountChange,
-}: Props) {
+}, ref) {
     const safeAreaInsets = useSafeAreaInsets();
+    const listRef = useRef<FlatList<VideoComment>>(null);
+    const statusScrollRef = useRef<ScrollView>(null);
+    const scrollOffsetRef = useRef(0);
     const requestControllerRef = useRef<AbortController | null>(null);
     const [comments, setComments] = useState<VideoComment[]>([]);
     const [status, setStatus] = useState<LoadStatus>('idle');
@@ -350,6 +370,37 @@ export default function VideoCommentsPanel({
     const [picturePreview, setPicturePreview] = useState<
         PicturePreviewState | null
     >(null);
+
+    useImperativeHandle(ref, () => ({
+        scrollToOffset: (offset, animated = false) => {
+            scrollOffsetRef.current = offset;
+
+            if (status === 'success') {
+                listRef.current?.scrollToOffset({ offset, animated });
+                return;
+            }
+
+            statusScrollRef.current?.scrollTo({ y: offset, animated });
+        },
+    }), [status]);
+
+    const handleScroll = useCallback((event: Parameters<typeof onScroll>[0]) => {
+        scrollOffsetRef.current = Math.max(
+            0,
+            event.nativeEvent.contentOffset.y,
+        );
+        onScroll(event);
+    }, [onScroll]);
+
+    useEffect(() => {
+        const offset = scrollOffsetRef.current;
+
+        if (status === 'success') {
+            listRef.current?.scrollToOffset({ offset, animated: false });
+        } else {
+            statusScrollRef.current?.scrollTo({ y: offset, animated: false });
+        }
+    }, [status]);
 
     const openPicturePreview = useCallback((
         imageUrls: string[],
@@ -702,37 +753,73 @@ export default function VideoCommentsPanel({
 
     if (!aid || status === 'idle' || status === 'loading') {
         return (
-            <View style={styles.centeredStatus}>
-                <AppLoadingIndicator />
-                <Text style={styles.statusText}>
-                    {aid ? '正在获取评论...' : '正在获取视频信息...'}
-                </Text>
-            </View>
+            <ScrollView
+                ref={statusScrollRef}
+                contentOffset={{ x: 0, y: scrollOffsetRef.current }}
+                contentContainerStyle={[
+                    styles.statusContent,
+                    {
+                        minHeight: minimumContentHeight,
+                        paddingTop: headerSpacerHeight,
+                    },
+                ]}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                style={styles.panel}
+            >
+                <View style={styles.centeredStatus}>
+                    <AppLoadingIndicator />
+                    <Text style={styles.statusText}>
+                        {aid ? '正在获取评论...' : '正在获取视频信息...'}
+                    </Text>
+                </View>
+            </ScrollView>
         );
     }
 
     if (status === 'error') {
         return (
-            <View style={styles.centeredStatus}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
-                <AppButton
-                    onPress={() => void loadInitialPage(false)}
-                    style={styles.retryButton}
-                    title='重新加载'
-                />
-            </View>
+            <ScrollView
+                ref={statusScrollRef}
+                contentOffset={{ x: 0, y: scrollOffsetRef.current }}
+                contentContainerStyle={[
+                    styles.statusContent,
+                    {
+                        minHeight: minimumContentHeight,
+                        paddingTop: headerSpacerHeight,
+                    },
+                ]}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                style={styles.panel}
+            >
+                <View style={styles.centeredStatus}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                    <AppButton
+                        onPress={() => void loadInitialPage(false)}
+                        style={styles.retryButton}
+                        title='重新加载'
+                    />
+                </View>
+            </ScrollView>
         );
     }
 
     return (
         <View style={styles.panel}>
             <FlatList
+                ref={listRef}
+                contentOffset={{ x: 0, y: scrollOffsetRef.current }}
                 data={comments}
                 initialNumToRender={5}
                 keyExtractor={(comment) => comment.id}
                 contentContainerStyle={[
                     comments.length === 0 ? styles.emptyList : undefined,
-                    { paddingBottom: safeAreaInsets.bottom + spacing.xl },
+                    {
+                        minHeight: minimumContentHeight,
+                        paddingTop: headerSpacerHeight,
+                        paddingBottom: safeAreaInsets.bottom + spacing.xl,
+                    },
                 ]}
                 ListHeaderComponent={errorMessage ? (
                     <Text style={styles.inlineError}>{errorMessage}</Text>
@@ -753,6 +840,7 @@ export default function VideoCommentsPanel({
                     }
                 }}
                 onEndReachedThreshold={0.4}
+                onScroll={handleScroll}
                 refreshControl={(
                     <AppRefreshControl
                         onRefresh={() => void loadInitialPage(true)}
@@ -785,6 +873,7 @@ export default function VideoCommentsPanel({
                 }}
                 updateCellsBatchingPeriod={50}
                 windowSize={7}
+                scrollEventThrottle={16}
             />
 
             <FullscreenImageViewer
@@ -795,12 +884,17 @@ export default function VideoCommentsPanel({
             />
         </View>
     );
-}
+});
+
+export default VideoCommentsPanel;
 
 const styles = StyleSheet.create({
     panel: {
         flex: 1,
         backgroundColor: colors.pageBackground,
+    },
+    statusContent: {
+        flexGrow: 1,
     },
     centeredStatus: {
         flex: 1,

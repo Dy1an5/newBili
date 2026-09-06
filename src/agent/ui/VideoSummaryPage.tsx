@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import {
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useRef,
+    useState,
+} from 'react';
 import {
     ActivityIndicator,
     ScrollView,
@@ -37,6 +43,10 @@ import AppButton from '@/components/AppButton';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import type {
+    CollapsiblePageScrollHandle,
+    CollapsiblePageScrollProps,
+} from '@/page/video/collapsibleVideoScroll';
 
 const DEEPSEEK_MODEL_ID = 'deepseek-v4-flash';
 const deepSeekProvider = new DeepSeekResponsesProvider({
@@ -60,7 +70,7 @@ type SummaryState =
         storageWarning?: string;
     };
 
-type Props = {
+type Props = CollapsiblePageScrollProps & {
     target: VideoPartSummaryTarget | null;
     apiKey: string | null;
 };
@@ -122,14 +132,28 @@ function createCuePreview(
     }));
 }
 
-export default function VideoSummaryPanel({ target, apiKey }: Props) {
+const VideoSummaryPanel = forwardRef<CollapsiblePageScrollHandle, Props>(
+function VideoSummaryPanel({
+    target,
+    apiKey,
+    headerSpacerHeight,
+    minimumContentHeight,
+    onScroll,
+}, ref) {
     const safeAreaInsets = useSafeAreaInsets();
+    const scrollRef = useRef<ScrollView>(null);
     const requestIdRef = useRef(0);
     const [request, setRequest] = useState<SummaryRequest | null>(null);
     const [state, setState] = useState<SummaryState>({ status: 'idle' });
     const targetKey = target
         ? `${target.identity.bvid}:${target.identity.cid}`
         : '';
+
+    useImperativeHandle(ref, () => ({
+        scrollToOffset: (offset, animated = false) => {
+            scrollRef.current?.scrollTo({ y: offset, animated });
+        },
+    }), []);
 
     useEffect(() => {
         let isCurrent = true;
@@ -445,7 +469,19 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
     }, [apiKey, request]);
 
     return (
-        <View style={styles.page}>
+        <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={[
+                styles.scrollContent,
+                {
+                    minHeight: minimumContentHeight,
+                    paddingTop: headerSpacerHeight,
+                },
+            ]}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            style={styles.page}
+        >
             {state.status === 'checking-cache' ? (
                 <View style={styles.centerState}>
                     <ActivityIndicator color={colors.accentForeground} size='small' />
@@ -497,8 +533,8 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
                     />
                 </View>
             ) : (
-                <ScrollView
-                    contentContainerStyle={[
+                <View
+                    style={[
                         styles.content,
                         { paddingBottom: safeAreaInsets.bottom + spacing.xl },
                     ]}
@@ -580,16 +616,21 @@ export default function VideoSummaryPanel({ target, apiKey }: Props) {
                             Token用量:输入{state.inputTokens ?? '-'},输出{state.outputTokens ?? '-'}
                         </Text>
                     ) : null}
-                </ScrollView>
+                </View>
             )}
-        </View>
+        </ScrollView>
     );
-}
+});
+
+export default VideoSummaryPanel;
 
 const styles = StyleSheet.create({
     page: {
         flex: 1,
         backgroundColor: colors.pageBackground,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     centerState: {
         flex: 1,
