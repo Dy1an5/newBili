@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GestureResponderEvent } from 'react-native';
+import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import {
     BackHandler,
     Pressable,
@@ -8,9 +8,16 @@ import {
     Text,
     View,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEvent } from 'expo';
+import * as Brightness from 'expo-brightness';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import {
+    addVolumeListener,
+    getVolume,
+    setVolume,
+} from 'react-native-volume-manager';
 
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
@@ -34,6 +41,29 @@ const TAP_MAX_DURATION_MS = 250;
 const TOUCH_MOVE_TOLERANCE = 12;
 const FAST_PLAYBACK_RATE = 2;
 const PROGRESS_CONTROLS_HIDE_DELAY_MS = 2500;
+const ADJUSTMENT_FEEDBACK_HIDE_DELAY_MS = 600;
+const NATIVE_ADJUSTMENT_INTERVAL_MS = 50;
+
+type VerticalGesture = 'brightness' | 'volume' | 'blocked';
+
+type AdjustmentFeedback =
+    | {
+        kind: 'brightness' | 'volume';
+        value: number;
+    }
+    | {
+        kind: 'error';
+        message: string;
+    };
+
+type PendingAdjustment = {
+    kind: 'brightness' | 'volume';
+    value: number;
+};
+
+function clampUnitValue(value: number): number {
+    return Math.min(1, Math.max(0, value));
+}
 
 function formatPlaybackTime(timeSeconds: number): string {
     const normalizedSeconds = Number.isFinite(timeSeconds)
@@ -63,14 +93,34 @@ export default function VideoPlayer({
     onPlaybackError,
 }: Props) {
     const [areProgressControlsVisible, setAreProgressControlsVisible] = useState(false);
+    const [adjustmentFeedback, setAdjustmentFeedback] =
+        useState<AdjustmentFeedback | null>(null);
     const [progressBarWidth, setProgressBarWidth] = useState(0);
     const areProgressControlsVisibleRef = useRef(false);
     const lastTapAtRef = useRef(0);
     const touchStartedAtRef = useRef(0);
     const touchStartPositionRef = useRef({ x: 0, y: 0 });
+    const touchStartedOnLeftRef = useRef(false);
+    const playerWidthRef = useRef(0);
+    const playerHeightRef = useRef(0);
+    const verticalGestureRef = useRef<VerticalGesture | null>(null);
+    const gestureStartValueRef = useRef(0);
+    const initialBrightnessRef = useRef<number | null>(null);
+    const currentBrightnessRef = useRef<number | null>(null);
+    const initialVolumeRef = useRef<number | null>(null);
+    const currentVolumeRef = useRef<number | null>(null);
+    const hasAdjustedBrightnessRef = useRef(false);
+    const hasAdjustedVolumeRef = useRef(false);
+    const isMountedRef = useRef(true);
+    const lastNativeAdjustmentAtRef = useRef(0);
+    const pendingAdjustmentRef = useRef<PendingAdjustment | null>(null);
+    const nativeAdjustmentWriteChainRef = useRef<Promise<void>>(Promise.resolve());
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const progressControlsHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const adjustmentFeedbackHideTimerRef =
+        useRef<ReturnType<typeof setTimeout> | null>(null);
+    const nativeAdjustmentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLongPressActiveRef = useRef(false);
     const playbackRateBeforeLongPressRef = useRef(1);
     const isFullscreenRef = useRef(false);
@@ -118,6 +168,106 @@ export default function VideoPlayer({
         }
     }, []);
 
+    const clearAdjustmentFeedbackHideTimer = useCallback(() => {
+        if (adjustmentFeedbackHideTimerRef.current !== null) {
+            clearTimeout(adjustmentFeedbackHideTimerRef.current);
+            adjustmentFeedbackHideTimerRef.current = null;
+        }
+    }, []);
+
+    const clearNativeAdjustmentTimer = useCallback(() => {
+        if (nativeAdjustmentTimerRef.current !== null) {
+            clearTimeout(nativeAdjustmentTimerRef.current);
+            nativeAdjustmentTimerRef.current = null;
+        }
+    }, []);
+
+    const showAdjustmentError = useCallback((message: string) => {
+        if (!isMountedRef.current) {
+            return;
+        }
+
+        clearAdjustmentFeedbackHideTimer();
+        setAdjustmentFeedback({ kind: 'error', message });
+        adjustmentFeedbackHideTimerRef.current = setTimeout(() => {
+            adjustmentFeedbackHideTimerRef.current = null;
+            setAdjustmentFeedback(null);
+        }, ADJUSTMENT_FEEDBACK_HIDE_DELAY_MS);
+    }, [clearAdjustmentFeedbackHideTimer]);
+
+    const flushNativeAdjustment = useCallback(() => {
+        clearNativeAdjustmentTimer();
+
+        const adjustment = pendingAdjustmentRef.current;
+        pendingAdjustmentRef.current = null;
+
+        if (adjustment === null) {
+            return;
+        }
+
+        lastNativeAdjustmentAtRef.current = Date.now();
+        nativeAdjustmentWriteChainRef.current = nativeAdjustmentWriteChainRef.current
+            .catch(() => undefined)
+            .then(async () => {
+                if (adjustment.kind === 'brightness') {
+                    await Brightness.setBrightnessAsync(adjustment.value);
+                    return;
+                }
+
+                await setVolume(adjustment.value, {
+                    type: 'music',
+                    showUI: false,
+                    playSound: false,
+                });
+            })
+            .catch(() => {
+                clearNativeAdjustmentTimer();
+                pendingAdjustmentRef.current = null;
+                verticalGestureRef.current = 'blocked';
+
+                if (adjustment.kind === 'brightness') {
+                    currentBrightnessRef.current = null;
+                } else {
+                    currentVolumeRef.current = null;
+                }
+
+                showAdjustmentError(
+                    adjustment.kind === 'brightness'
+                        ? '亮度调节失败'
+                        : '音量调节失败',
+                );
+            });
+    }, [clearNativeAdjustmentTimer, showAdjustmentError]);
+
+    const queueNativeAdjustment = useCallback((adjustment: PendingAdjustment) => {
+        pendingAdjustmentRef.current = adjustment;
+
+        if (nativeAdjustmentTimerRef.current !== null) {
+            return;
+        }
+
+        const elapsed = Date.now() - lastNativeAdjustmentAtRef.current;
+
+        if (elapsed >= NATIVE_ADJUSTMENT_INTERVAL_MS) {
+            flushNativeAdjustment();
+            return;
+        }
+
+        nativeAdjustmentTimerRef.current = setTimeout(
+            flushNativeAdjustment,
+            NATIVE_ADJUSTMENT_INTERVAL_MS - elapsed,
+        );
+    }, [flushNativeAdjustment]);
+
+    const finishAdjustmentFeedback = useCallback(() => {
+        flushNativeAdjustment();
+        clearAdjustmentFeedbackHideTimer();
+        adjustmentFeedbackHideTimerRef.current = setTimeout(() => {
+            adjustmentFeedbackHideTimerRef.current = null;
+            setAdjustmentFeedback(null);
+        }, ADJUSTMENT_FEEDBACK_HIDE_DELAY_MS);
+    }, [clearAdjustmentFeedbackHideTimer, flushNativeAdjustment]);
+
     const showProgressControls = useCallback(() => {
         clearProgressControlsHideTimer();
         areProgressControlsVisibleRef.current = true;
@@ -152,9 +302,98 @@ export default function VideoPlayer({
         return true;
     }, [clearLongPressTimer, player]);
 
+    useEffect(() => {
+        let isActive = true;
+        let volumeSubscription: ReturnType<typeof addVolumeListener> | null = null;
+
+        isMountedRef.current = true;
+
+        void Brightness.getBrightnessAsync()
+            .then((brightness) => {
+                if (!isActive) {
+                    return;
+                }
+
+                const normalizedBrightness = clampUnitValue(brightness);
+                initialBrightnessRef.current = normalizedBrightness;
+                currentBrightnessRef.current = normalizedBrightness;
+            })
+            .catch(() => undefined);
+
+        void getVolume()
+            .then(({ volume }) => {
+                if (!isActive) {
+                    return;
+                }
+
+                const normalizedVolume = clampUnitValue(volume);
+
+                if (initialVolumeRef.current === null) {
+                    initialVolumeRef.current = normalizedVolume;
+                }
+
+                currentVolumeRef.current = normalizedVolume;
+            })
+            .catch(() => undefined);
+
+        try {
+            volumeSubscription = addVolumeListener(({ type, volume }) => {
+                if (!isActive || (type !== undefined && type !== 'music')) {
+                    return;
+                }
+
+                const normalizedVolume = clampUnitValue(volume);
+
+                if (initialVolumeRef.current === null) {
+                    initialVolumeRef.current = normalizedVolume;
+                }
+
+                currentVolumeRef.current = normalizedVolume;
+            });
+        } catch {
+            volumeSubscription = null;
+        }
+
+        return () => {
+            isActive = false;
+            isMountedRef.current = false;
+            volumeSubscription?.remove();
+            clearAdjustmentFeedbackHideTimer();
+            clearNativeAdjustmentTimer();
+            pendingAdjustmentRef.current = null;
+
+            const shouldRestoreBrightness =
+                hasAdjustedBrightnessRef.current &&
+                initialBrightnessRef.current !== null;
+            const volumeToRestore = hasAdjustedVolumeRef.current
+                ? initialVolumeRef.current
+                : null;
+
+            void nativeAdjustmentWriteChainRef.current
+                .catch(() => undefined)
+                .then(async () => {
+                    if (shouldRestoreBrightness) {
+                        await Brightness.restoreSystemBrightnessAsync()
+                            .catch(() => undefined);
+                    }
+
+                    if (volumeToRestore !== null) {
+                        await setVolume(volumeToRestore, {
+                            type: 'music',
+                            showUI: false,
+                            playSound: false,
+                        }).catch(() => undefined);
+                    }
+                });
+        };
+    }, [clearAdjustmentFeedbackHideTimer, clearNativeAdjustmentTimer]);
+
     const handleTouchStart = useCallback((event: GestureResponderEvent) => {
         if (event.nativeEvent.touches.length !== 1) {
+            touchStartedAtRef.current = 0;
+            verticalGestureRef.current = 'blocked';
             clearLongPressTimer();
+            restorePlaybackRate();
             return;
         }
 
@@ -167,6 +406,9 @@ export default function VideoPlayer({
             x: event.nativeEvent.pageX,
             y: event.nativeEvent.pageY,
         };
+        touchStartedOnLeftRef.current =
+            event.nativeEvent.locationX < playerWidthRef.current / 2;
+        verticalGestureRef.current = null;
         isLongPressActiveRef.current = false;
         clearLongPressTimer();
         longPressTimerRef.current = setTimeout(() => {
@@ -175,23 +417,103 @@ export default function VideoPlayer({
             player.playbackRate = FAST_PLAYBACK_RATE;
             isLongPressActiveRef.current = true;
         }, LONG_PRESS_DELAY_MS);
-    }, [clearLongPressTimer, clearSingleTapTimer, player]);
+    }, [
+        clearLongPressTimer,
+        clearSingleTapTimer,
+        player,
+        restorePlaybackRate,
+    ]);
 
     const handleTouchMove = useCallback((event: GestureResponderEvent) => {
         const deltaX = event.nativeEvent.pageX - touchStartPositionRef.current.x;
         const deltaY = event.nativeEvent.pageY - touchStartPositionRef.current.y;
+        const absoluteDeltaX = Math.abs(deltaX);
+        const absoluteDeltaY = Math.abs(deltaY);
 
         if (
-            Math.abs(deltaX) > TOUCH_MOVE_TOLERANCE ||
-            Math.abs(deltaY) > TOUCH_MOVE_TOLERANCE
+            absoluteDeltaX <= TOUCH_MOVE_TOLERANCE &&
+            absoluteDeltaY <= TOUCH_MOVE_TOLERANCE
         ) {
-            clearLongPressTimer();
-            touchStartedAtRef.current = 0;
+            return;
         }
-    }, [clearLongPressTimer]);
+
+        clearLongPressTimer();
+        touchStartedAtRef.current = 0;
+
+        if (verticalGestureRef.current === null) {
+            if (absoluteDeltaY <= absoluteDeltaX) {
+                verticalGestureRef.current = 'blocked';
+                return;
+            }
+
+            restorePlaybackRate();
+
+            const nextGesture = touchStartedOnLeftRef.current
+                ? 'brightness'
+                : 'volume';
+            const startValue = nextGesture === 'brightness'
+                ? currentBrightnessRef.current
+                : currentVolumeRef.current;
+
+            if (startValue === null || playerHeightRef.current <= 0) {
+                verticalGestureRef.current = 'blocked';
+                showAdjustmentError(
+                    nextGesture === 'brightness'
+                        ? '亮度暂不可用'
+                        : '音量暂不可用',
+                );
+                return;
+            }
+
+            verticalGestureRef.current = nextGesture;
+            gestureStartValueRef.current = startValue;
+        }
+
+        const gesture = verticalGestureRef.current;
+
+        if (gesture === null || gesture === 'blocked') {
+            return;
+        }
+
+        const nextValue = clampUnitValue(
+            gestureStartValueRef.current - deltaY / playerHeightRef.current,
+        );
+
+        if (gesture === 'brightness') {
+            currentBrightnessRef.current = nextValue;
+            hasAdjustedBrightnessRef.current = true;
+        } else {
+            currentVolumeRef.current = nextValue;
+            hasAdjustedVolumeRef.current = true;
+        }
+
+        clearAdjustmentFeedbackHideTimer();
+        setAdjustmentFeedback({ kind: gesture, value: nextValue });
+        queueNativeAdjustment({ kind: gesture, value: nextValue });
+    }, [
+        clearAdjustmentFeedbackHideTimer,
+        clearLongPressTimer,
+        queueNativeAdjustment,
+        restorePlaybackRate,
+        showAdjustmentError,
+    ]);
 
     const handleTouchEnd = useCallback(() => {
         clearLongPressTimer();
+
+        if (verticalGestureRef.current !== null) {
+            const completedGesture = verticalGestureRef.current;
+            verticalGestureRef.current = null;
+            touchStartedAtRef.current = 0;
+            lastTapAtRef.current = 0;
+            restorePlaybackRate();
+
+            if (completedGesture !== 'blocked') {
+                finishAdjustmentFeedback();
+            }
+
+            return;
+        }
 
         if (restorePlaybackRate()) {
             touchStartedAtRef.current = 0;
@@ -224,17 +546,24 @@ export default function VideoPlayer({
     }, [
         clearLongPressTimer,
         clearSingleTapTimer,
+        finishAdjustmentFeedback,
         player,
         restorePlaybackRate,
         toggleProgressControls,
     ]);
 
     const handleTouchCancel = useCallback(() => {
+        const cancelledGesture = verticalGestureRef.current;
+        verticalGestureRef.current = null;
         touchStartedAtRef.current = 0;
         lastTapAtRef.current = 0;
         clearSingleTapTimer();
         restorePlaybackRate();
-    }, [clearSingleTapTimer, restorePlaybackRate]);
+
+        if (cancelledGesture !== null && cancelledGesture !== 'blocked') {
+            finishAdjustmentFeedback();
+        }
+    }, [clearSingleTapTimer, finishAdjustmentFeedback, restorePlaybackRate]);
 
     const seekToTouchPosition = useCallback((event: GestureResponderEvent) => {
         const duration = player.duration;
@@ -314,7 +643,13 @@ export default function VideoPlayer({
         : 0;
 
     return (
-        <View style={styles.playerSurface}>
+        <View
+            onLayout={(event: LayoutChangeEvent) => {
+                playerWidthRef.current = event.nativeEvent.layout.width;
+                playerHeightRef.current = event.nativeEvent.layout.height;
+            }}
+            style={styles.playerSurface}
+        >
             <StatusBar hidden={isFullscreen} />
             <VideoView
                 player={player}
@@ -327,6 +662,29 @@ export default function VideoPlayer({
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchCancel}
             />
+
+            {adjustmentFeedback ? (
+                <View pointerEvents='none' style={styles.adjustmentFeedback}>
+                    <MaterialIcons
+                        color={colors.primaryText}
+                        name={adjustmentFeedback.kind === 'error'
+                            ? 'error-outline'
+                            : adjustmentFeedback.kind === 'brightness'
+                                ? 'brightness-6'
+                                : adjustmentFeedback.value === 0
+                                    ? 'volume-off'
+                                    : adjustmentFeedback.value < 0.5
+                                        ? 'volume-down'
+                                        : 'volume-up'}
+                        size={22}
+                    />
+                    <Text style={styles.adjustmentFeedbackText}>
+                        {adjustmentFeedback.kind === 'error'
+                            ? adjustmentFeedback.message
+                            : `${Math.round(adjustmentFeedback.value * 100)}%`}
+                    </Text>
+                </View>
+            ) : null}
 
             {areProgressControlsVisible ? (
                 <View style={styles.progressControls}>
@@ -391,9 +749,11 @@ export default function VideoPlayer({
                                 pressed && styles.fullscreenButtonPressed,
                             ]}
                         >
-                            <Text style={styles.fullscreenButtonText}>
-                                {isFullscreen ? '退出全屏' : '全屏'}
-                            </Text>
+                            <MaterialIcons
+                                color={colors.primaryText}
+                                name={isFullscreen ? 'fullscreen-exit' : 'fullscreen'}
+                                size={24}
+                            />
                         </Pressable>
                     </View>
                 </View>
@@ -410,6 +770,29 @@ const styles = StyleSheet.create({
     player: {
         width: '100%',
         height: '100%',
+    },
+    adjustmentFeedback: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: 120,
+        minHeight: 44,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.full,
+        backgroundColor: colors.mediaOverlayBackground,
+        transform: [
+            { translateX: -60 },
+            { translateY: -22 },
+        ],
+    },
+    adjustmentFeedbackText: {
+        color: colors.primaryText,
+        fontSize: 13,
+        fontWeight: '600',
     },
     progressControls: {
         position: 'absolute',
@@ -450,14 +833,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: spacing.sm,
         borderRadius: radius.md,
-        backgroundColor: colors.mediaOverlayBackground,
     },
     fullscreenButtonPressed: {
         opacity: 0.72,
-    },
-    fullscreenButtonText: {
-        color: colors.primaryText,
-        fontSize: 13,
-        fontWeight: '600',
     },
 });
