@@ -5,6 +5,7 @@
     "private": true,
     "main": "src/index.ts",
     "scripts": {
+        "dev": "APP_VARIANT=development expo start --dev-client",
         "start": "expo start",
         "typecheck": "tsc --noEmit"
     },
