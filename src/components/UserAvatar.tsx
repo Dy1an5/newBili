@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-    Image,
     StyleSheet,
     Text,
     View,
@@ -8,8 +7,8 @@ import {
     type ViewStyle,
 } from 'react-native';
 
+import BilibiliImage from '@/components/BilibiliImage';
 import { colors } from '@/theme/colors';
-import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
 
 type Props = {
     uri?: string;
@@ -44,13 +43,11 @@ export default function UserAvatar({
             ]}
         >
             {shouldShowImage ? (
-                <Image
+                <BilibiliImage
                     onError={() => setFailedUri(normalizedUri)}
-                    source={{
-                        uri: normalizedUri,
-                        headers: BILIBILI_IMAGE_HEADERS,
-                    }}
                     style={styles.image}
+                    thumbnailSize={{ width: size, height: size }}
+                    uri={normalizedUri}
                 />
             ) : (
                 <Text style={[styles.placeholder, { fontSize: Math.max(11, size * 0.38) }]}>

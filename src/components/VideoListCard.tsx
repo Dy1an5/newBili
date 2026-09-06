@@ -1,17 +1,19 @@
 import { memo } from 'react';
 import {
-    Image,
     Pressable,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
 
+import BilibiliImage from '@/components/BilibiliImage';
+import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import UserAvatar from '@/components/UserAvatar';
-import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
+
+const COVER_WIDTH = 132;
+const COVER_HEIGHT = COVER_WIDTH * 10 / 16;
 
 type VideoListItem = {
     title: string;
@@ -62,13 +64,13 @@ function VideoListCard({
             ]}
         >
             <View style={styles.coverContainer}>
-                <Image
-                    source={{
-                        uri: video.coverUrl,
-                        headers: BILIBILI_IMAGE_HEADERS,
-                    }}
-                    resizeMode='cover'
+                <BilibiliImage
                     style={styles.cover}
+                    thumbnailSize={{
+                        width: COVER_WIDTH,
+                        height: COVER_HEIGHT,
+                    }}
+                    uri={video.coverUrl}
                 />
                 {duration ? (
                     <View style={styles.durationBadge}>
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
         opacity: 0.8,
     },
     coverContainer: {
-        width: 132,
+        width: COVER_WIDTH,
         aspectRatio: 16 / 10,
         overflow: 'hidden',
         borderRadius: radius.sm,

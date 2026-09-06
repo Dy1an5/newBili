@@ -9,6 +9,9 @@ export const BILIBILI_IMAGE_HEADERS = {
 export const BILIBILI_DEFAULT_AVATAR_URL =
     'https://i0.hdslb.com/bfs/face/member/noface.jpg';
 
+const BILIBILI_THUMBNAIL_MAX_EDGE = 1440;
+const BILIBILI_THUMBNAIL_QUALITY = 80;
+
 export type JsonRecord = Record<string, unknown>;
 
 export function asRecord(value: unknown): JsonRecord | null {
@@ -73,6 +76,60 @@ export function normalizeImageUrl(value: unknown): string | null {
     }
 
     return url.replace(/^http:\/\//i, 'https://');
+}
+
+export function buildBilibiliThumbnailUrl(
+    sourceUrl: string,
+    requestedWidth: number,
+    requestedHeight: number,
+): string {
+    const normalizedUrl = normalizeImageUrl(sourceUrl);
+
+    if (
+        !normalizedUrl ||
+        !Number.isFinite(requestedWidth) ||
+        !Number.isFinite(requestedHeight) ||
+        requestedWidth <= 0 ||
+        requestedHeight <= 0
+    ) {
+        return sourceUrl;
+    }
+
+    try {
+        const url = new URL(normalizedUrl);
+        const isBilibiliImageHost =
+            url.hostname === 'hdslb.com' ||
+            url.hostname.endsWith('.hdslb.com') ||
+            url.hostname === 'biliimg.com' ||
+            url.hostname.endsWith('.biliimg.com');
+
+        if (!isBilibiliImageHost || !url.pathname.startsWith('/bfs/')) {
+            return sourceUrl;
+        }
+
+        const requestedMaxEdge = Math.max(requestedWidth, requestedHeight);
+        const scale = requestedMaxEdge > BILIBILI_THUMBNAIL_MAX_EDGE
+            ? BILIBILI_THUMBNAIL_MAX_EDGE / requestedMaxEdge
+            : 1;
+        const width = Math.max(1, Math.round(requestedWidth * scale));
+        const height = Math.max(1, Math.round(requestedHeight * scale));
+        const lastSlashIndex = url.pathname.lastIndexOf('/');
+        const existingParametersIndex = url.pathname.indexOf(
+            '@',
+            lastSlashIndex + 1,
+        );
+        const originalPath = existingParametersIndex >= 0
+            ? url.pathname.slice(0, existingParametersIndex)
+            : url.pathname;
+
+        url.pathname =
+            `${originalPath}@${width}w_${height}h_1e_` +
+            `${BILIBILI_THUMBNAIL_QUALITY}q.webp`;
+
+        return url.toString();
+    } catch {
+        return sourceUrl;
+    }
 }
 
 export function getCookiePair(cookie: string, cookieName: string): string | null {

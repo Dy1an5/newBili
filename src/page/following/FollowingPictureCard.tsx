@@ -7,7 +7,6 @@ import type {
 } from 'react-native';
 import {
     FlatList,
-    Image,
     Modal,
     Pressable,
     StyleSheet,
@@ -17,11 +16,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BilibiliImage from '@/components/BilibiliImage';
+import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import UserAvatar from '@/components/UserAvatar';
-import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
 
 const MAX_PICTURE_COUNT = 9;
 const COLLAPSED_CONTENT_LINE_COUNT = 2;
@@ -201,14 +200,18 @@ function FollowingPictureCard({
                                     pressed && styles.pictureTilePressed,
                                 ]}
                             >
-                                <Image
-                                    resizeMode='cover'
-                                    source={{
-                                        uri: imageUrl,
-                                        headers: BILIBILI_IMAGE_HEADERS,
-                                    }}
-                                    style={styles.picture}
-                                />
+                                {pictureTileWidth > 0 ? (
+                                    <BilibiliImage
+                                        style={styles.picture}
+                                        thumbnailSize={{
+                                            width: pictureTileWidth,
+                                            height: validImageUrls.length === 1
+                                                ? pictureTileWidth * 3 / 4
+                                                : pictureTileWidth,
+                                        }}
+                                        uri={imageUrl}
+                                    />
+                                ) : null}
                             </Pressable>
                         ))}
                     </View>
@@ -268,13 +271,11 @@ function FollowingPictureCard({
                                         { width: previewWidth },
                                     ]}
                                 >
-                                    <Image
-                                        resizeMode='contain'
-                                        source={{
-                                            uri: imageUrl,
-                                            headers: BILIBILI_IMAGE_HEADERS,
-                                        }}
+                                    <BilibiliImage
+                                        contentFit='contain'
+                                        priority='high'
                                         style={styles.previewPicture}
+                                        uri={imageUrl}
                                     />
                                 </View>
                             )}

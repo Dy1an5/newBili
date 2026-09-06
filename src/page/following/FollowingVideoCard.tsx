@@ -1,17 +1,17 @@
 import { memo } from 'react';
 import {
-    Image,
     Pressable,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View,
 } from 'react-native';
 
+import BilibiliImage from '@/components/BilibiliImage';
+import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
-import UserAvatar from '@/components/UserAvatar';
-import { BILIBILI_IMAGE_HEADERS } from '@/tool/bilibiliApi';
 
 type Props = {
     title: string;
@@ -30,6 +30,12 @@ function FollowingVideoCard({
     publishedTimeText,
     onPress,
 }: Props) {
+    const { width: windowWidth } = useWindowDimensions();
+    const coverWidth = Math.max(
+        1,
+        windowWidth - spacing.lg * 2 - spacing.md * 2 - 2,
+    );
+
     return (
         <Pressable
             onPress={onPress}
@@ -46,13 +52,13 @@ function FollowingVideoCard({
             </Text>
 
             <View style={styles.coverContainer}>
-                <Image
-                    source={{
-                        uri: coverUrl,
-                        headers: BILIBILI_IMAGE_HEADERS,
-                    }}
+                <BilibiliImage
                     style={styles.cover}
-                    resizeMode='cover'
+                    thumbnailSize={{
+                        width: coverWidth,
+                        height: coverWidth * 9 / 16,
+                    }}
+                    uri={coverUrl}
                 />
             </View>
 
