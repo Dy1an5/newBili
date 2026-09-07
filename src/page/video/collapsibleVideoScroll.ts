@@ -1,4 +1,5 @@
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type { ScrollHandlerProcessed } from 'react-native-reanimated';
 
 export type CollapsiblePageScrollHandle = {
     scrollToOffset: (offset: number, animated?: boolean) => void;
@@ -7,5 +8,8 @@ export type CollapsiblePageScrollHandle = {
 export type CollapsiblePageScrollProps = {
     headerSpacerHeight: number;
     minimumContentHeight: number;
-    onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    onScroll: ScrollHandlerProcessed<Record<string, unknown>>;
+    onScrollEnd: (
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => void;
 };

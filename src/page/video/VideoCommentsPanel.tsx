@@ -10,12 +10,17 @@ import {
 } from 'react';
 import {
     FlatList,
+    type ListRenderItemInfo,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
+    type ViewToken,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getLoginCookie } from '@/auth/authCookie';
@@ -49,6 +54,9 @@ type Props = CollapsiblePageScrollProps & {
 type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
 
 const MAX_COMMENT_PICTURE_COUNT = 9;
+const REPLY_PREVIEW_IDLE_DELAY_MS = 150;
+const MAX_REPLY_PREVIEW_CONCURRENCY = 2;
+const EMPTY_REPLIES: VideoComment[] = [];
 
 type ReplyThreadState = {
     comments: VideoComment[];
@@ -167,6 +175,7 @@ const CommentPictures = memo(function CommentPictures({
                             width: pictureSize,
                             height: pictureSize,
                         }}
+                        transition={0}
                         uri={picture.url}
                     />
                 </Pressable>
@@ -183,12 +192,11 @@ type CommentCardProps = {
     isLoadingPreview: boolean;
     isLoadingReplies: boolean;
     replyErrorMessage: string | null;
-    onLoadPreview: (comment: VideoComment) => void;
     onLoadMore: (comment: VideoComment) => void;
     onOpenPictures: (imageUrls: string[], initialIndex: number) => void;
 };
 
-function CommentCard({
+const CommentCard = memo(function CommentCard({
     comment,
     displayedReplies,
     hasMoreReplies,
@@ -196,31 +204,17 @@ function CommentCard({
     isLoadingPreview,
     isLoadingReplies,
     replyErrorMessage,
-    onLoadPreview,
     onLoadMore,
     onOpenPictures,
 }: CommentCardProps) {
     const createdAt = formatCreatedAt(comment.createdAt);
     const isLoading = isLoadingPreview || isLoadingReplies;
+    const renderedReplies = isExpanded
+        ? displayedReplies
+        : displayedReplies.slice(0, 2);
     const shouldShowLoadMore = isExpanded
         ? hasMoreReplies
-        : comment.replyCount > displayedReplies.length;
-
-    useEffect(() => {
-        if (
-            !isExpanded
-            && comment.replyCount > displayedReplies.length
-            && displayedReplies.length < Math.min(2, comment.replyCount)
-        ) {
-            onLoadPreview(comment);
-        }
-    }, [
-        comment.replyCount,
-        comment,
-        displayedReplies.length,
-        isExpanded,
-        onLoadPreview,
-    ]);
+        : comment.replyCount > renderedReplies.length;
 
     return (
         <View
@@ -232,6 +226,7 @@ function CommentCard({
                 size={36}
                 style={styles.commentAvatar}
                 uri={comment.author.avatarUrl}
+                transition={0}
             />
 
             <View style={styles.commentBody}>
@@ -279,7 +274,7 @@ function CommentCard({
 
                 {comment.replyCount > 0 ? (
                     <View style={styles.replyPreview}>
-                        {displayedReplies.map((reply) => (
+                        {renderedReplies.map((reply) => (
                             <View key={reply.id} style={styles.replyItem}>
                                 <Text
                                     numberOfLines={isExpanded ? undefined : 2}
@@ -331,7 +326,7 @@ function CommentCard({
             </View>
         </View>
     );
-}
+});
 
 const VideoCommentsPanel = forwardRef<CollapsiblePageScrollHandle, Props>(
 function VideoCommentsPanel({
@@ -340,6 +335,7 @@ function VideoCommentsPanel({
     headerSpacerHeight,
     minimumContentHeight,
     onScroll,
+    onScrollEnd,
     onTotalCountChange,
 }, ref) {
     const safeAreaInsets = useSafeAreaInsets();
@@ -360,6 +356,11 @@ function VideoCommentsPanel({
     const replyPageRequestControllersRef = useRef(
         new Map<string, AbortController>(),
     );
+    const previewIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isListScrollingRef = useRef(false);
+    const pendingLoadMoreRef = useRef(false);
+    const visibleCommentsRef = useRef<VideoComment[]>([]);
+    const scheduleReplyPreviewsRef = useRef<() => void>(() => undefined);
     const completedPreviewIdsRef = useRef(new Set<string>());
     const [loadingPreviewIds, setLoadingPreviewIds] = useState<Set<string>>(
         () => new Set(),
@@ -367,9 +368,12 @@ function VideoCommentsPanel({
     const [replyThreads, setReplyThreads] = useState<
         Record<string, ReplyThreadState>
     >({});
+    const replyThreadsRef = useRef(replyThreads);
     const [picturePreview, setPicturePreview] = useState<
         PicturePreviewState | null
     >(null);
+
+    replyThreadsRef.current = replyThreads;
 
     useImperativeHandle(ref, () => ({
         scrollToOffset: (offset, animated = false) => {
@@ -383,14 +387,6 @@ function VideoCommentsPanel({
             statusScrollRef.current?.scrollTo({ y: offset, animated });
         },
     }), [status]);
-
-    const handleScroll = useCallback((event: Parameters<typeof onScroll>[0]) => {
-        scrollOffsetRef.current = Math.max(
-            0,
-            event.nativeEvent.contentOffset.y,
-        );
-        onScroll(event);
-    }, [onScroll]);
 
     useEffect(() => {
         const offset = scrollOffsetRef.current;
@@ -413,7 +409,15 @@ function VideoCommentsPanel({
         setPicturePreview(null);
     }, []);
 
+    const clearReplyPreviewTimer = useCallback(() => {
+        if (previewIdleTimerRef.current !== null) {
+            clearTimeout(previewIdleTimerRef.current);
+            previewIdleTimerRef.current = null;
+        }
+    }, []);
+
     const abortReplyRequests = useCallback(() => {
+        clearReplyPreviewTimer();
         previewRequestControllersRef.current.forEach((controller) => {
             controller.abort();
         });
@@ -423,7 +427,7 @@ function VideoCommentsPanel({
         previewRequestControllersRef.current.clear();
         replyPageRequestControllersRef.current.clear();
         completedPreviewIdsRef.current.clear();
-    }, []);
+    }, [clearReplyPreviewTimer]);
 
     const loadInitialPage = useCallback(async (refresh: boolean) => {
         if (!aid || requestControllerRef.current) {
@@ -553,6 +557,8 @@ function VideoCommentsPanel({
             || completedPreviewIdsRef.current.has(comment.id)
             || previewRequestControllersRef.current.has(comment.id)
             || replyPageRequestControllersRef.current.has(comment.id)
+            || previewRequestControllersRef.current.size
+                >= MAX_REPLY_PREVIEW_CONCURRENCY
         ) {
             return;
         }
@@ -611,12 +617,106 @@ function VideoCommentsPanel({
         }
     }, [aid]);
 
+    const loadVisibleReplyPreviews = useCallback(() => {
+        if (!active || isListScrollingRef.current) {
+            return;
+        }
+
+        const availableSlots = Math.max(
+            0,
+            MAX_REPLY_PREVIEW_CONCURRENCY
+                - previewRequestControllersRef.current.size,
+        );
+
+        if (availableSlots === 0) {
+            return;
+        }
+
+        const candidates = visibleCommentsRef.current.filter((comment) => {
+            const requiredPreviewCount = Math.min(2, comment.replyCount);
+
+            return requiredPreviewCount > comment.previewReplies.length
+                && !completedPreviewIdsRef.current.has(comment.id)
+                && !previewRequestControllersRef.current.has(comment.id)
+                && !replyPageRequestControllersRef.current.has(comment.id)
+                && !(replyThreads[comment.id]?.isExpanded ?? false);
+        });
+
+        candidates.slice(0, availableSlots).forEach((comment) => {
+            void loadReplyPreview(comment);
+        });
+    }, [active, loadReplyPreview, replyThreads]);
+
+    const scheduleVisibleReplyPreviews = useCallback(() => {
+        clearReplyPreviewTimer();
+
+        if (!active || isListScrollingRef.current) {
+            return;
+        }
+
+        previewIdleTimerRef.current = setTimeout(() => {
+            previewIdleTimerRef.current = null;
+
+            if (pendingLoadMoreRef.current) {
+                pendingLoadMoreRef.current = false;
+                void loadMore();
+            }
+
+            loadVisibleReplyPreviews();
+        }, REPLY_PREVIEW_IDLE_DELAY_MS);
+    }, [active, clearReplyPreviewTimer, loadMore, loadVisibleReplyPreviews]);
+
+    scheduleReplyPreviewsRef.current = scheduleVisibleReplyPreviews;
+
+    useEffect(() => {
+        scheduleVisibleReplyPreviews();
+    }, [loadingPreviewIds, scheduleVisibleReplyPreviews]);
+
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 40,
+        minimumViewTime: 100,
+    }).current;
+    const onViewableItemsChanged = useRef(({
+        viewableItems,
+    }: {
+        viewableItems: ViewToken<VideoComment>[];
+    }) => {
+        visibleCommentsRef.current = viewableItems.flatMap((viewToken) => (
+            viewToken.isViewable && viewToken.item ? [viewToken.item] : []
+        ));
+        scheduleReplyPreviewsRef.current();
+    }).current;
+
+    const handleScrollBegin = useCallback(() => {
+        isListScrollingRef.current = true;
+        clearReplyPreviewTimer();
+        previewRequestControllersRef.current.forEach((controller) => {
+            controller.abort();
+        });
+        previewRequestControllersRef.current.clear();
+        setLoadingPreviewIds((currentIds) => (
+            currentIds.size === 0 ? currentIds : new Set()
+        ));
+    }, [clearReplyPreviewTimer]);
+
+    const handleScrollEnd = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        scrollOffsetRef.current = Math.max(
+            0,
+            event.nativeEvent.contentOffset.y,
+        );
+        isListScrollingRef.current = false;
+        onScrollEnd(event);
+        scheduleVisibleReplyPreviews();
+    }, [onScrollEnd, scheduleVisibleReplyPreviews]);
+
     const loadMoreReplies = useCallback(async (comment: VideoComment) => {
         if (!aid || replyPageRequestControllersRef.current.has(comment.id)) {
             return;
         }
 
-        const currentThread = replyThreads[comment.id];
+        const currentThread = replyThreadsRef.current[comment.id];
 
         if (currentThread?.isExpanded && !currentThread.hasMore) {
             return;
@@ -720,7 +820,7 @@ function VideoCommentsPanel({
                 replyPageRequestControllersRef.current.delete(comment.id);
             }
         }
-    }, [aid, replyThreads]);
+    }, [aid]);
 
     useEffect(() => {
         abortReplyRequests();
@@ -736,6 +836,9 @@ function VideoCommentsPanel({
         setLoadingPreviewIds(new Set());
         setReplyThreads({});
         setPicturePreview(null);
+        visibleCommentsRef.current = [];
+        isListScrollingRef.current = false;
+        pendingLoadMoreRef.current = false;
         onTotalCountChange(null);
     }, [abortReplyRequests, aid, onTotalCountChange]);
 
@@ -751,9 +854,38 @@ function VideoCommentsPanel({
         requestControllerRef.current = null;
     }, [abortReplyRequests]);
 
+    const renderComment = useCallback(({
+        item,
+    }: ListRenderItemInfo<VideoComment>) => {
+        const thread = replyThreads[item.id];
+        const isExpanded = thread?.isExpanded ?? false;
+        const displayedReplies = isExpanded
+            ? thread?.comments ?? EMPTY_REPLIES
+            : item.previewReplies;
+
+        return (
+            <CommentCard
+                comment={item}
+                displayedReplies={displayedReplies}
+                hasMoreReplies={thread?.hasMore ?? true}
+                isExpanded={isExpanded}
+                isLoadingPreview={loadingPreviewIds.has(item.id)}
+                isLoadingReplies={thread?.isLoading ?? false}
+                onLoadMore={loadMoreReplies}
+                onOpenPictures={openPicturePreview}
+                replyErrorMessage={thread?.errorMessage ?? null}
+            />
+        );
+    }, [
+        loadMoreReplies,
+        loadingPreviewIds,
+        openPicturePreview,
+        replyThreads,
+    ]);
+
     if (!aid || status === 'idle' || status === 'loading') {
         return (
-            <ScrollView
+            <Animated.ScrollView
                 ref={statusScrollRef}
                 contentOffset={{ x: 0, y: scrollOffsetRef.current }}
                 contentContainerStyle={[
@@ -763,7 +895,10 @@ function VideoCommentsPanel({
                         paddingTop: headerSpacerHeight,
                     },
                 ]}
-                onScroll={handleScroll}
+                onMomentumScrollEnd={handleScrollEnd}
+                onScroll={onScroll}
+                onScrollBeginDrag={handleScrollBegin}
+                onScrollEndDrag={handleScrollEnd}
                 scrollEventThrottle={16}
                 style={styles.panel}
             >
@@ -773,13 +908,13 @@ function VideoCommentsPanel({
                         {aid ? '正在获取评论...' : '正在获取视频信息...'}
                     </Text>
                 </View>
-            </ScrollView>
+            </Animated.ScrollView>
         );
     }
 
     if (status === 'error') {
         return (
-            <ScrollView
+            <Animated.ScrollView
                 ref={statusScrollRef}
                 contentOffset={{ x: 0, y: scrollOffsetRef.current }}
                 contentContainerStyle={[
@@ -789,7 +924,10 @@ function VideoCommentsPanel({
                         paddingTop: headerSpacerHeight,
                     },
                 ]}
-                onScroll={handleScroll}
+                onMomentumScrollEnd={handleScrollEnd}
+                onScroll={onScroll}
+                onScrollBeginDrag={handleScrollBegin}
+                onScrollEndDrag={handleScrollEnd}
                 scrollEventThrottle={16}
                 style={styles.panel}
             >
@@ -801,13 +939,13 @@ function VideoCommentsPanel({
                         title='重新加载'
                     />
                 </View>
-            </ScrollView>
+            </Animated.ScrollView>
         );
     }
 
     return (
         <View style={styles.panel}>
-            <FlatList
+            <Animated.FlatList
                 ref={listRef}
                 contentOffset={{ x: 0, y: scrollOffsetRef.current }}
                 data={comments}
@@ -836,11 +974,20 @@ function VideoCommentsPanel({
                 ) : null}
                 onEndReached={() => {
                     if (!isLoadingMore) {
-                        void loadMore();
+                        if (isListScrollingRef.current) {
+                            pendingLoadMoreRef.current = true;
+                        } else {
+                            void loadMore();
+                        }
                     }
                 }}
                 onEndReachedThreshold={0.4}
-                onScroll={handleScroll}
+                onMomentumScrollBegin={handleScrollBegin}
+                onMomentumScrollEnd={handleScrollEnd}
+                onScroll={onScroll}
+                onScrollBeginDrag={handleScrollBegin}
+                onScrollEndDrag={handleScrollEnd}
+                onViewableItemsChanged={onViewableItemsChanged}
                 refreshControl={(
                     <AppRefreshControl
                         onRefresh={() => void loadInitialPage(true)}
@@ -849,31 +996,11 @@ function VideoCommentsPanel({
                 )}
                 maxToRenderPerBatch={5}
                 removeClippedSubviews
-                renderItem={({ item }) => {
-                    const thread = replyThreads[item.id];
-                    const isExpanded = thread?.isExpanded ?? false;
-                    const displayedReplies = isExpanded
-                        ? thread?.comments ?? []
-                        : item.previewReplies.slice(0, 2);
-
-                    return (
-                        <CommentCard
-                            comment={item}
-                            displayedReplies={displayedReplies}
-                            hasMoreReplies={thread?.hasMore ?? true}
-                            isExpanded={isExpanded}
-                            isLoadingPreview={loadingPreviewIds.has(item.id)}
-                            isLoadingReplies={thread?.isLoading ?? false}
-                            onLoadMore={loadMoreReplies}
-                            onLoadPreview={loadReplyPreview}
-                            onOpenPictures={openPicturePreview}
-                            replyErrorMessage={thread?.errorMessage ?? null}
-                        />
-                    );
-                }}
+                renderItem={renderComment}
                 updateCellsBatchingPeriod={50}
                 windowSize={7}
                 scrollEventThrottle={16}
+                viewabilityConfig={viewabilityConfig}
             />
 
             <FullscreenImageViewer

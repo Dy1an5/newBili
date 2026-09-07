@@ -6,6 +6,7 @@ import {
     StatusBar,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -27,6 +28,7 @@ import type { VideoPlayback } from '@/page/video/fetchVideoPlayback';
 export type FullscreenOrientation = 'portrait' | 'landscape' | 'default';
 
 type Props = {
+    embeddedHeight: number;
     playback: VideoPlayback;
     title: string;
     fullscreenOrientation: FullscreenOrientation;
@@ -85,6 +87,7 @@ function formatPlaybackTime(timeSeconds: number): string {
 }
 
 export default function VideoPlayer({
+    embeddedHeight,
     playback,
     title,
     fullscreenOrientation,
@@ -92,6 +95,7 @@ export default function VideoPlayer({
     onFullscreenChange,
     onPlaybackError,
 }: Props) {
+    const { width: windowWidth } = useWindowDimensions();
     const [areProgressControlsVisible, setAreProgressControlsVisible] = useState(false);
     const [adjustmentFeedback, setAdjustmentFeedback] =
         useState<AdjustmentFeedback | null>(null);
@@ -146,6 +150,13 @@ export default function VideoPlayer({
         currentOffsetFromLive: player.currentOffsetFromLive,
         bufferedPosition: player.bufferedPosition,
     });
+
+    useEffect(() => {
+        if (!isFullscreen) {
+            playerWidthRef.current = windowWidth;
+            playerHeightRef.current = embeddedHeight;
+        }
+    }, [embeddedHeight, isFullscreen, windowWidth]);
 
     const clearLongPressTimer = useCallback(() => {
         if (longPressTimerRef.current !== null) {
@@ -644,10 +655,12 @@ export default function VideoPlayer({
 
     return (
         <View
-            onLayout={(event: LayoutChangeEvent) => {
-                playerWidthRef.current = event.nativeEvent.layout.width;
-                playerHeightRef.current = event.nativeEvent.layout.height;
-            }}
+            onLayout={isFullscreen
+                ? (event: LayoutChangeEvent) => {
+                    playerWidthRef.current = event.nativeEvent.layout.width;
+                    playerHeightRef.current = event.nativeEvent.layout.height;
+                }
+                : undefined}
             style={styles.playerSurface}
         >
             <StatusBar hidden={isFullscreen} />

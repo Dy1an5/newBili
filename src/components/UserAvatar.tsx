@@ -15,6 +15,7 @@ type Props = {
     name?: string;
     size: number;
     style?: StyleProp<ViewStyle>;
+    transition?: number;
 };
 
 export default function UserAvatar({
@@ -22,6 +23,7 @@ export default function UserAvatar({
     name,
     size,
     style,
+    transition,
 }: Props) {
     const [failedUri, setFailedUri] = useState<string | null>(null);
     const normalizedUri = uri?.trim() ?? '';
@@ -47,6 +49,7 @@ export default function UserAvatar({
                     onError={() => setFailedUri(normalizedUri)}
                     style={styles.image}
                     thumbnailSize={{ width: size, height: size }}
+                    transition={transition}
                     uri={normalizedUri}
                 />
             ) : (

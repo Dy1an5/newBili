@@ -6,7 +6,6 @@ import type {
 } from 'react-native';
 import {
     ActivityIndicator,
-    Animated,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -14,6 +13,12 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
+import Animated, {
+    type SharedValue,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getLoginCookie } from '@/auth/authCookie';
@@ -51,6 +56,30 @@ const NEAR_SQUARE_PLAYER_HEIGHT_RATIO = 0.42;
 const VERTICAL_PLAYER_HEIGHT_RATIO = 0.48;
 const DETAIL_TAB_HEIGHT = 46;
 const DETAIL_PAGE_COUNT = 3;
+
+function useCollapsibleScrollHandler(
+    pageIndex: number,
+    pageOffset: SharedValue<number>,
+    activePageIndex: SharedValue<number>,
+    headerScrollOffset: SharedValue<number>,
+    collapseDistance: SharedValue<number>,
+    isPlayerFullscreen: SharedValue<boolean>,
+) {
+    return useAnimatedScrollHandler((event) => {
+        const offset = Math.max(0, event.contentOffset.y);
+        pageOffset.value = offset;
+
+        if (
+            activePageIndex.value === pageIndex
+            && !isPlayerFullscreen.value
+        ) {
+            headerScrollOffset.value = Math.min(
+                offset,
+                collapseDistance.value,
+            );
+        }
+    });
+}
 
 function isAbortError(error: unknown): boolean {
     return error instanceof Error && error.name === 'AbortError';
@@ -147,17 +176,44 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
     const [detailPageIndex, setDetailPageIndex] = useState(0);
     const [commentCount, setCommentCount] = useState<number | null>(null);
+    const [settledPlayerHeight, setSettledPlayerHeight] = useState<number | null>(
+        null,
+    );
     const detailPagerRef = useRef<ScrollView>(null);
     const introScrollRef = useRef<ScrollView>(null);
     const commentsScrollRef = useRef<CollapsiblePageScrollHandle>(null);
     const summaryScrollRef = useRef<CollapsiblePageScrollHandle>(null);
-    const headerScrollOffset = useRef(new Animated.Value(0)).current;
-    const pageOffsetsRef = useRef<number[]>(
-        Array.from({ length: DETAIL_PAGE_COUNT }, () => 0),
+    const headerScrollOffset = useSharedValue(0);
+    const introPageOffset = useSharedValue(0);
+    const commentsPageOffset = useSharedValue(0);
+    const summaryPageOffset = useSharedValue(0);
+    const activePageIndex = useSharedValue(detailPageIndex);
+    const fullscreenValue = useSharedValue(isPlayerFullscreen);
+    const collapseDistanceValue = useSharedValue(0);
+    const introScrollHandler = useCollapsibleScrollHandler(
+        0,
+        introPageOffset,
+        activePageIndex,
+        headerScrollOffset,
+        collapseDistanceValue,
+        fullscreenValue,
     );
-    const detailPageIndexRef = useRef(detailPageIndex);
-    const isPlayerFullscreenRef = useRef(isPlayerFullscreen);
-    const collapseDistanceRef = useRef(0);
+    const commentsScrollHandler = useCollapsibleScrollHandler(
+        1,
+        commentsPageOffset,
+        activePageIndex,
+        headerScrollOffset,
+        collapseDistanceValue,
+        fullscreenValue,
+    );
+    const summaryScrollHandler = useCollapsibleScrollHandler(
+        2,
+        summaryPageOffset,
+        activePageIndex,
+        headerScrollOffset,
+        collapseDistanceValue,
+        fullscreenValue,
+    );
 
     useEffect(() => {
         setIsTitleExpanded(false);
@@ -284,60 +340,70 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
         'AI总结',
     ];
 
-    detailPageIndexRef.current = detailPageIndex;
-    isPlayerFullscreenRef.current = isPlayerFullscreen;
-    collapseDistanceRef.current = collapseDistance;
+    useEffect(() => {
+        activePageIndex.value = detailPageIndex;
+    }, [activePageIndex, detailPageIndex]);
 
-    const animatedPlayerHeight = headerScrollOffset.interpolate({
-        inputRange: [0, Math.max(collapseDistance, 1)],
-        outputRange: [
-            playerHeight,
-            collapseDistance > 0 ? collapsedPlayerHeight : playerHeight,
-        ],
-        extrapolate: 'clamp',
-    });
+    useEffect(() => {
+        fullscreenValue.value = isPlayerFullscreen;
+    }, [fullscreenValue, isPlayerFullscreen]);
 
-    const handlePageScroll = useCallback((
-        pageIndex: number,
-        event: NativeSyntheticEvent<NativeScrollEvent>,
-    ) => {
-        const offset = Math.max(0, event.nativeEvent.contentOffset.y);
-        pageOffsetsRef.current[pageIndex] = offset;
+    useEffect(() => {
+        collapseDistanceValue.value = collapseDistance;
+        headerScrollOffset.value = Math.min(
+            headerScrollOffset.value,
+            collapseDistance,
+        );
+    }, [collapseDistance, collapseDistanceValue, headerScrollOffset]);
 
-        if (
-            detailPageIndexRef.current === pageIndex
-            && !isPlayerFullscreenRef.current
-        ) {
-            headerScrollOffset.setValue(
-                Math.min(offset, collapseDistanceRef.current),
+    useEffect(() => {
+        if (!isPlayerFullscreen) {
+            setSettledPlayerHeight(
+                playerHeight - Math.min(
+                    headerScrollOffset.value,
+                    collapseDistance,
+                ),
             );
         }
-    }, [headerScrollOffset]);
+    }, [
+        collapseDistance,
+        headerScrollOffset,
+        isPlayerFullscreen,
+        playerHeight,
+    ]);
 
-    const handleIntroScroll = useCallback((
-        event: NativeSyntheticEvent<NativeScrollEvent>,
-    ) => {
-        handlePageScroll(0, event);
-    }, [handlePageScroll]);
+    const playerAnimatedStyle = useAnimatedStyle(() => ({
+        height: playerHeight - Math.min(
+            headerScrollOffset.value,
+            collapseDistance,
+        ),
+    }), [collapseDistance, playerHeight]);
 
-    const handleCommentsScroll = useCallback((
-        event: NativeSyntheticEvent<NativeScrollEvent>,
-    ) => {
-        handlePageScroll(1, event);
-    }, [handlePageScroll]);
+    const detailTabsAnimatedStyle = useAnimatedStyle(() => ({
+        top: playerHeight - Math.min(
+            headerScrollOffset.value,
+            collapseDistance,
+        ),
+    }), [collapseDistance, playerHeight]);
 
-    const handleSummaryScroll = useCallback((
-        event: NativeSyntheticEvent<NativeScrollEvent>,
-    ) => {
-        handlePageScroll(2, event);
-    }, [handlePageScroll]);
+    const pageOffsets = [
+        introPageOffset,
+        commentsPageOffset,
+        summaryPageOffset,
+    ];
 
     const scrollPageToOffset = useCallback((
         pageIndex: number,
         offset: number,
         animated = false,
     ) => {
-        pageOffsetsRef.current[pageIndex] = offset;
+        const pageOffset = pageIndex === 0
+            ? introPageOffset
+            : pageIndex === 1
+                ? commentsPageOffset
+                : summaryPageOffset;
+
+        pageOffset.value = offset;
 
         if (pageIndex === 0) {
             introScrollRef.current?.scrollTo({ y: offset, animated });
@@ -346,19 +412,59 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
         } else {
             summaryScrollRef.current?.scrollToOffset(offset, animated);
         }
-    }, []);
+    }, [commentsPageOffset, introPageOffset, summaryPageOffset]);
 
     useEffect(() => {
-        pageOffsetsRef.current = Array.from(
-            { length: DETAIL_PAGE_COUNT },
-            () => 0,
-        );
-        headerScrollOffset.setValue(0);
+        introPageOffset.value = 0;
+        commentsPageOffset.value = 0;
+        summaryPageOffset.value = 0;
+        headerScrollOffset.value = 0;
+        setSettledPlayerHeight(playerHeight);
 
         for (let pageIndex = 0; pageIndex < DETAIL_PAGE_COUNT; pageIndex += 1) {
             scrollPageToOffset(pageIndex, 0);
         }
-    }, [headerScrollOffset, scrollPageToOffset, selectedCid, target.bvid]);
+    }, [
+        commentsPageOffset,
+        headerScrollOffset,
+        introPageOffset,
+        scrollPageToOffset,
+        selectedCid,
+        summaryPageOffset,
+        target.bvid,
+    ]);
+
+    const handlePageScrollEnd = useCallback((
+        pageIndex: number,
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        if (detailPageIndex !== pageIndex || isPlayerFullscreen) {
+            return;
+        }
+
+        const offset = Math.max(0, event.nativeEvent.contentOffset.y);
+        setSettledPlayerHeight(
+            playerHeight - Math.min(offset, collapseDistance),
+        );
+    }, [collapseDistance, detailPageIndex, isPlayerFullscreen, playerHeight]);
+
+    const handleIntroScrollEnd = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        handlePageScrollEnd(0, event);
+    }, [handlePageScrollEnd]);
+
+    const handleCommentsScrollEnd = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        handlePageScrollEnd(1, event);
+    }, [handlePageScrollEnd]);
+
+    const handleSummaryScrollEnd = useCallback((
+        event: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+        handlePageScrollEnd(2, event);
+    }, [handlePageScrollEnd]);
 
     const handleTitleTextLayout = (event: TextLayoutEvent) => {
         const nextIsOverflowing =
@@ -372,19 +478,20 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     };
 
     const scrollToDetailPage = (pageIndex: number) => {
-        const currentOffset = pageOffsetsRef.current[detailPageIndex] ?? 0;
+        const currentOffset = pageOffsets[detailPageIndex]?.value ?? 0;
         const currentCollapseOffset = Math.min(currentOffset, collapseDistance);
         const targetOffset = currentCollapseOffset < collapseDistance
             ? currentCollapseOffset
             : Math.max(
-                pageOffsetsRef.current[pageIndex] ?? 0,
+                pageOffsets[pageIndex]?.value ?? 0,
                 collapseDistance,
             );
 
-        detailPageIndexRef.current = pageIndex;
+        activePageIndex.value = pageIndex;
         scrollPageToOffset(pageIndex, targetOffset);
-        headerScrollOffset.setValue(
-            Math.min(targetOffset, collapseDistance),
+        headerScrollOffset.value = Math.min(targetOffset, collapseDistance);
+        setSettledPlayerHeight(
+            playerHeight - Math.min(targetOffset, collapseDistance),
         );
         detailPagerRef.current?.scrollTo({
             x: windowWidth * pageIndex,
@@ -398,13 +505,13 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
             <Animated.View
                 style={[
                     styles.playerContainer,
-                    isPlayerFullscreen
-                        ? styles.playerContainerFullscreen
-                        : { height: animatedPlayerHeight },
+                    !isPlayerFullscreen && playerAnimatedStyle,
+                    isPlayerFullscreen && styles.playerContainerFullscreen,
                 ]}
             >
                 {playback ? (
                     <VideoPlayer
+                        embeddedHeight={settledPlayerHeight ?? playerHeight}
                         playback={playback}
                         title={target.title}
                         fullscreenOrientation={fullscreenOrientation}
@@ -436,7 +543,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
             <Animated.View
                 style={[
                     styles.detailTabs,
-                    { top: animatedPlayerHeight },
+                    detailTabsAnimatedStyle,
                 ]}
             >
                 {detailTabs.map((label, pageIndex) => {
@@ -474,7 +581,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                 style={styles.detailPager}
             >
                 <View style={[styles.detailPage, { width: windowWidth }]}>
-                    <ScrollView
+                    <Animated.ScrollView
                         ref={introScrollRef}
                         contentContainerStyle={[
                             styles.detailsContent,
@@ -484,7 +591,9 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                                 paddingBottom: safeAreaInsets.bottom + spacing.xl,
                             },
                         ]}
-                        onScroll={handleIntroScroll}
+                        onMomentumScrollEnd={handleIntroScrollEnd}
+                        onScroll={introScrollHandler}
+                        onScrollEndDrag={handleIntroScrollEnd}
                         scrollEventThrottle={16}
                         style={styles.detailsScroll}
                     >
@@ -609,7 +718,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                         </ScrollView>
                             </View>
                         ) : null}
-                    </ScrollView>
+                    </Animated.ScrollView>
                 </View>
 
                 <View style={[styles.detailPage, { width: windowWidth }]}>
@@ -619,7 +728,8 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                         aid={videoAid}
                         headerSpacerHeight={headerSpacerHeight}
                         minimumContentHeight={minimumContentHeight}
-                        onScroll={handleCommentsScroll}
+                        onScroll={commentsScrollHandler}
+                        onScrollEnd={handleCommentsScrollEnd}
                         onTotalCountChange={setCommentCount}
                     />
                 </View>
@@ -630,7 +740,8 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                         apiKey={deepSeekApiKey}
                         headerSpacerHeight={headerSpacerHeight}
                         minimumContentHeight={minimumContentHeight}
-                        onScroll={handleSummaryScroll}
+                        onScroll={summaryScrollHandler}
+                        onScrollEnd={handleSummaryScrollEnd}
                         target={summaryTarget}
                     />
                 </View>

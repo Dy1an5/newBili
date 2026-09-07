@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
     SafeAreaProvider,
     SafeAreaView,
@@ -86,16 +87,21 @@ export default function App() {
     }
 
     return (
-        <SafeAreaProvider>
-            <StatusBar barStyle='light-content' backgroundColor={colors.pageBackground} />
-            <SafeAreaView edges={['top']} style={styles.safeArea}>
-                {content}
-            </SafeAreaView>
-        </SafeAreaProvider>
+        <GestureHandlerRootView style={styles.appRoot}>
+            <SafeAreaProvider>
+                <StatusBar barStyle='light-content' backgroundColor={colors.pageBackground} />
+                <SafeAreaView edges={['top']} style={styles.safeArea}>
+                    {content}
+                </SafeAreaView>
+            </SafeAreaProvider>
+        </GestureHandlerRootView>
     );
 }
 
 const styles = StyleSheet.create({
+    appRoot: {
+        flex: 1,
+    },
     safeArea: {
         flex: 1,
         backgroundColor: colors.pageBackground,

@@ -12,6 +12,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AgentTaskError, runAgentTask } from '../core/agentTaskRunner';
@@ -139,6 +140,7 @@ function VideoSummaryPanel({
     headerSpacerHeight,
     minimumContentHeight,
     onScroll,
+    onScrollEnd,
 }, ref) {
     const safeAreaInsets = useSafeAreaInsets();
     const scrollRef = useRef<ScrollView>(null);
@@ -469,7 +471,7 @@ function VideoSummaryPanel({
     }, [apiKey, request]);
 
     return (
-        <ScrollView
+        <Animated.ScrollView
             ref={scrollRef}
             contentContainerStyle={[
                 styles.scrollContent,
@@ -479,6 +481,8 @@ function VideoSummaryPanel({
                 },
             ]}
             onScroll={onScroll}
+            onMomentumScrollEnd={onScrollEnd}
+            onScrollEndDrag={onScrollEnd}
             scrollEventThrottle={16}
             style={styles.page}
         >
@@ -618,7 +622,7 @@ function VideoSummaryPanel({
                     ) : null}
                 </View>
             )}
-        </ScrollView>
+        </Animated.ScrollView>
     );
 });
 
