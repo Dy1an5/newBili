@@ -16,6 +16,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import type { TextLayoutEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getLoginCookie } from '@/auth/authCookie';
@@ -49,6 +50,7 @@ type Props = CollapsiblePageScrollProps & {
 type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
 
 const MAX_COMMENT_PICTURE_COUNT = 9;
+const COLLAPSED_REPLY_LINE_COUNT = 2;
 
 type ReplyThreadState = {
     comments: VideoComment[];
@@ -201,10 +203,46 @@ function CommentCard({
     onOpenPictures,
 }: CommentCardProps) {
     const createdAt = formatCreatedAt(comment.createdAt);
+    const [isPreviewTextExpanded, setIsPreviewTextExpanded] = useState(false);
+    const [overflowingReplyIds, setOverflowingReplyIds] = useState<Set<string>>(
+        () => new Set(),
+    );
     const isLoading = isLoadingPreview || isLoadingReplies;
     const shouldShowLoadMore = isExpanded
         ? hasMoreReplies
         : comment.replyCount > displayedReplies.length;
+    const hasOverflowingReply = displayedReplies.some((reply) => (
+        overflowingReplyIds.has(reply.id)
+    ));
+    const shouldShowPreviewToggle = !isExpanded
+        && !shouldShowLoadMore
+        && hasOverflowingReply;
+
+    const handleReplyTextLayout = useCallback((
+        replyId: string,
+        event: TextLayoutEvent,
+    ) => {
+        const nextIsOverflowing =
+            event.nativeEvent.lines.length > COLLAPSED_REPLY_LINE_COUNT;
+
+        setOverflowingReplyIds((currentIds) => {
+            const currentlyOverflowing = currentIds.has(replyId);
+
+            if (currentlyOverflowing === nextIsOverflowing) {
+                return currentIds;
+            }
+
+            const nextIds = new Set(currentIds);
+
+            if (nextIsOverflowing) {
+                nextIds.add(replyId);
+            } else {
+                nextIds.delete(replyId);
+            }
+
+            return nextIds;
+        });
+    }, []);
 
     useEffect(() => {
         if (
@@ -282,7 +320,11 @@ function CommentCard({
                         {displayedReplies.map((reply) => (
                             <View key={reply.id} style={styles.replyItem}>
                                 <Text
-                                    numberOfLines={isExpanded ? undefined : 2}
+                                    numberOfLines={
+                                        isExpanded || isPreviewTextExpanded
+                                            ? undefined
+                                            : COLLAPSED_REPLY_LINE_COUNT
+                                    }
                                     style={styles.replyPreviewText}
                                 >
                                     <Text
@@ -295,6 +337,30 @@ function CommentCard({
                                     </Text>
                                     {reply.message ? ` ${reply.message}` : ''}
                                 </Text>
+                                {!isExpanded ? (
+                                    <Text
+                                        accessibilityElementsHidden
+                                        importantForAccessibility='no-hide-descendants'
+                                        onTextLayout={(event) => {
+                                            handleReplyTextLayout(reply.id, event);
+                                        }}
+                                        pointerEvents='none'
+                                        style={[
+                                            styles.replyPreviewText,
+                                            styles.replyTextMeasurement,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.replyPreviewAuthor,
+                                                reply.isUpAuthor && styles.upAuthorName,
+                                            ]}
+                                        >
+                                            {reply.author.name}{reply.isUpAuthor ? ' [UP]' : ''}:
+                                        </Text>
+                                        {reply.message ? ` ${reply.message}` : ''}
+                                    </Text>
+                                ) : null}
                                 <CommentPictures
                                     comment={reply}
                                     compact
@@ -323,6 +389,27 @@ function CommentCard({
                                         : replyErrorMessage
                                             ? '重试'
                                             : '加载更多'}
+                                </Text>
+                            </Pressable>
+                        ) : null}
+                        {shouldShowPreviewToggle ? (
+                            <Pressable
+                                accessibilityLabel={
+                                    isPreviewTextExpanded
+                                        ? '收起回复全文'
+                                        : '展开回复全文'
+                                }
+                                accessibilityRole='button'
+                                onPress={() => {
+                                    setIsPreviewTextExpanded((value) => !value);
+                                }}
+                                style={({ pressed }) => [
+                                    styles.loadMoreButton,
+                                    pressed && styles.pressed,
+                                ]}
+                            >
+                                <Text style={styles.showAllReplies}>
+                                    {isPreviewTextExpanded ? '收起' : '展开全文'}
                                 </Text>
                             </Pressable>
                         ) : null}
@@ -1036,6 +1123,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surfaceBackground,
     },
     replyItem: {
+        position: 'relative',
         marginVertical: 2,
     },
     replyPreviewText: {
@@ -1046,6 +1134,13 @@ const styles = StyleSheet.create({
     replyPreviewAuthor: {
         color: colors.accentForeground,
         fontWeight: '600',
+    },
+    replyTextMeasurement: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        left: 0,
+        opacity: 0,
     },
     replyErrorText: {
         marginTop: spacing.xs,
