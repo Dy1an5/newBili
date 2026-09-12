@@ -17,7 +17,6 @@ import {
 
 const VIDEO_COMMENT_LIST_URL = 'https://api.bilibili.com/x/v2/reply/wbi/main';
 const VIDEO_COMMENT_REPLIES_URL = 'https://api.bilibili.com/x/v2/reply/reply';
-const VIDEO_COMMENT_TYPE = 1;
 const VIDEO_COMMENT_MODE_HOT = 3;
 const REPLY_PREVIEW_SIZE = 2;
 const REPLY_PAGE_SIZE = 10;
@@ -26,6 +25,11 @@ export type VideoCommentPicture = {
     url: string;
     width?: number;
     height?: number;
+};
+
+export type CommentSubject = {
+    oid: string;
+    type: number;
 };
 
 export type VideoComment = {
@@ -216,8 +220,8 @@ async function requestBilibili(
     }
 
     if (code !== 0) {
-        if (code === 12002 || code === 12052) {
-            throw new VideoCommentsError('该视频评论区已关闭', code);
+        if (code === 12002 || code === 12052 || code === 12061) {
+            throw new VideoCommentsError('该内容评论区已关闭', code);
         }
 
         const message = readNonEmptyString(body.message) ?? '未知错误';
@@ -228,7 +232,7 @@ async function requestBilibili(
 }
 
 async function requestMainCommentPage(
-    aid: string,
+    subject: CommentSubject,
     cookie: string,
     nextOffset: string | null,
     signal?: AbortSignal,
@@ -238,8 +242,8 @@ async function requestMainCommentPage(
         try {
             const signedQuery = await createWbiSignedQuery(
                 {
-                    oid: aid,
-                    type: VIDEO_COMMENT_TYPE,
+                    oid: subject.oid,
+                    type: subject.type,
                     mode: VIDEO_COMMENT_MODE_HOT,
                     pagination_str: JSON.stringify({ offset: nextOffset ?? '' }),
                     plat: 1,
@@ -277,12 +281,12 @@ async function requestMainCommentPage(
 }
 
 export async function fetchVideoCommentPage(
-    aid: string,
+    subject: CommentSubject,
     cookie: string,
     nextOffset: string | null,
     signal?: AbortSignal,
 ): Promise<VideoCommentPage> {
-    const body = await requestMainCommentPage(aid, cookie, nextOffset, signal);
+    const body = await requestMainCommentPage(subject, cookie, nextOffset, signal);
     const data = asRecord(body.data);
 
     if (!data) {
@@ -316,7 +320,7 @@ export async function fetchVideoCommentPage(
 }
 
 async function fetchVideoCommentReplies(
-    aid: string,
+    subject: CommentSubject,
     rootId: string,
     page: number,
     pageSize: number,
@@ -329,9 +333,9 @@ async function fetchVideoCommentReplies(
 
     const sessdata = getSessdataPair(cookie);
     const parameters = new URLSearchParams({
-        oid: aid,
+        oid: subject.oid,
         root: rootId,
-        type: String(VIDEO_COMMENT_TYPE),
+        type: String(subject.type),
         pn: String(page),
         ps: String(pageSize),
     });
@@ -363,13 +367,13 @@ async function fetchVideoCommentReplies(
 }
 
 export async function fetchVideoCommentReplyPreview(
-    aid: string,
+    subject: CommentSubject,
     rootId: string,
     cookie: string,
     signal?: AbortSignal,
 ): Promise<VideoCommentReplyPage> {
     return fetchVideoCommentReplies(
-        aid,
+        subject,
         rootId,
         1,
         REPLY_PREVIEW_SIZE,
@@ -379,14 +383,14 @@ export async function fetchVideoCommentReplyPreview(
 }
 
 export async function fetchVideoCommentReplyPage(
-    aid: string,
+    subject: CommentSubject,
     rootId: string,
     page: number,
     cookie: string,
     signal?: AbortSignal,
 ): Promise<VideoCommentReplyPage> {
     return fetchVideoCommentReplies(
-        aid,
+        subject,
         rootId,
         page,
         REPLY_PAGE_SIZE,

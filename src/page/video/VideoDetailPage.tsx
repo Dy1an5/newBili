@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
     NativeScrollEvent,
     NativeSyntheticEvent,
@@ -179,6 +179,9 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const [settledPlayerHeight, setSettledPlayerHeight] = useState<number | null>(
         null,
     );
+    const videoCommentSubject = useMemo(() => videoAid === null
+        ? null
+        : { oid: videoAid, type: 1 }, [videoAid]);
     const detailPagerRef = useRef<ScrollView>(null);
     const introScrollRef = useRef<ScrollView>(null);
     const commentsScrollRef = useRef<CollapsiblePageScrollHandle>(null);
@@ -725,12 +728,12 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                     <VideoCommentsPanel
                         ref={commentsScrollRef}
                         active={detailPageIndex === 1}
-                        aid={videoAid}
                         headerSpacerHeight={headerSpacerHeight}
                         minimumContentHeight={minimumContentHeight}
                         onScroll={commentsScrollHandler}
                         onScrollEnd={handleCommentsScrollEnd}
                         onTotalCountChange={setCommentCount}
+                        subject={videoCommentSubject}
                     />
                 </View>
 

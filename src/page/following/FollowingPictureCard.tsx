@@ -1,5 +1,6 @@
 import { memo, useLayoutEffect, useMemo, useState } from 'react';
 import type {
+    GestureResponderEvent,
     LayoutChangeEvent,
     TextLayoutEvent,
 } from 'react-native';
@@ -25,6 +26,7 @@ type Props = {
     imageUrls: string[];
     avatarUrl: string;
     authorName: string;
+    onContentPress: () => void;
     publishedTimeText: string;
 };
 
@@ -49,6 +51,7 @@ function FollowingPictureCard({
     imageUrls,
     avatarUrl,
     authorName,
+    onContentPress,
     publishedTimeText,
 }: Props) {
     const [pictureGridWidth, setPictureGridWidth] = useState(0);
@@ -83,7 +86,11 @@ function FollowingPictureCard({
         }
     };
 
-    const openPicturePreview = (index: number) => {
+    const openPicturePreview = (
+        event: GestureResponderEvent,
+        index: number,
+    ) => {
+        event.stopPropagation();
         setPreviewPictureIndex(index);
         setIsPreviewVisible(true);
     };
@@ -103,13 +110,22 @@ function FollowingPictureCard({
         );
     };
 
-    const toggleContentExpanded = () => {
+    const toggleContentExpanded = (event: GestureResponderEvent) => {
+        event.stopPropagation();
         setIsContentExpanded((currentIsExpanded) => !currentIsExpanded);
     };
 
     return (
         <>
-            <View style={styles.card}>
+            <Pressable
+                accessibilityLabel={`查看${authorName}的动态详情和评论`}
+                accessibilityRole='button'
+                onPress={onContentPress}
+                style={({ pressed }) => [
+                    styles.card,
+                    pressed && styles.cardPressed,
+                ]}
+            >
                 {hasContent ? (
                     <View
                         style={[
@@ -156,7 +172,13 @@ function FollowingPictureCard({
                             </Pressable>
                         ) : null}
                     </View>
-                ) : null}
+                ) : (
+                    <View style={styles.emptyContentLink}>
+                        <Text style={styles.emptyContentLinkText}>
+                            查看动态详情与评论
+                        </Text>
+                    </View>
+                )}
 
                 {hasPictures ? (
                     <View
@@ -168,7 +190,7 @@ function FollowingPictureCard({
                                 accessibilityLabel={`查看图片,第${index + 1}张,共${validImageUrls.length}张`}
                                 accessibilityRole='button'
                                 key={`${imageUrl}:${index}`}
-                                onPress={() => openPicturePreview(index)}
+                                onPress={(event) => openPicturePreview(event, index)}
                                 style={({ pressed }) => [
                                     styles.pictureTile,
                                     validImageUrls.length === 1 && styles.singlePictureTile,
@@ -214,7 +236,7 @@ function FollowingPictureCard({
                         {publishedTimeText}
                     </Text>
                 </View>
-            </View>
+            </Pressable>
 
             <FullscreenImageViewer
                 imageUrls={validImageUrls}
@@ -242,6 +264,10 @@ const styles = StyleSheet.create({
         borderRadius: radius.lg,
     },
 
+    cardPressed: {
+        opacity: 0.9,
+    },
+
     contentContainer: {
         position: 'relative',
     },
@@ -257,6 +283,18 @@ const styles = StyleSheet.create({
         fontWeight: '700',
 
         color: colors.primaryText,
+    },
+
+    emptyContentLink: {
+        alignSelf: 'flex-start',
+        marginBottom: spacing.md,
+        paddingVertical: spacing.xs,
+    },
+
+    emptyContentLinkText: {
+        color: colors.accentForeground,
+        fontSize: 14,
+        fontWeight: '600',
     },
 
     contentMeasurement: {

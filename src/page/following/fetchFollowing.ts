@@ -12,8 +12,10 @@ import {
     readString,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
+import type { CommentSubject } from '@/page/video/fetchVideoComments';
 
 const FOLLOWING_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
+const FOLLOWING_DETAIL_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/detail';
 const FOLLOWING_GROUPS_URL = 'https://api.bilibili.com/x/relation/tags';
 const FOLLOWING_GROUP_MEMBERS_URL = 'https://api.bilibili.com/x/relation/tag';
 const FOLLOWING_GROUP_MEMBER_PAGE_SIZE = 20;
@@ -47,6 +49,8 @@ export type FollowingPicture = {
     imageUrls: string[];
     author: FollowingAuthor;
     publishedAt: number;
+    commentCount: number | null;
+    commentSubject: CommentSubject | null;
 };
 
 export type FollowingItem = FollowingVideo | FollowingPicture;
@@ -57,6 +61,8 @@ type FollowingOpusData = {
     imageUrls: string[];
     author: FollowingPicture['author'];
     publishedAt: number;
+    commentCount: number | null;
+    commentSubject: CommentSubject | null;
 };
 
 export type FollowingPageData = {
@@ -94,6 +100,30 @@ function readContentText(value: unknown): string | null {
         .join('\n');
 
     return normalizedText.length > 0 ? normalizedText : null;
+}
+
+function parseCommentSubject(item: JsonRecord): CommentSubject | null {
+    const basic = asRecord(item.basic);
+    const oid = readPositiveId(basic?.comment_id_str);
+    const type = readNumber(basic?.comment_type);
+
+    if (!oid || type === null || !Number.isInteger(type) || type <= 0) {
+        return null;
+    }
+
+    return { oid, type };
+}
+
+function parseCommentCount(modules: JsonRecord): number | null {
+    const moduleStat = asRecord(modules.module_stat);
+    const comment = asRecord(moduleStat?.comment);
+    const count = readNumber(comment?.count);
+
+    if (count === null || count < 0) {
+        return null;
+    }
+
+    return Math.floor(count);
 }
 
 function readFollowingTagId(value: unknown): string | null {
@@ -306,7 +336,14 @@ function parseFollowingOpusData(value: unknown): FollowingOpusData | null {
     const dynamic = asRecord(modules?.module_dynamic);
     const major = asRecord(dynamic?.major);
 
-    if (!item || !author || !major || major.type !== 'MAJOR_TYPE_OPUS') {
+    if (
+        !item ||
+        !modules ||
+        !author ||
+        !dynamic ||
+        !major ||
+        major.type !== 'MAJOR_TYPE_OPUS'
+    ) {
         return null;
     }
 
@@ -343,6 +380,8 @@ function parseFollowingOpusData(value: unknown): FollowingOpusData | null {
             avatarUrl: normalizeImageUrl(author.face) ?? DEFAULT_AVATAR_URL,
         },
         publishedAt: readNumber(author.pub_ts) ?? 0,
+        commentCount: parseCommentCount(modules),
+        commentSubject: parseCommentSubject(item),
     };
 }
 
@@ -448,4 +487,33 @@ export async function fetchFollowingPage(
             majorTypes: collectMajorTypes(rawItems),
         },
     };
+}
+
+export async function fetchFollowingPictureDetail(
+    dynamicId: string,
+    cookie: string,
+    signal?: AbortSignal,
+): Promise<FollowingPicture> {
+    const sessdata = getSessdataPair(cookie);
+    const parameters = new URLSearchParams({
+        timezone_offset: '-480',
+        id: dynamicId,
+        features: 'itemOpusStyle',
+        web_location: '333.1330',
+    });
+    const body = await requestFollowingJson(
+        `${FOLLOWING_DETAIL_URL}?${parameters.toString()}`,
+        sessdata,
+        '动态详情',
+        signal,
+    );
+    const data = asRecord(body.data);
+    const item = asRecord(data?.item);
+    const picture = item ? parseFollowingPicture(item) : null;
+
+    if (!picture || picture.dynamicId !== dynamicId) {
+        throw new FollowingRequestError('动态详情接口没有返回有效图文');
+    }
+
+    return picture;
 }

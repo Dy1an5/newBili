@@ -24,13 +24,18 @@ import FloatingTabBar from '@/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
 import FollowedCollectionDetailPage from '@/page/favorites/FollowedCollectionDetailPage';
 import type { FollowedCollection } from '@/page/favorites/fetchFollowedCollections';
+import DynamicDetailPage from '@/page/following/DynamicDetailPage';
 import FollowingPage from '@/page/following/FollowingPage';
+import type { FollowingPicture } from '@/page/following/fetchFollowing';
 import VideoDetailPage from '@/page/video/VideoDetailPage';
 import type { VideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import WatchLaterPage from '@/page/watchLater/WatchLaterPage';
 
 type HomeStackParamList = {
     Home: undefined;
+    DynamicDetail: {
+        picture: FollowingPicture;
+    };
     VideoDetail: {
         target: VideoPlaybackTarget;
     };
@@ -101,10 +106,23 @@ function HomeScreen({
 }: NativeStackScreenProps<HomeStackParamList, 'Home'> & RefreshRequestProps) {
     return (
         <FollowingPage
+            onPicturePress={(picture) => {
+                navigation.navigate('DynamicDetail', { picture });
+            }}
             onVideoPress={(target) => {
                 navigation.navigate('VideoDetail', { target });
             }}
             refreshRequestId={refreshRequestId}
+        />
+    );
+}
+
+function DynamicDetailScreen({
+    route,
+}: NativeStackScreenProps<HomeStackParamList, 'DynamicDetail'>) {
+    return (
+        <DynamicDetailPage
+            initialPicture={route.params.picture}
         />
     );
 }
@@ -139,6 +157,10 @@ function HomeNavigator({
                         />
                     )}
                 </HomeStack.Screen>
+                <HomeStack.Screen
+                    name='DynamicDetail'
+                    component={DynamicDetailScreen}
+                />
                 <HomeStack.Screen name='VideoDetail' component={VideoDetailScreen} />
             </HomeStack.Navigator>
         </BlurTargetView>
@@ -291,6 +313,7 @@ export default function MainTabNavigator() {
 
                     if (
                         nestedRouteName === 'CollectionDetail' ||
+                        nestedRouteName === 'DynamicDetail' ||
                         nestedRouteName === 'VideoDetail'
                     ) {
                         return null;

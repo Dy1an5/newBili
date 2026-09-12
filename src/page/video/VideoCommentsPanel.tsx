@@ -7,6 +7,7 @@ import {
     useMemo,
     useRef,
     useState,
+    type ReactNode,
 } from 'react';
 import {
     FlatList,
@@ -35,6 +36,7 @@ import {
     fetchVideoCommentPage,
     fetchVideoCommentReplyPage,
     fetchVideoCommentReplyPreview,
+    type CommentSubject,
     type VideoComment,
     VideoCommentsError,
 } from '@/page/video/fetchVideoComments';
@@ -48,8 +50,10 @@ import { spacing } from '@/theme/spacing';
 
 type Props = CollapsiblePageScrollProps & {
     active: boolean;
-    aid: string | null;
+    contentHeader?: ReactNode;
     onTotalCountChange: (count: number | null) => void;
+    subject: CommentSubject | null;
+    subjectUnavailableMessage?: string;
 };
 
 type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -418,12 +422,14 @@ const CommentCard = memo(function CommentCard({
 const VideoCommentsPanel = forwardRef<CollapsiblePageScrollHandle, Props>(
 function VideoCommentsPanel({
     active,
-    aid,
+    contentHeader,
     headerSpacerHeight,
     minimumContentHeight,
     onScroll,
     onScrollEnd,
     onTotalCountChange,
+    subject,
+    subjectUnavailableMessage,
 }, ref) {
     const safeAreaInsets = useSafeAreaInsets();
     const listRef = useRef<FlatList<VideoComment>>(null);
@@ -517,7 +523,7 @@ function VideoCommentsPanel({
     }, [clearReplyPreviewTimer]);
 
     const loadInitialPage = useCallback(async (refresh: boolean) => {
-        if (!aid || requestControllerRef.current) {
+        if (!subject || requestControllerRef.current) {
             return;
         }
 
@@ -545,7 +551,7 @@ function VideoCommentsPanel({
             }
 
             const result = await fetchVideoCommentPage(
-                aid,
+                subject,
                 cookie,
                 null,
                 controller.signal,
@@ -577,10 +583,10 @@ function VideoCommentsPanel({
                 setIsRefreshing(false);
             }
         }
-    }, [abortReplyRequests, aid, onTotalCountChange]);
+    }, [abortReplyRequests, onTotalCountChange, subject]);
 
     const loadMore = useCallback(async () => {
-        if (!aid || !nextOffset || !hasMore || requestControllerRef.current) {
+        if (!subject || !nextOffset || !hasMore || requestControllerRef.current) {
             return;
         }
 
@@ -597,7 +603,7 @@ function VideoCommentsPanel({
             }
 
             const result = await fetchVideoCommentPage(
-                aid,
+                subject,
                 cookie,
                 nextOffset,
                 controller.signal,
@@ -630,10 +636,10 @@ function VideoCommentsPanel({
                 setIsLoadingMore(false);
             }
         }
-    }, [aid, hasMore, nextOffset, onTotalCountChange]);
+    }, [hasMore, nextOffset, onTotalCountChange, subject]);
 
     const loadReplyPreview = useCallback(async (comment: VideoComment) => {
-        if (!aid || comment.replyCount <= 0) {
+        if (!subject || comment.replyCount <= 0) {
             return;
         }
 
@@ -666,7 +672,7 @@ function VideoCommentsPanel({
             }
 
             const result = await fetchVideoCommentReplyPreview(
-                aid,
+                subject,
                 comment.id,
                 cookie,
                 controller.signal,
@@ -702,7 +708,7 @@ function VideoCommentsPanel({
                 });
             }
         }
-    }, [aid]);
+    }, [subject]);
 
     const loadVisibleReplyPreviews = useCallback(() => {
         if (!active || isListScrollingRef.current) {
@@ -799,7 +805,7 @@ function VideoCommentsPanel({
     }, [onScrollEnd, scheduleVisibleReplyPreviews]);
 
     const loadMoreReplies = useCallback(async (comment: VideoComment) => {
-        if (!aid || replyPageRequestControllersRef.current.has(comment.id)) {
+        if (!subject || replyPageRequestControllersRef.current.has(comment.id)) {
             return;
         }
 
@@ -849,7 +855,7 @@ function VideoCommentsPanel({
             }
 
             const result = await fetchVideoCommentReplyPage(
-                aid,
+                subject,
                 comment.id,
                 page,
                 cookie,
@@ -907,7 +913,7 @@ function VideoCommentsPanel({
                 replyPageRequestControllersRef.current.delete(comment.id);
             }
         }
-    }, [aid]);
+    }, [subject]);
 
     useEffect(() => {
         abortReplyRequests();
@@ -927,13 +933,13 @@ function VideoCommentsPanel({
         isListScrollingRef.current = false;
         pendingLoadMoreRef.current = false;
         onTotalCountChange(null);
-    }, [abortReplyRequests, aid, onTotalCountChange]);
+    }, [abortReplyRequests, onTotalCountChange, subject]);
 
     useEffect(() => {
-        if (active && aid && status === 'idle') {
+        if (active && subject && status === 'idle') {
             void loadInitialPage(false);
         }
-    }, [active, aid, loadInitialPage, status]);
+    }, [active, loadInitialPage, status, subject]);
 
     useEffect(() => () => {
         abortReplyRequests();
@@ -970,7 +976,7 @@ function VideoCommentsPanel({
         replyThreads,
     ]);
 
-    if (!aid || status === 'idle' || status === 'loading') {
+    if (!subject || status === 'idle' || status === 'loading') {
         return (
             <Animated.ScrollView
                 ref={statusScrollRef}
@@ -989,10 +995,15 @@ function VideoCommentsPanel({
                 scrollEventThrottle={16}
                 style={styles.panel}
             >
+                {contentHeader}
                 <View style={styles.centeredStatus}>
-                    <AppLoadingIndicator />
+                    {subject || !subjectUnavailableMessage ? (
+                        <AppLoadingIndicator />
+                    ) : null}
                     <Text style={styles.statusText}>
-                        {aid ? '正在获取评论...' : '正在获取视频信息...'}
+                        {subject
+                            ? '正在获取评论...'
+                            : subjectUnavailableMessage ?? '正在获取评论信息...'}
                     </Text>
                 </View>
             </Animated.ScrollView>
@@ -1018,6 +1029,7 @@ function VideoCommentsPanel({
                 scrollEventThrottle={16}
                 style={styles.panel}
             >
+                {contentHeader}
                 <View style={styles.centeredStatus}>
                     <Text style={styles.errorText}>{errorMessage}</Text>
                     <AppButton
@@ -1046,8 +1058,13 @@ function VideoCommentsPanel({
                         paddingBottom: safeAreaInsets.bottom + spacing.xl,
                     },
                 ]}
-                ListHeaderComponent={errorMessage ? (
-                    <Text style={styles.inlineError}>{errorMessage}</Text>
+                ListHeaderComponent={contentHeader || errorMessage ? (
+                    <>
+                        {contentHeader}
+                        {errorMessage ? (
+                            <Text style={styles.inlineError}>{errorMessage}</Text>
+                        ) : null}
+                    </>
                 ) : null}
                 ListEmptyComponent={(
                     <Text style={styles.emptyText}>暂时没有可显示的评论</Text>

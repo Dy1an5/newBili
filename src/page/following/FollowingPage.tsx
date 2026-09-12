@@ -28,6 +28,7 @@ import {
     type FollowingGroup,
     type FollowingItem,
     type FollowingPageData,
+    type FollowingPicture,
 } from '@/page/following/fetchFollowing';
 import {
     createVideoPlaybackTarget,
@@ -42,6 +43,7 @@ type Diagnostics = FollowingPageData['diagnostics'];
 type MemberMidsByTagId = Record<string, string[]>;
 
 type Props = {
+    onPicturePress: (picture: FollowingPicture) => void;
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
 };
@@ -116,6 +118,7 @@ function hasGroupDynamic(
 }
 
 export default function FollowingPage({
+    onPicturePress,
     onVideoPress,
     refreshRequestId,
 }: Props) {
@@ -643,6 +646,7 @@ export default function FollowingPage({
                     avatarUrl={item.author.avatarUrl}
                     contentText={item.contentText}
                     imageUrls={item.imageUrls}
+                    onContentPress={() => onPicturePress(item)}
                     publishedTimeText={publishedTimeText}
                 />
             );
@@ -658,7 +662,7 @@ export default function FollowingPage({
                 title={item.title}
             />
         );
-    }, [onVideoPress]);
+    }, [onPicturePress, onVideoPress]);
 
     if (isLoading && dynamics.length === 0) {
         return (
