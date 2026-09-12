@@ -3,6 +3,7 @@
     "name": "newBili",
     "slug": "new-bili",
     "version": "1.0.0",
+    "backgroundColor": "#000000",
     "orientation": "portrait",
     "android": {
       "package": "com.dylan.newbili"

@@ -101,6 +101,7 @@ export default function App() {
 const styles = StyleSheet.create({
     appRoot: {
         flex: 1,
+        backgroundColor: colors.pageBackground,
     },
     safeArea: {
         flex: 1,
