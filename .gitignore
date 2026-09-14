@@ -5,3 +5,24 @@ node_modules/
 /ios/
 study/
 formyself
+
+# AI 工具本地目录
+.agents/
+.codex/
+
+# EAS 和签名凭证
+.eas/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# 日志和构建产物
+*.log
+dist/
+*.tsbuildinfo
+
+# 系统文件
+.DS_Store
+Thumbs.db
