@@ -6,6 +6,12 @@
 //   fetch failed: Fetch request has been canceled
 const CANCELLED_FETCH_MESSAGE = /^fetch failed: .*(abort|cancel)/i;
 
+export function createRequestCancelledError(): Error {
+    const error = new Error('请求已取消');
+    error.name = 'AbortError';
+    return error;
+}
+
 export function isRequestCancelled(
     error: unknown,
     signal?: AbortSignal,

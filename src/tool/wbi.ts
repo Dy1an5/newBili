@@ -7,6 +7,7 @@ import {
     readNumber,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { createRequestCancelledError } from '@/tool/requestCancellation';
 
 const WBI_NAV_URL = 'https://api.bilibili.com/x/web-interface/nav';
 const FORBIDDEN_VALUE_CHARACTERS = /[!'()*]/g;
@@ -207,7 +208,7 @@ function md5(value: string): string {
         .join('');
 }
 
-async function requestMixinKey(cookie: string, signal?: AbortSignal): Promise<string> {
+async function requestMixinKey(cookie: string): Promise<string> {
     const sessdata = getSessdataPair(cookie);
     const response = await fetch(WBI_NAV_URL, {
         method: 'GET',
@@ -217,7 +218,6 @@ async function requestMixinKey(cookie: string, signal?: AbortSignal): Promise<st
             Referer: BILIBILI_REFERER,
             'User-Agent': USER_AGENT,
         },
-        signal,
     });
 
     if (!response.ok) {
@@ -262,22 +262,29 @@ async function getMixinKey(cookie: string, signal?: AbortSignal): Promise<string
         return cachedMixinKey.value;
     }
 
-    if (pendingMixinKeyRequest) {
-        return pendingMixinKeyRequest;
+    if (!pendingMixinKeyRequest) {
+        // 这个请求幂等, 只用来填当天的密钥缓存, 不能绑定任何单个调用者的 signal:
+        // 一个调用者取消会连带让其他仍在挂载的调用者一起失败.
+        pendingMixinKeyRequest = requestMixinKey(cookie)
+            .then((value) => {
+                cachedMixinKey = {
+                    day: currentDay,
+                    value,
+                };
+                return value;
+            })
+            .finally(() => {
+                pendingMixinKeyRequest = null;
+            });
     }
 
-    pendingMixinKeyRequest = requestMixinKey(cookie, signal);
+    const value = await pendingMixinKeyRequest;
 
-    try {
-        const value = await pendingMixinKeyRequest;
-        cachedMixinKey = {
-            day: currentDay,
-            value,
-        };
-        return value;
-    } finally {
-        pendingMixinKeyRequest = null;
+    if (signal?.aborted) {
+        throw createRequestCancelledError();
     }
+
+    return value;
 }
 
 export function signWbiParameters(
