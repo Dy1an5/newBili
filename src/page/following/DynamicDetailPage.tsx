@@ -26,16 +26,13 @@ import VideoCommentsPanel from '@/page/video/VideoCommentsPanel';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
     initialPicture: FollowingPicture;
 };
 
 type DetailStatus = 'loading' | 'success' | 'error';
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
-}
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof FollowingRequestError) {
@@ -120,7 +117,7 @@ export default function DynamicDetailPage({ initialPicture }: Props) {
                 }
                 setDetailStatus('success');
             } catch (error) {
-                if (!isAbortError(error)) {
+                if (!isRequestCancelled(error, controller.signal)) {
                     setDetailErrorMessage(getErrorMessage(error));
                     setDetailStatus('error');
                 }

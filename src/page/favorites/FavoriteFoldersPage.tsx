@@ -30,6 +30,7 @@ import {
 } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
     onCollectionPress: (collection: FollowedCollection) => void;
@@ -40,10 +41,6 @@ type Props = {
 type VideoRequestMode = 'initial' | 'refresh' | 'more';
 
 const COLLECTIONS_OPTION_VALUE = 'followed-collections';
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
-}
 
 function getErrorMessage(error: unknown, resourceName: string): string {
     if (error instanceof FavoritesRequestError) {
@@ -127,7 +124,7 @@ export default function FavoriteFoldersPage({
 
             return nextFolders;
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setFoldersErrorMessage(getErrorMessage(error, '收藏夹'));
             }
 
@@ -195,7 +192,7 @@ export default function FavoriteFoldersPage({
             setCurrentPage(targetPage);
             setHasMore(nextPage.hasMore);
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setVideosErrorMessage(getErrorMessage(error, '收藏视频'));
                 setHasMore(false);
             }

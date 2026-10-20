@@ -211,7 +211,7 @@ export class DeepSeekResponsesProvider implements ModelProvider {
                 signal,
             });
         } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
+            if (signal?.aborted) {
                 throw error;
             }
 

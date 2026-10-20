@@ -48,6 +48,7 @@ import type {
     CollapsiblePageScrollHandle,
     CollapsiblePageScrollProps,
 } from '@/page/video/collapsibleVideoScroll';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 const DEEPSEEK_MODEL_ID = 'deepseek-v4-flash';
 const deepSeekProvider = new DeepSeekResponsesProvider({
@@ -80,10 +81,6 @@ type SummaryRequest = {
     id: number;
     target: VideoPartSummaryTarget;
 };
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
-}
 
 function getErrorMessage(error: unknown): string {
     if (
@@ -420,7 +417,7 @@ function VideoSummaryPanel({
                     storageWarning,
                 });
             } catch (error) {
-                if (!isAbortError(error)) {
+                if (!isRequestCancelled(error, controller.signal)) {
                     const errorRecord = error instanceof DeepSeekRequestError
                         ? {
                             name: error.name,

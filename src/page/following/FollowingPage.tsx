@@ -36,6 +36,7 @@ import {
 } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 const GROUP_FEED_SCAN_PAGE_LIMIT = 3;
 
@@ -83,10 +84,6 @@ function getErrorMessage(error: unknown): string {
     }
 
     return '加载动态失败,请稍后重试';
-}
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
 }
 
 function getFollowingItemKey(item: FollowingItem): string {
@@ -201,7 +198,7 @@ export default function FollowingPage({
             const page = await fetchFollowingPage(cookie, undefined, controller.signal);
             replaceFollowingPage(page);
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setErrorMessage(getErrorMessage(error));
             }
         } finally {
@@ -252,7 +249,7 @@ export default function FollowingPage({
 
             return nextGroups;
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setGroupsErrorMessage(getErrorMessage(error));
             }
 
@@ -343,7 +340,7 @@ export default function FollowingPage({
             isGroupScanPausedRef.current = shouldPauseGroupScan;
             setIsGroupScanPaused(shouldPauseGroupScan);
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setPaginationErrorMessage(getErrorMessage(error));
             }
         } finally {
@@ -417,7 +414,7 @@ export default function FollowingPage({
                 void loadMoreDynamics(memberMidSet, GROUP_FEED_SCAN_PAGE_LIMIT);
             }
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setMemberErrorMessage(getErrorMessage(error));
             }
         } finally {

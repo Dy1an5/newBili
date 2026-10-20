@@ -42,6 +42,7 @@ import VideoPlayer, {
     type FullscreenOrientation,
 } from '@/page/video/VideoPlayer';
 import type { VideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
     target: VideoPlaybackTarget;
@@ -79,10 +80,6 @@ function useCollapsibleScrollHandler(
             );
         }
     });
-}
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
 }
 
 function getErrorMessage(error: unknown): string {
@@ -261,7 +258,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                 setParts(nextParts);
                 setSelectedCid(initialPart?.cid ?? nextParts[0].cid);
             } catch (error) {
-                if (!isAbortError(error)) {
+                if (!isRequestCancelled(error, controller.signal)) {
                     setErrorMessage(getErrorMessage(error));
                 }
             }
@@ -300,7 +297,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                 );
                 setPlayback(nextPlayback);
             } catch (error) {
-                if (!isAbortError(error)) {
+                if (!isRequestCancelled(error, controller.signal)) {
                     setErrorMessage(getErrorMessage(error));
                 }
             }

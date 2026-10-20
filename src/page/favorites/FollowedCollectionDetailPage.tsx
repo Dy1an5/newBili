@@ -30,6 +30,7 @@ import {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
     initialCollection: FollowedCollection;
@@ -38,10 +39,6 @@ type Props = {
 };
 
 type RequestMode = 'initial' | 'refresh';
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
-}
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof FollowedCollectionsRequestError) {
@@ -131,7 +128,7 @@ export default function FollowedCollectionDetailPage({
             setCollection(result.collection);
             setVideos(result.videos);
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setErrorMessage(getErrorMessage(error));
             }
         } finally {

@@ -24,6 +24,7 @@ import {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 const COVER_WIDTH = 132;
 const COVER_HEIGHT = COVER_WIDTH * 10 / 16;
@@ -38,10 +39,6 @@ type FailedRequest = {
     page: number;
     mode: RequestMode;
 };
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
-}
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof FollowedCollectionsRequestError) {
@@ -186,7 +183,7 @@ export default function FollowedCollectionsPage({
             setNextPage(result.nextPage);
             setHasMore(result.hasMore);
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setErrorMessage(getErrorMessage(error));
                 setFailedRequest({ page: targetPage, mode });
             }

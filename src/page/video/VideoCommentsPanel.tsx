@@ -47,6 +47,7 @@ import type {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = CollapsiblePageScrollProps & {
     active: boolean;
@@ -77,10 +78,6 @@ type PicturePreviewState = {
     imageUrls: string[];
     initialIndex: number;
 };
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
-}
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof VideoCommentsError) {
@@ -571,7 +568,7 @@ function VideoCommentsPanel({
             onTotalCountChange(result.totalCount);
         } catch (error) {
             if (
-                !isAbortError(error)
+                !isRequestCancelled(error, controller.signal)
                 && requestControllerRef.current === controller
             ) {
                 setErrorMessage(getErrorMessage(error));
@@ -625,7 +622,7 @@ function VideoCommentsPanel({
             onTotalCountChange(result.totalCount);
         } catch (error) {
             if (
-                !isAbortError(error)
+                !isRequestCancelled(error, controller.signal)
                 && requestControllerRef.current === controller
             ) {
                 setErrorMessage(getErrorMessage(error));
@@ -694,7 +691,7 @@ function VideoCommentsPanel({
                     : currentComment
             )));
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 completedPreviewIdsRef.current.add(comment.id);
             }
         } finally {
@@ -889,7 +886,7 @@ function VideoCommentsPanel({
             });
         } catch (error) {
             if (
-                !isAbortError(error)
+                !isRequestCancelled(error, controller.signal)
                 && replyPageRequestControllersRef.current.get(comment.id) === controller
             ) {
                 setReplyThreads((currentThreads) => {

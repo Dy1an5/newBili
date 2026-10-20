@@ -26,15 +26,12 @@ import {
 } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
 };
-
-function isAbortError(error: unknown): boolean {
-    return error instanceof Error && error.name === 'AbortError';
-}
 
 function getErrorMessage(error: unknown): string {
     if (error instanceof WatchLaterRequestError) {
@@ -141,7 +138,7 @@ export default function WatchLaterPage({
             setTotalCount(nextPage.totalCount);
             setHasMore(nextPage.hasMore);
         } catch (error) {
-            if (!isAbortError(error)) {
+            if (!isRequestCancelled(error, controller.signal)) {
                 setErrorMessage(getErrorMessage(error));
                 setHasMore(false);
             }
