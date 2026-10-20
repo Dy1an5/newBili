@@ -37,6 +37,7 @@ import {
 import {
     getStoredVideoPartSummary,
     saveVideoPartSummary,
+    type StoredVideoPartSummary,
     VideoPartSummaryStorageError,
 } from '../storage/videoPartSummaryRepository';
 import { getLoginCookie } from '@/auth/authCookie';
@@ -54,6 +55,17 @@ const DEEPSEEK_MODEL_ID = 'deepseek-v4-flash';
 const deepSeekProvider = new DeepSeekResponsesProvider({
     reasoningEffort: 'high',
 });
+
+// 缓存只在生成参数与当前代码一致时可用, 否则改了提示词或换了模型以后,
+// 用户会一直看到旧的总结, 而且界面上标着「本地缓存」.
+// sourceHash 不在这里比对: 它要取到字幕后才能算出来, 而缓存检查发生在取字幕之前,
+// 在这里比对会让每次检查都先发一次字幕请求, 缓存就没有意义了.
+function isStoredSummaryCurrent(storedSummary: StoredVideoPartSummary): boolean {
+    return storedSummary.providerId === deepSeekProvider.id
+        && storedSummary.modelId === DEEPSEEK_MODEL_ID
+        && storedSummary.promptId === videoPartSummaryPrompt.id
+        && storedSummary.promptVersion === videoPartSummaryPrompt.version;
+}
 
 type SummaryState =
     | { status: 'idle' }
@@ -176,11 +188,15 @@ function VideoSummaryPanel({
                     return;
                 }
 
-                if (!storedSummary) {
+                if (!storedSummary || !isStoredSummaryCurrent(storedSummary)) {
                     logAgentDebug('本地总结查询', {
                         bvid: target.identity.bvid,
                         cid: target.identity.cid,
-                        status: 'miss',
+                        status: storedSummary ? 'stale' : 'miss',
+                        storedProviderId: storedSummary?.providerId,
+                        storedModelId: storedSummary?.modelId,
+                        storedPromptId: storedSummary?.promptId,
+                        storedPromptVersion: storedSummary?.promptVersion,
                     });
                     setState({ status: 'idle' });
                     return;
