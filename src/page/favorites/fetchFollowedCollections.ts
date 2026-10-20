@@ -18,6 +18,7 @@ const FOLLOWED_COLLECTION_VIDEOS_URL =
     'https://api.bilibili.com/x/space/fav/season/list';
 const PAGE_SIZE = 20;
 const UGC_COLLECTION_TYPE = 21;
+const MAX_EMPTY_PAGE_SCAN = 5;
 
 export type FollowedCollectionAuthor = {
     mid: string | null;
@@ -201,7 +202,9 @@ export async function fetchFollowedCollectionPage(
     const { mid, sessdata } = getRequestIdentity(cookie);
     let page = startPage;
 
-    while (true) {
+    // 接口按页返回, 但界面上只有 UGC 合集有用, 所以要跳过不含 UGC 合集的页.
+    // 这个跳过必须有上限: 接口一直报 has_more 时, while(true) 会无限请求下去.
+    while (page - startPage < MAX_EMPTY_PAGE_SCAN) {
         const parameters = new URLSearchParams({
             up_mid: mid,
             pn: String(page),
@@ -233,6 +236,14 @@ export async function fetchFollowedCollectionPage(
             };
         }
     }
+
+    // 扫描到上限仍未找到 UGC 合集. 上一页报的是还有下一页, 所以 hasMore 保持 true,
+    // 让界面上的下一次加载可以从这里继续往后扫.
+    return {
+        collections: [],
+        nextPage: page,
+        hasMore: true,
+    };
 }
 
 export async function fetchFollowedCollectionDetailPage(
