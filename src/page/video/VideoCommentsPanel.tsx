@@ -62,6 +62,9 @@ type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
 const MAX_COMMENT_PICTURE_COUNT = 9;
 const REPLY_PREVIEW_IDLE_DELAY_MS = 150;
 const MAX_REPLY_PREVIEW_CONCURRENCY = 2;
+// 失败后仍要重试, 但必须封顶: 失败会写 loadingPreviewIds, 进而重新触发
+// scheduleVisibleReplyPreviews, 不设上限就成了每秒数次的重试循环.
+const MAX_REPLY_PREVIEW_ATTEMPTS = 3;
 const EMPTY_REPLIES: VideoComment[] = [];
 const COLLAPSED_REPLY_LINE_COUNT = 2;
 
@@ -451,7 +454,9 @@ function VideoCommentsPanel({
     const pendingLoadMoreRef = useRef(false);
     const visibleCommentsRef = useRef<VideoComment[]>([]);
     const scheduleReplyPreviewsRef = useRef<() => void>(() => undefined);
-    const completedPreviewIdsRef = useRef(new Set<string>());
+    // 已取完的 id 记成 Infinity, 失败过的记失败次数. 之前是一个 Set, 失败也被算作
+    // 完成, 一次瞬时失败就让这条评论永远没有预览.
+    const previewAttemptsRef = useRef(new Map<string, number>());
     const [loadingPreviewIds, setLoadingPreviewIds] = useState<Set<string>>(
         () => new Set(),
     );
@@ -516,7 +521,7 @@ function VideoCommentsPanel({
         });
         previewRequestControllersRef.current.clear();
         replyPageRequestControllersRef.current.clear();
-        completedPreviewIdsRef.current.clear();
+        previewAttemptsRef.current.clear();
     }, [clearReplyPreviewTimer]);
 
     const loadInitialPage = useCallback(async (refresh: boolean) => {
@@ -644,7 +649,8 @@ function VideoCommentsPanel({
 
         if (
             comment.previewReplies.length >= requiredPreviewCount
-            || completedPreviewIdsRef.current.has(comment.id)
+            || (previewAttemptsRef.current.get(comment.id) ?? 0)
+                >= MAX_REPLY_PREVIEW_ATTEMPTS
             || previewRequestControllersRef.current.has(comment.id)
             || replyPageRequestControllersRef.current.has(comment.id)
             || previewRequestControllersRef.current.size
@@ -682,6 +688,8 @@ function VideoCommentsPanel({
                 return;
             }
 
+            previewAttemptsRef.current.set(comment.id, Number.POSITIVE_INFINITY);
+
             setComments((currentComments) => currentComments.map((currentComment) => (
                 currentComment.id === comment.id
                     ? {
@@ -692,12 +700,13 @@ function VideoCommentsPanel({
             )));
         } catch (error) {
             if (!isRequestCancelled(error, controller.signal)) {
-                completedPreviewIdsRef.current.add(comment.id);
+                const attempts = previewAttemptsRef.current.get(comment.id) ?? 0;
+
+                previewAttemptsRef.current.set(comment.id, attempts + 1);
             }
         } finally {
             if (previewRequestControllersRef.current.get(comment.id) === controller) {
                 previewRequestControllersRef.current.delete(comment.id);
-                completedPreviewIdsRef.current.add(comment.id);
                 setLoadingPreviewIds((currentIds) => {
                     const nextIds = new Set(currentIds);
                     nextIds.delete(comment.id);
@@ -726,7 +735,8 @@ function VideoCommentsPanel({
             const requiredPreviewCount = Math.min(2, comment.replyCount);
 
             return requiredPreviewCount > comment.previewReplies.length
-                && !completedPreviewIdsRef.current.has(comment.id)
+                && (previewAttemptsRef.current.get(comment.id) ?? 0)
+                    < MAX_REPLY_PREVIEW_ATTEMPTS
                 && !previewRequestControllersRef.current.has(comment.id)
                 && !replyPageRequestControllersRef.current.has(comment.id)
                 && !(replyThreads[comment.id]?.isExpanded ?? false);
@@ -817,7 +827,7 @@ function VideoCommentsPanel({
         if (previewController) {
             previewController.abort();
             previewRequestControllersRef.current.delete(comment.id);
-            completedPreviewIdsRef.current.add(comment.id);
+            previewAttemptsRef.current.set(comment.id, Number.POSITIVE_INFINITY);
             setLoadingPreviewIds((currentIds) => {
                 const nextIds = new Set(currentIds);
                 nextIds.delete(comment.id);
