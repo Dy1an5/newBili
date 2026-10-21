@@ -1,16 +1,14 @@
 import {
     asRecord,
     BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
-    BILIBILI_REFERER,
-    BILIBILI_USER_AGENT as USER_AGENT,
     getCookiePair,
     getCookieValue,
     normalizeImageUrl,
     readNonEmptyString as readString,
     readNumber,
     readPositiveId,
-    type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { requestBilibiliJson } from '@/tool/bilibiliRequest';
 
 const FOLLOWED_COLLECTIONS_URL =
     'https://api.bilibili.com/x/v3/fav/folder/collected/list';
@@ -60,11 +58,13 @@ export type FollowedCollectionDetail = {
 };
 
 export class FollowedCollectionsRequestError extends Error {
+    readonly status?: number;
     readonly code?: number;
 
-    constructor(message: string, code?: number) {
+    constructor(message: string, status?: number, code?: number) {
         super(message);
         this.name = 'FollowedCollectionsRequestError';
+        this.status = status;
         this.code = code;
     }
 }
@@ -98,46 +98,6 @@ function getSessdataPair(cookie: string): string {
     }
 
     return sessdata;
-}
-
-async function requestBilibili(
-    url: string,
-    sessdata: string,
-    signal?: AbortSignal,
-): Promise<JsonRecord> {
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Cookie: sessdata,
-            Referer: BILIBILI_REFERER,
-            'User-Agent': USER_AGENT,
-        },
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new FollowedCollectionsRequestError(
-            `合集接口请求失败,HTTP ${response.status}`,
-        );
-    }
-
-    const body = asRecord(await response.json());
-    const code = readNumber(body?.code);
-
-    if (!body || code === null) {
-        throw new FollowedCollectionsRequestError('合集接口返回格式不正确');
-    }
-
-    if (code !== 0) {
-        const message = readString(body.message) ?? '未知错误';
-        throw new FollowedCollectionsRequestError(
-            `合集接口错误 ${code}:${message}`,
-            code,
-        );
-    }
-
-    return body;
 }
 
 function parseCollectionAuthor(value: unknown): FollowedCollectionAuthor {
@@ -211,10 +171,14 @@ export async function fetchFollowedCollectionPage(
             ps: String(PAGE_SIZE),
             platform: 'web',
         });
-        const body = await requestBilibili(
+        const body = await requestBilibiliJson(
             `${FOLLOWED_COLLECTIONS_URL}?${parameters.toString()}`,
-            sessdata,
-            signal,
+            {
+                sessdata,
+                resourceName: '合集',
+                createError: FollowedCollectionsRequestError,
+                signal,
+            },
         );
         const data = asRecord(body.data);
         const list = Array.isArray(data?.list) ? data.list : [];
@@ -266,10 +230,14 @@ export async function fetchFollowedCollectionDetailPage(
         pn: String(page),
         ps: String(PAGE_SIZE),
     });
-    const body = await requestBilibili(
+    const body = await requestBilibiliJson(
         `${FOLLOWED_COLLECTION_VIDEOS_URL}?${parameters.toString()}`,
-        sessdata,
-        signal,
+        {
+            sessdata,
+            resourceName: '合集',
+            createError: FollowedCollectionsRequestError,
+            signal,
+        },
     );
     const data = asRecord(body.data);
     const collection = parseFollowedCollection(data?.info);

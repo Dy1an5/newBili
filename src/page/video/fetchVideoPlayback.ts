@@ -13,6 +13,7 @@ import {
     readPositiveId,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { requestBilibiliJson } from '@/tool/bilibiliRequest';
 
 const VIDEO_VIEW_URL = 'https://api.bilibili.com/x/web-interface/view';
 const VIDEO_PLAY_URL = 'https://api.bilibili.com/x/player/wbi/playurl';
@@ -38,11 +39,13 @@ export type VideoDetail = {
 };
 
 export class VideoPlaybackError extends Error {
+    readonly status?: number;
     readonly code?: number;
 
-    constructor(message: string, code?: number) {
+    constructor(message: string, status?: number, code?: number) {
         super(message);
         this.name = 'VideoPlaybackError';
+        this.status = status;
         this.code = code;
     }
 }
@@ -87,41 +90,6 @@ function getSessdataPair(cookie: string): string {
     throw new VideoPlaybackError('登录信息中没有有效的 SESSDATA');
 }
 
-async function requestBilibili(
-    url: string,
-    sessdata: string,
-    signal?: AbortSignal,
-): Promise<JsonRecord> {
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Cookie: sessdata,
-            Referer: BILIBILI_REFERER,
-            'User-Agent': USER_AGENT,
-        },
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new VideoPlaybackError(`视频接口请求失败,HTTP ${response.status}`);
-    }
-
-    const body = asRecord(await response.json());
-    const code = readNumber(body?.code);
-
-    if (!body || code === null) {
-        throw new VideoPlaybackError('视频接口返回格式不正确');
-    }
-
-    if (code !== 0) {
-        const message = readString(body.message) ?? '未知错误';
-        throw new VideoPlaybackError(`视频接口错误 ${code}:${message}`, code);
-    }
-
-    return body;
-}
-
 export async function fetchVideoDetail(
     bvid: string,
     cookie: string,
@@ -129,10 +97,14 @@ export async function fetchVideoDetail(
 ): Promise<VideoDetail> {
     const sessdata = getSessdataPair(cookie);
     const parameters = new URLSearchParams({ bvid });
-    const body = await requestBilibili(
+    const body = await requestBilibiliJson(
         `${VIDEO_VIEW_URL}?${parameters.toString()}`,
-        sessdata,
-        signal,
+        {
+            sessdata,
+            resourceName: '视频',
+            createError: VideoPlaybackError,
+            signal,
+        },
     );
     const data = asRecord(body.data);
     const aid = readPositiveId(data?.aid);
@@ -228,10 +200,14 @@ async function fetchProgressiveUrl(
     let body: JsonRecord;
 
     try {
-        body = await requestBilibili(
+        body = await requestBilibiliJson(
             `${VIDEO_PLAY_URL}?${signedQuery}`,
-            sessdata,
-            signal,
+            {
+                sessdata,
+                resourceName: '视频',
+                createError: VideoPlaybackError,
+                signal,
+            },
         );
     } catch (error) {
         if (error instanceof VideoPlaybackError && error.code === -403) {

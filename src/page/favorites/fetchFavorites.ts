@@ -1,16 +1,14 @@
 import {
     asRecord,
     BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
-    BILIBILI_REFERER,
-    BILIBILI_USER_AGENT as USER_AGENT,
     getCookiePair,
     getCookieValue,
     normalizeImageUrl,
     readNonEmptyString as readString,
     readNumber,
     readPositiveId,
-    type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { requestBilibiliJson } from '@/tool/bilibiliRequest';
 
 const FAVORITE_FOLDERS_URL =
     'https://api.bilibili.com/x/v3/fav/folder/created/list-all';
@@ -40,11 +38,13 @@ export type FavoriteVideoPage = {
 };
 
 export class FavoritesRequestError extends Error {
+    readonly status?: number;
     readonly code?: number;
 
-    constructor(message: string, code?: number) {
+    constructor(message: string, status?: number, code?: number) {
         super(message);
         this.name = 'FavoritesRequestError';
+        this.status = status;
         this.code = code;
     }
 }
@@ -72,41 +72,6 @@ function getSessdataPair(cookie: string): string {
     }
 
     return sessdata;
-}
-
-async function requestBilibili(
-    url: string,
-    sessdata: string,
-    signal?: AbortSignal,
-): Promise<JsonRecord> {
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Cookie: sessdata,
-            Referer: BILIBILI_REFERER,
-            'User-Agent': USER_AGENT,
-        },
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new FavoritesRequestError(`收藏接口请求失败,HTTP ${response.status}`);
-    }
-
-    const body = asRecord(await response.json());
-    const code = readNumber(body?.code);
-
-    if (!body || code === null) {
-        throw new FavoritesRequestError('收藏接口返回格式不正确');
-    }
-
-    if (code !== 0) {
-        const message = readString(body.message) ?? '未知错误';
-        throw new FavoritesRequestError(`收藏接口错误 ${code}:${message}`, code);
-    }
-
-    return body;
 }
 
 function parseFavoriteFolder(value: unknown): FavoriteFolder | null {
@@ -159,10 +124,14 @@ export async function fetchFavoriteFolders(
 ): Promise<FavoriteFolder[]> {
     const { mid, sessdata } = getRequestIdentity(cookie);
     const parameters = new URLSearchParams({ up_mid: mid });
-    const body = await requestBilibili(
+    const body = await requestBilibiliJson(
         `${FAVORITE_FOLDERS_URL}?${parameters.toString()}`,
-        sessdata,
-        signal,
+        {
+            sessdata,
+            resourceName: '收藏',
+            createError: FavoritesRequestError,
+            signal,
+        },
     );
     const data = asRecord(body.data);
     const list = Array.isArray(data?.list) ? data.list : [];
@@ -190,10 +159,14 @@ export async function fetchFavoriteVideoPage(
         tid: '0',
         platform: 'web',
     });
-    const body = await requestBilibili(
+    const body = await requestBilibiliJson(
         `${FAVORITE_VIDEOS_URL}?${parameters.toString()}`,
-        sessdata,
-        signal,
+        {
+            sessdata,
+            resourceName: '收藏',
+            createError: FavoritesRequestError,
+            signal,
+        },
     );
     const data = asRecord(body.data);
     const medias = Array.isArray(data?.medias) ? data.medias : [];

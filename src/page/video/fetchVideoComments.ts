@@ -5,8 +5,6 @@ import {
 } from '@/tool/wbi';
 import {
     asRecord,
-    BILIBILI_REFERER,
-    BILIBILI_USER_AGENT as USER_AGENT,
     getCookiePair,
     normalizeImageUrl,
     readNonEmptyString,
@@ -14,6 +12,7 @@ import {
     readPositiveId,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { requestBilibiliJson } from '@/tool/bilibiliRequest';
 
 const VIDEO_COMMENT_LIST_URL = 'https://api.bilibili.com/x/v2/reply/wbi/main';
 const VIDEO_COMMENT_REPLIES_URL = 'https://api.bilibili.com/x/v2/reply/reply';
@@ -66,11 +65,13 @@ export type VideoCommentReplyPage = {
 };
 
 export class VideoCommentsError extends Error {
+    readonly status?: number;
     readonly code?: number;
 
-    constructor(message: string, code?: number) {
+    constructor(message: string, status?: number, code?: number) {
         super(message);
         this.name = 'VideoCommentsError';
+        this.status = status;
         this.code = code;
     }
 }
@@ -192,45 +193,6 @@ function deduplicateComments(comments: VideoComment[]): VideoComment[] {
     });
 }
 
-async function requestBilibili(
-    url: string,
-    sessdata: string,
-    signal?: AbortSignal,
-): Promise<JsonRecord> {
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Cookie: sessdata,
-            Referer: BILIBILI_REFERER,
-            'User-Agent': USER_AGENT,
-        },
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new VideoCommentsError(`评论接口请求失败,HTTP ${response.status}`);
-    }
-
-    const body = asRecord(await response.json());
-    const code = readNumber(body?.code);
-
-    if (!body || code === null) {
-        throw new VideoCommentsError('评论接口返回格式不正确');
-    }
-
-    if (code !== 0) {
-        if (code === 12002 || code === 12052 || code === 12061) {
-            throw new VideoCommentsError('该内容评论区已关闭', code);
-        }
-
-        const message = readNonEmptyString(body.message) ?? '未知错误';
-        throw new VideoCommentsError(`评论接口错误 ${code}:${message}`, code);
-    }
-
-    return body;
-}
-
 async function requestMainCommentPage(
     subject: CommentSubject,
     cookie: string,
@@ -254,10 +216,19 @@ async function requestMainCommentPage(
                 signal,
             );
 
-            return await requestBilibili(
+            return await requestBilibiliJson(
                 `${VIDEO_COMMENT_LIST_URL}?${signedQuery}`,
-                sessdata,
-                signal,
+                {
+                    sessdata,
+                    resourceName: '评论',
+                    createError: VideoCommentsError,
+                    signal,
+                    messageByCode: {
+                        12002: '该内容评论区已关闭',
+                        12052: '该内容评论区已关闭',
+                        12061: '该内容评论区已关闭',
+                    },
+                },
             );
         } catch (error) {
             if (error instanceof WbiSigningError) {
@@ -339,10 +310,19 @@ async function fetchVideoCommentReplies(
         pn: String(page),
         ps: String(pageSize),
     });
-    const body = await requestBilibili(
+    const body = await requestBilibiliJson(
         `${VIDEO_COMMENT_REPLIES_URL}?${parameters.toString()}`,
-        sessdata,
-        signal,
+        {
+            sessdata,
+            resourceName: '评论',
+            createError: VideoCommentsError,
+            signal,
+            messageByCode: {
+                12002: '该内容评论区已关闭',
+                12052: '该内容评论区已关闭',
+                12061: '该内容评论区已关闭',
+            },
+        },
     );
     const data = asRecord(body.data);
 

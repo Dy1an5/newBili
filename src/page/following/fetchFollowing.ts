@@ -1,8 +1,6 @@
 import {
     asRecord,
     BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
-    BILIBILI_REFERER,
-    BILIBILI_USER_AGENT as USER_AGENT,
     getCookiePair,
     getCookieValue,
     normalizeImageUrl,
@@ -12,6 +10,7 @@ import {
     readString,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { requestBilibiliJson } from '@/tool/bilibiliRequest';
 import type { CommentSubject } from '@/page/video/fetchVideoComments';
 
 const FOLLOWING_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
@@ -77,11 +76,13 @@ export type FollowingPageData = {
 };
 
 export class FollowingRequestError extends Error {
+    readonly status?: number;
     readonly code?: number;
 
-    constructor(message: string, code?: number) {
+    constructor(message: string, status?: number, code?: number) {
         super(message);
         this.name = 'FollowingRequestError';
+        this.status = status;
         this.code = code;
     }
 }
@@ -163,42 +164,6 @@ function getRequestIdentity(cookie: string): { mid: string; sessdata: string } {
     return { mid, sessdata };
 }
 
-async function requestFollowingJson(
-    url: string,
-    sessdata: string,
-    resourceName: string,
-    signal?: AbortSignal,
-): Promise<JsonRecord> {
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Cookie: sessdata,
-            Referer: BILIBILI_REFERER,
-            'User-Agent': USER_AGENT,
-        },
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new FollowingRequestError(`${resourceName}请求失败,HTTP ${response.status}`);
-    }
-
-    const body = asRecord(await response.json());
-    const code = readNumber(body?.code);
-
-    if (!body || code === null) {
-        throw new FollowingRequestError(`${resourceName}接口返回格式不正确`);
-    }
-
-    if (code !== 0) {
-        const message = readString(body.message) ?? '未知错误';
-        throw new FollowingRequestError(`${resourceName}接口错误 ${code}:${message}`, code);
-    }
-
-    return body;
-}
-
 function parseFollowingGroup(value: unknown): FollowingGroup | null {
     const group = asRecord(value);
     const tagId = readFollowingTagId(group?.tagid);
@@ -221,12 +186,12 @@ export async function fetchFollowingGroups(
     signal?: AbortSignal,
 ): Promise<FollowingGroup[]> {
     const sessdata = getSessdataPair(cookie);
-    const body = await requestFollowingJson(
-        FOLLOWING_GROUPS_URL,
+    const body = await requestBilibiliJson(FOLLOWING_GROUPS_URL, {
         sessdata,
-        '关注分组',
+        resourceName: '关注分组',
+        createError: FollowingRequestError,
         signal,
-    );
+    });
 
     if (!Array.isArray(body.data)) {
         throw new FollowingRequestError('关注分组接口没有返回data列表');
@@ -253,11 +218,14 @@ export async function fetchFollowingGroupMemberMids(
             pn: String(pageNumber),
             ps: String(FOLLOWING_GROUP_MEMBER_PAGE_SIZE),
         });
-        const body = await requestFollowingJson(
+        const body = await requestBilibiliJson(
             `${FOLLOWING_GROUP_MEMBERS_URL}?${parameters.toString()}`,
-            sessdata,
-            '关注分组成员',
-            signal,
+            {
+                sessdata,
+                resourceName: '关注分组成员',
+                createError: FollowingRequestError,
+                signal,
+            },
         );
 
         if (!Array.isArray(body.data)) {
@@ -459,12 +427,12 @@ export async function fetchFollowingPage(
     signal?: AbortSignal,
 ): Promise<FollowingPageData> {
     const sessdata = getSessdataPair(cookie);
-    const body = await requestFollowingJson(
-        buildRequestUrl(offset),
+    const body = await requestBilibiliJson(buildRequestUrl(offset), {
         sessdata,
-        '动态',
+        resourceName: '动态',
+        createError: FollowingRequestError,
         signal,
-    );
+    });
 
     const data = asRecord(body?.data);
 
@@ -501,11 +469,14 @@ export async function fetchFollowingPictureDetail(
         features: 'itemOpusStyle',
         web_location: '333.1330',
     });
-    const body = await requestFollowingJson(
+    const body = await requestBilibiliJson(
         `${FOLLOWING_DETAIL_URL}?${parameters.toString()}`,
-        sessdata,
-        '动态详情',
-        signal,
+        {
+            sessdata,
+            resourceName: '动态详情',
+            createError: FollowingRequestError,
+            signal,
+        },
     );
     const data = asRecord(body.data);
     const item = asRecord(data?.item);

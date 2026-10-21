@@ -5,15 +5,13 @@ import {
 import {
     asRecord,
     BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
-    BILIBILI_REFERER,
-    BILIBILI_USER_AGENT as USER_AGENT,
     getCookiePair,
     normalizeImageUrl,
     readNonEmptyString as readString,
     readNumber,
     readPositiveId,
-    type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { requestBilibiliJson } from '@/tool/bilibiliRequest';
 
 const WATCH_LATER_URL = 'https://api.bilibili.com/x/v2/history/toview/web';
 
@@ -43,11 +41,13 @@ export type WatchLaterQueryOptions = {
 };
 
 export class WatchLaterRequestError extends Error {
+    readonly status?: number;
     readonly code?: number;
 
-    constructor(message: string, code?: number) {
+    constructor(message: string, status?: number, code?: number) {
         super(message);
         this.name = 'WatchLaterRequestError';
+        this.status = status;
         this.code = code;
     }
 }
@@ -98,41 +98,6 @@ function parseWatchLaterVideo(
         },
         publishedAt: readNumber(video.pubdate) ?? 0,
     };
-}
-
-async function requestBilibili(
-    url: string,
-    sessdata: string,
-    signal?: AbortSignal,
-): Promise<JsonRecord> {
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Cookie: sessdata,
-            Referer: BILIBILI_REFERER,
-            'User-Agent': USER_AGENT,
-        },
-        signal,
-    });
-
-    if (!response.ok) {
-        throw new WatchLaterRequestError(`稍后再看请求失败,HTTP ${response.status}`);
-    }
-
-    const body = asRecord(await response.json());
-    const code = readNumber(body?.code);
-
-    if (!body || code === null) {
-        throw new WatchLaterRequestError('稍后再看接口返回格式不正确');
-    }
-
-    if (code !== 0) {
-        const message = readString(body?.message) ?? '未知错误';
-        throw new WatchLaterRequestError(`稍后再看接口错误 ${code}:${message}`, code);
-    }
-
-    return body;
 }
 
 async function createWatchLaterSignedQuery(
@@ -186,10 +151,14 @@ export async function fetchWatchLaterVideoPage(
         signal,
     );
 
-    const body = await requestBilibili(
+    const body = await requestBilibiliJson(
         `${WATCH_LATER_URL}?${signedQuery}`,
-        sessdata,
-        signal,
+        {
+            sessdata,
+            resourceName: '稍后再看',
+            createError: WatchLaterRequestError,
+            signal,
+        },
     );
 
     const data = asRecord(body.data);
