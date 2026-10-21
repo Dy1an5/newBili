@@ -90,7 +90,6 @@ type Props = CollapsiblePageScrollProps & {
 };
 
 type SummaryRequest = {
-    id: number;
     target: VideoPartSummaryTarget;
 };
 
@@ -153,7 +152,6 @@ function VideoSummaryPanel({
 }, ref) {
     const safeAreaInsets = useSafeAreaInsets();
     const scrollRef = useRef<ScrollView>(null);
-    const requestIdRef = useRef(0);
     const [request, setRequest] = useState<SummaryRequest | null>(null);
     const [state, setState] = useState<SummaryState>({ status: 'idle' });
     const targetKey = target
@@ -251,7 +249,6 @@ function VideoSummaryPanel({
             return;
         }
 
-        requestIdRef.current += 1;
         logAgentDebug('点击开始生成', {
             bvid: target.identity.bvid,
             cid: target.identity.cid,
@@ -259,10 +256,7 @@ function VideoSummaryPanel({
             partTitle: target.partTitle,
             partNumber: target.partNumber,
         });
-        setRequest({
-            id: requestIdRef.current,
-            target,
-        });
+        setRequest({ target });
     };
 
     useEffect(() => {
@@ -305,6 +299,11 @@ function VideoSummaryPanel({
                         status: 'unavailable',
                         reason: subtitleResult.reason,
                     });
+
+                    if (controller.signal.aborted) {
+                        return;
+                    }
+
                     setState({ status: 'unavailable' });
                     return;
                 }
@@ -420,6 +419,13 @@ function VideoSummaryPanel({
                         name: error instanceof Error ? error.name : 'UnknownError',
                         message: storageWarning,
                     });
+                }
+
+                // getLoginCookie 和 saveVideoPartSummary 都不接受 signal, 所以取消可能
+                // 发生在最后一个可中断的 await 之后. 这里不检查就会把上一次运行的总结
+                // 写到已经切走的分P上.
+                if (controller.signal.aborted) {
+                    return;
                 }
 
                 setState({
