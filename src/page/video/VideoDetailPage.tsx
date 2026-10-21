@@ -164,7 +164,13 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const safeAreaInsets = useSafeAreaInsets();
     const [videoAid, setVideoAid] = useState<string | null>(null);
     const [parts, setParts] = useState<VideoPart[]>([]);
-    const [selectedCid, setSelectedCid] = useState<string | null>(null);
+    // cid 只在它所属的 bvid 里才有意义. 单独存一个 cid 时, 切换视频的那一次渲染
+    // 会拿旧的 cid 配新的 bvid 去请求播放地址.
+    const [selection, setSelection] = useState<{
+        bvid: string;
+        cid: string;
+    } | null>(null);
+    const selectedCid = selection?.bvid === target.bvid ? selection.cid : null;
     const [playback, setPlayback] = useState<VideoPlayback | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
@@ -233,7 +239,7 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
         const loadVideoDetail = async () => {
             setVideoAid(null);
             setParts([]);
-            setSelectedCid(null);
+            setSelection(null);
             setPlayback(null);
             setErrorMessage(null);
 
@@ -256,7 +262,10 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
 
                 setVideoAid(nextVideoDetail.aid);
                 setParts(nextParts);
-                setSelectedCid(initialPart?.cid ?? nextParts[0].cid);
+                setSelection({
+                    bvid: target.bvid,
+                    cid: initialPart?.cid ?? nextParts[0].cid,
+                });
             } catch (error) {
                 if (!isRequestCancelled(error, controller.signal)) {
                     setErrorMessage(getErrorMessage(error));
@@ -684,7 +693,10 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                                         accessibilityLabel={`P${part.page} ${part.title}`}
                                         onPress={() => {
                                             if (!isSelected) {
-                                                setSelectedCid(part.cid);
+                                                setSelection({
+                                                    bvid: target.bvid,
+                                                    cid: part.cid,
+                                                });
                                             }
                                         }}
                                         style={({ pressed }) => [
