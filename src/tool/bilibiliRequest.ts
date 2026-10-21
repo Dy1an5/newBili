@@ -6,6 +6,7 @@ import {
     readString,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { reportAuthFailure } from '@/tool/authFailure';
 
 // 六个 fetch 模块各自复制过一份同样的 fetch + ok + json + code 检查,
 // 差别只有错误类和资源名. 这里收成一处, 错误类由调用方传入.
@@ -47,6 +48,8 @@ export async function requestBilibiliJson(
     });
 
     if (!response.ok) {
+        reportAuthFailure(response.status, undefined);
+
         throw new createError(
             `${resourceName}请求失败,HTTP ${response.status}`,
             response.status,
@@ -76,6 +79,8 @@ export async function requestBilibiliJson(
     }
 
     if (code !== 0) {
+        reportAuthFailure(response.status, code);
+
         const customMessage = messageByCode?.[code];
 
         if (customMessage !== undefined) {

@@ -9,7 +9,8 @@ import {
 
 import LoginPage from './auth/LoginPage';
 import { AgentSessionProvider } from './agent/session/AgentSessionContext';
-import { getLoginCookie } from './auth/authCookie';
+import { clearLoginCookie, getLoginCookie } from './auth/authCookie';
+import { setAuthFailureHandler } from './tool/authFailure';
 import MainPage from './main/MainPage';
 import MainTabNavigator from './navigation/MainTabNavigator';
 import { colors } from './theme/colors';
@@ -40,6 +41,20 @@ export default function App() {
 
         return () => {
             isMounted = false;
+        };
+    }, []);
+
+    // 服务端已经认定登录态失效时, 删掉本地 cookie 再回到登录入口.
+    // 删 cookie 失败不影响切页面, 否则用户会卡在错误页.
+    useEffect(() => {
+        setAuthFailureHandler(() => {
+            setScreen('main');
+
+            void clearLoginCookie().catch(() => undefined);
+        });
+
+        return () => {
+            setAuthFailureHandler(null);
         };
     }, []);
 
