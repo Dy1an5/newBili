@@ -1,8 +1,6 @@
 import {
     asRecord,
     BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
-    getCookiePair,
-    getCookieValue,
     normalizeImageUrl,
     readNonEmptyString,
     readNumber,
@@ -11,6 +9,7 @@ import {
     type JsonRecord,
 } from '@/tool/bilibiliApi';
 import { requestBilibiliJson } from '@/tool/bilibiliRequest';
+import { createGetRequestIdentity, createGetSessdataPair } from '@/tool/sessdata';
 import type { CommentSubject } from '@/page/video/fetchVideoComments';
 
 const FOLLOWING_URL = 'https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all';
@@ -143,26 +142,9 @@ function readFollowingTagId(value: unknown): string | null {
     return null;
 }
 
-function getSessdataPair(cookie: string): string {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
+const getSessdataPair = createGetSessdataPair(FollowingRequestError);
 
-    if (!sessdata) {
-        throw new FollowingRequestError('登录信息中没有有效的SESSDATA,请重新登录');
-    }
-
-    return sessdata;
-}
-
-function getRequestIdentity(cookie: string): { mid: string; sessdata: string } {
-    const mid = getCookieValue(cookie, 'DedeUserID');
-    const sessdata = getSessdataPair(cookie);
-
-    if (!mid || !/^\d+$/.test(mid)) {
-        throw new FollowingRequestError('登录信息中没有有效的DedeUserID,请重新登录');
-    }
-
-    return { mid, sessdata };
-}
+const getRequestIdentity = createGetRequestIdentity(FollowingRequestError);
 
 function parseFollowingGroup(value: unknown): FollowingGroup | null {
     const group = asRecord(value);

@@ -2,12 +2,12 @@ import {
     asRecord,
     BILIBILI_REFERER,
     BILIBILI_USER_AGENT as USER_AGENT,
-    getCookiePair,
     readNonEmptyString as readString,
     readNumber,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
 import { createRequestCancelledError } from '@/tool/requestCancellation';
+import { createGetSessdataPair } from '@/tool/sessdata';
 
 const WBI_NAV_URL = 'https://api.bilibili.com/x/web-interface/nav';
 const FORBIDDEN_VALUE_CHARACTERS = /[!'()*]/g;
@@ -50,15 +50,10 @@ export class WbiSigningError extends Error {
 let cachedMixinKey: CachedMixinKey | null = null;
 let pendingMixinKeyRequest: Promise<string> | null = null;
 
-function getSessdataPair(cookie: string): string {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
-
-    if (sessdata) {
-        return sessdata;
-    }
-
-    throw new WbiSigningError('登录信息中没有有效的 SESSDATA');
-}
+const getSessdataPair = createGetSessdataPair(
+    WbiSigningError,
+    '登录信息中没有有效的 SESSDATA',
+);
 
 function getFileNameWithoutExtension(url: string): string | null {
     const path = url.split(/[?#]/, 1)[0];

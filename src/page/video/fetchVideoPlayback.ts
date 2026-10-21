@@ -7,13 +7,13 @@ import {
     asRecord,
     BILIBILI_REFERER,
     BILIBILI_USER_AGENT as USER_AGENT,
-    getCookiePair,
     readNonEmptyString as readString,
     readNumber,
     readPositiveId,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
 import { requestBilibiliJson } from '@/tool/bilibiliRequest';
+import { createGetSessdataPair } from '@/tool/sessdata';
 
 const VIDEO_VIEW_URL = 'https://api.bilibili.com/x/web-interface/view';
 const VIDEO_PLAY_URL = 'https://api.bilibili.com/x/player/wbi/playurl';
@@ -80,15 +80,10 @@ function normalizeUrl(value: unknown): string | null {
     return url;
 }
 
-function getSessdataPair(cookie: string): string {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
-
-    if (sessdata) {
-        return sessdata;
-    }
-
-    throw new VideoPlaybackError('登录信息中没有有效的 SESSDATA');
-}
+const getSessdataPair = createGetSessdataPair(
+    VideoPlaybackError,
+    '登录信息中没有有效的 SESSDATA',
+);
 
 export async function fetchVideoDetail(
     bvid: string,

@@ -11,11 +11,11 @@ import {
     asRecord,
     BILIBILI_REFERER,
     BILIBILI_USER_AGENT as USER_AGENT,
-    getCookiePair,
     readNonEmptyString as readString,
     readNumber,
     type JsonRecord,
 } from '@/tool/bilibiliApi';
+import { createGetSessdataPair } from '@/tool/sessdata';
 
 const PLAYER_INFO_URL = 'https://api.bilibili.com/x/player/wbi/v2';
 
@@ -72,15 +72,10 @@ function normalizeUrl(value: unknown): string | null {
     return null;
 }
 
-function getSessdataPair(cookie: string): string {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
-
-    if (sessdata) {
-        return sessdata;
-    }
-
-    throw new BilibiliSubtitleError('登录信息中没有有效的 SESSDATA');
-}
+const getSessdataPair = createGetSessdataPair(
+    BilibiliSubtitleError,
+    '登录信息中没有有效的 SESSDATA',
+);
 
 function parseTrack(value: unknown): BilibiliSubtitleTrack | null {
     const record = asRecord(value);

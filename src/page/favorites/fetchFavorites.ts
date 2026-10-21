@@ -1,14 +1,13 @@
 import {
     asRecord,
     BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
-    getCookiePair,
-    getCookieValue,
     normalizeImageUrl,
     readNonEmptyString as readString,
     readNumber,
     readPositiveId,
 } from '@/tool/bilibiliApi';
 import { requestBilibiliJson } from '@/tool/bilibiliRequest';
+import { createGetRequestIdentity, createGetSessdataPair } from '@/tool/sessdata';
 
 const FAVORITE_FOLDERS_URL =
     'https://api.bilibili.com/x/v3/fav/folder/created/list-all';
@@ -49,30 +48,9 @@ export class FavoritesRequestError extends Error {
     }
 }
 
-function getRequestIdentity(cookie: string): { mid: string; sessdata: string } {
-    const mid = getCookieValue(cookie, 'DedeUserID');
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
+const getRequestIdentity = createGetRequestIdentity(FavoritesRequestError);
 
-    if (!mid || !/^\d+$/.test(mid)) {
-        throw new FavoritesRequestError('登录信息中没有有效的DedeUserID,请重新登录');
-    }
-
-    if (!sessdata) {
-        throw new FavoritesRequestError('登录信息中没有有效的SESSDATA,请重新登录');
-    }
-
-    return { mid, sessdata };
-}
-
-function getSessdataPair(cookie: string): string {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
-
-    if (!sessdata) {
-        throw new FavoritesRequestError('登录信息中没有有效的SESSDATA,请重新登录');
-    }
-
-    return sessdata;
-}
+const getSessdataPair = createGetSessdataPair(FavoritesRequestError);
 
 function parseFavoriteFolder(value: unknown): FavoriteFolder | null {
     const folder = asRecord(value);

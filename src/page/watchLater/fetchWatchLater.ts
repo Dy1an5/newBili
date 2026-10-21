@@ -5,13 +5,13 @@ import {
 import {
     asRecord,
     BILIBILI_DEFAULT_AVATAR_URL as DEFAULT_AVATAR_URL,
-    getCookiePair,
     normalizeImageUrl,
     readNonEmptyString as readString,
     readNumber,
     readPositiveId,
 } from '@/tool/bilibiliApi';
 import { requestBilibiliJson } from '@/tool/bilibiliRequest';
+import { createGetSessdataPair } from '@/tool/sessdata';
 
 const WATCH_LATER_URL = 'https://api.bilibili.com/x/v2/history/toview/web';
 
@@ -52,17 +52,7 @@ export class WatchLaterRequestError extends Error {
     }
 }
 
-function getSessdataPair(cookie: string): string {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
-
-    if (!sessdata) {
-        throw new WatchLaterRequestError(
-            '登录信息中没有有效的SESSDATA,请重新登录',
-        );
-    }
-
-    return sessdata;
-}
+const getSessdataPair = createGetSessdataPair(WatchLaterRequestError);
 
 function parseWatchLaterVideo(
     value: unknown,

@@ -5,7 +5,6 @@ import {
 } from '@/tool/wbi';
 import {
     asRecord,
-    getCookiePair,
     normalizeImageUrl,
     readNonEmptyString,
     readNumber,
@@ -13,6 +12,7 @@ import {
     type JsonRecord,
 } from '@/tool/bilibiliApi';
 import { requestBilibiliJson } from '@/tool/bilibiliRequest';
+import { createGetSessdataPair } from '@/tool/sessdata';
 
 const VIDEO_COMMENT_LIST_URL = 'https://api.bilibili.com/x/v2/reply/wbi/main';
 const VIDEO_COMMENT_REPLIES_URL = 'https://api.bilibili.com/x/v2/reply/reply';
@@ -76,15 +76,7 @@ export class VideoCommentsError extends Error {
     }
 }
 
-function getSessdataPair(cookie: string): string {
-    const sessdata = getCookiePair(cookie, 'SESSDATA');
-
-    if (!sessdata) {
-        throw new VideoCommentsError('登录信息中没有有效的SESSDATA,请重新登录');
-    }
-
-    return sessdata;
-}
+const getSessdataPair = createGetSessdataPair(VideoCommentsError);
 
 function readNonNegativeInteger(value: unknown): number {
     const number = readNumber(value);
