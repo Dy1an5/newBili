@@ -13,7 +13,8 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
-import SelectionBar from '@/components/SelectionBar';
+import SelectionHeader from '@/components/SelectionHeader';
+import SelectionSheet from '@/components/SelectionSheet';
 import VideoListCard from '@/components/VideoListCard';
 import FollowedCollectionsPage from '@/page/favorites/FollowedCollectionsPage';
 import type { FollowedCollection } from '@/page/favorites/fetchFollowedCollections';
@@ -37,6 +38,7 @@ type Props = {
     onCollectionPress: (collection: FollowedCollection) => void;
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
+    selectorRequestId: number;
 };
 
 type VideoRequestMode = 'initial' | 'refresh' | 'more';
@@ -66,9 +68,11 @@ export default function FavoriteFoldersPage({
     onCollectionPress,
     onVideoPress,
     refreshRequestId,
+    selectorRequestId,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [folders, setFolders] = useState<FavoriteFolder[]>([]);
+    const [isSelectorVisible, setIsSelectorVisible] = useState(false);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
     const [selectedOptionValue, setSelectedOptionValue] =
         useState<string | null>(null);
@@ -91,6 +95,7 @@ export default function FavoriteFoldersPage({
     const selectedOptionValueRef = useRef<string | null>(null);
     const isRefreshingRef = useRef(false);
     const handledRefreshRequestIdRef = useRef(refreshRequestId);
+    const handledSelectorRequestIdRef = useRef(selectorRequestId);
     const listRef = useRef<FlatList<FavoriteVideo> | null>(null);
     const foldersControllerRef = useRef<AbortController | null>(null);
     const videosControllerRef = useRef<AbortController | null>(null);
@@ -330,6 +335,15 @@ export default function FavoriteFoldersPage({
     }, [refreshFavorites, refreshRequestId]);
 
     useEffect(() => {
+        if (handledSelectorRequestIdRef.current === selectorRequestId) {
+            return;
+        }
+
+        handledSelectorRequestIdRef.current = selectorRequestId;
+        setIsSelectorVisible(true);
+    }, [selectorRequestId]);
+
+    useEffect(() => {
         void initializeFavorites();
 
         return () => {
@@ -343,6 +357,13 @@ export default function FavoriteFoldersPage({
     const selectedFolder = folders.find(
         (folder) => folder.id === selectedFolderId,
     ) ?? null;
+    const isCollectionsSelected =
+        selectedOptionValue === COLLECTIONS_OPTION_VALUE;
+    const selectedOptionLabel = isCollectionsSelected
+        ? '合集'
+        : selectedFolder
+            ? `${selectedFolder.title}(${selectedFolder.mediaCount})`
+            : '收藏夹';
 
     const renderFavoriteVideo = useCallback(({
         item,
@@ -449,12 +470,15 @@ export default function FavoriteFoldersPage({
         );
     }
 
-    const isCollectionsSelected =
-        selectedOptionValue === COLLECTIONS_OPTION_VALUE;
-
     return (
         <View style={styles.page}>
-            <SelectionBar
+            <SelectionHeader
+                accessibilityLabel='选择收藏夹或合集'
+                label={selectedOptionLabel}
+                onPress={() => setIsSelectorVisible(true)}
+            />
+
+            <SelectionSheet
                 errorMessage={
                     isCollectionsSelected || folders.length === 0
                         ? null
@@ -465,6 +489,7 @@ export default function FavoriteFoldersPage({
                     isFoldersLoading &&
                     !isRefreshing
                 }
+                onClose={() => setIsSelectorVisible(false)}
                 onRetry={() => void refreshFavorites()}
                 onSelect={(optionValue) => {
                     if (optionValue === COLLECTIONS_OPTION_VALUE) {
@@ -491,6 +516,8 @@ export default function FavoriteFoldersPage({
                     })),
                 ]}
                 selectedValue={selectedOptionValue}
+                title='选择收藏夹'
+                visible={isSelectorVisible}
             />
 
             <View style={[

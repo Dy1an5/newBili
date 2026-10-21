@@ -49,8 +49,9 @@ type MainTabParamList = {
 
 type BlurTargets = Record<keyof MainTabParamList, RefObject<View | null>>;
 
-type RefreshRequestProps = {
+type TabPageProps = {
     refreshRequestId: number;
+    selectorRequestId: number;
 };
 
 type FavoritesStackParamList = {
@@ -100,10 +101,25 @@ function useTabRefreshRequest(
     return refreshRequestId;
 }
 
+function useTabLongPressRequest(
+    navigation: BottomTabNavigationProp<MainTabParamList>,
+) {
+    const [selectorRequestId, setSelectorRequestId] = useState(0);
+
+    useEffect(() => navigation.addListener('tabLongPress', () => {
+        if (navigation.isFocused()) {
+            setSelectorRequestId((currentId) => currentId + 1);
+        }
+    }), [navigation]);
+
+    return selectorRequestId;
+}
+
 function HomeScreen({
     navigation,
     refreshRequestId,
-}: NativeStackScreenProps<HomeStackParamList, 'Home'> & RefreshRequestProps) {
+    selectorRequestId,
+}: NativeStackScreenProps<HomeStackParamList, 'Home'> & TabPageProps) {
     return (
         <FollowingPage
             onPicturePress={(picture) => {
@@ -113,6 +129,7 @@ function HomeScreen({
                 navigation.navigate('VideoDetail', { target });
             }}
             refreshRequestId={refreshRequestId}
+            selectorRequestId={selectorRequestId}
         />
     );
 }
@@ -145,6 +162,7 @@ function HomeNavigator({
 }: BottomTabScreenProps<MainTabParamList, 'HomeTab'>) {
     const blurTarget = useBlurTarget('HomeTab');
     const refreshRequestId = useTabRefreshRequest(navigation);
+    const selectorRequestId = useTabLongPressRequest(navigation);
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
@@ -154,6 +172,7 @@ function HomeNavigator({
                         <HomeScreen
                             {...props}
                             refreshRequestId={refreshRequestId}
+                            selectorRequestId={selectorRequestId}
                         />
                     )}
                 </HomeStack.Screen>
@@ -170,7 +189,8 @@ function HomeNavigator({
 function FavoritesHomeScreen({
     navigation,
     refreshRequestId,
-}: NativeStackScreenProps<FavoritesStackParamList, 'FavoritesHome'> & RefreshRequestProps) {
+    selectorRequestId,
+}: NativeStackScreenProps<FavoritesStackParamList, 'FavoritesHome'> & TabPageProps) {
     return (
         <FavoriteFoldersPage
             onCollectionPress={(collection) => {
@@ -178,6 +198,7 @@ function FavoritesHomeScreen({
             }}
             onVideoPress={(target) => navigation.navigate('VideoDetail', { target })}
             refreshRequestId={refreshRequestId}
+            selectorRequestId={selectorRequestId}
         />
     );
 }
@@ -213,6 +234,7 @@ function FavoritesNavigator({
 }: BottomTabScreenProps<MainTabParamList, 'FavoritesTab'>) {
     const blurTarget = useBlurTarget('FavoritesTab');
     const refreshRequestId = useTabRefreshRequest(navigation);
+    const selectorRequestId = useTabLongPressRequest(navigation);
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
@@ -222,6 +244,7 @@ function FavoritesNavigator({
                         <FavoritesHomeScreen
                             {...props}
                             refreshRequestId={refreshRequestId}
+                            selectorRequestId={selectorRequestId}
                         />
                     )}
                 </FavoritesStack.Screen>
@@ -238,13 +261,15 @@ function FavoritesNavigator({
 function WatchLaterListScreen({
     navigation,
     refreshRequestId,
-}: NativeStackScreenProps<WatchLaterStackParamList, 'WatchLaterList'> & RefreshRequestProps) {
+    selectorRequestId,
+}: NativeStackScreenProps<WatchLaterStackParamList, 'WatchLaterList'> & TabPageProps) {
     return (
         <WatchLaterPage
             onVideoPress={(target) => {
                 navigation.navigate('VideoDetail', { target });
             }}
             refreshRequestId={refreshRequestId}
+            selectorRequestId={selectorRequestId}
         />
     );
 }
@@ -267,6 +292,7 @@ function WatchLaterNavigator({
 }: BottomTabScreenProps<MainTabParamList, 'WatchLaterTab'>) {
     const blurTarget = useBlurTarget('WatchLaterTab');
     const refreshRequestId = useTabRefreshRequest(navigation);
+    const selectorRequestId = useTabLongPressRequest(navigation);
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
@@ -276,6 +302,7 @@ function WatchLaterNavigator({
                         <WatchLaterListScreen
                             {...props}
                             refreshRequestId={refreshRequestId}
+                            selectorRequestId={selectorRequestId}
                         />
                     )}
                 </WatchLaterStack.Screen>

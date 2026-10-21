@@ -13,7 +13,8 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
-import VideoListSortToolbar from '@/components/VideoListSortToolbar';
+import SelectionHeader from '@/components/SelectionHeader';
+import SelectionSheet from '@/components/SelectionSheet';
 import VideoListCard from '@/components/VideoListCard';
 import {
     fetchWatchLaterVideoPage,
@@ -32,6 +33,7 @@ import { isRequestCancelled } from '@/tool/requestCancellation';
 type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
+    selectorRequestId: number;
 };
 
 const getErrorMessage = createGetErrorMessage(
@@ -56,9 +58,11 @@ function getWatchLaterVideoKey(video: WatchLaterVideo): string {
 export default function WatchLaterPage({
     onVideoPress,
     refreshRequestId,
+    selectorRequestId,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [videos, setVideos] = useState<WatchLaterVideo[]>([]);
+    const [isSelectorVisible, setIsSelectorVisible] = useState(false);
     const [ascending, setAscending] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
@@ -72,6 +76,7 @@ export default function WatchLaterPage({
         useRef<AbortController | null>(null);
     const isRefreshingRef = useRef(false);
     const handledRefreshRequestIdRef = useRef(refreshRequestId);
+    const handledSelectorRequestIdRef = useRef(selectorRequestId);
     const listRef = useRef<FlatList<WatchLaterVideo> | null>(null);
 
     const loadVideoPage = useCallback(async (
@@ -178,6 +183,15 @@ export default function WatchLaterPage({
     }, [refreshRequestId, refreshWatchLater]);
 
     useEffect(() => {
+        if (handledSelectorRequestIdRef.current === selectorRequestId) {
+            return;
+        }
+
+        handledSelectorRequestIdRef.current = selectorRequestId;
+        setIsSelectorVisible(true);
+    }, [selectorRequestId]);
+
+    useEffect(() => {
         void loadVideoPage(1, false);
 
         return () => {
@@ -190,6 +204,7 @@ export default function WatchLaterPage({
         requestControllerRef.current?.abort();
         setVideos([]);
         setCurrentPage(0);
+        setTotalCount(0);
         setHasMore(true);
         setIsLoading(true);
         setIsLoadingMore(false);
@@ -217,20 +232,41 @@ export default function WatchLaterPage({
         />
     ), [onVideoPress]);
 
-    const toolbar = (
-        <VideoListSortToolbar
-            ascending={ascending}
-            ascendingLabel='最早添加'
-            descendingLabel='最近添加'
-            onSortChange={selectSort}
-            title={`稍后再看(${totalCount})`}
-        />
+    const sortLabel = ascending ? '最早添加' : '最近添加';
+    const header = (
+        <>
+            <SelectionHeader
+                accessibilityLabel='选择稍后再看排序'
+                label={`稍后再看 · ${sortLabel}`}
+                onPress={() => setIsSelectorVisible(true)}
+            />
+
+            <SelectionSheet
+                onClose={() => setIsSelectorVisible(false)}
+                onSelect={selectSort}
+                options={[
+                    {
+                        value: false,
+                        label: '最近添加',
+                        accessibilityLabel: '最近添加优先',
+                    },
+                    {
+                        value: true,
+                        label: '最早添加',
+                        accessibilityLabel: '最早添加优先',
+                    },
+                ]}
+                selectedValue={ascending}
+                title={totalCount > 0 ? `稍后再看(共${totalCount}个)` : '稍后再看'}
+                visible={isSelectorVisible}
+            />
+        </>
     );
 
     if (isLoading && videos.length === 0) {
         return (
             <View style={styles.page}>
-                {toolbar}
+                {header}
                 <View style={styles.centered}>
                     <ActivityIndicator color={colors.accentForeground} size='large' />
                     <Text style={styles.statusText}>正在加载稍后再看...</Text>
@@ -242,7 +278,7 @@ export default function WatchLaterPage({
     if (errorMessage && videos.length === 0) {
         return (
             <View style={styles.page}>
-                {toolbar}
+                {header}
                 <View style={styles.centered}>
                     <Text style={styles.errorText}>{errorMessage}</Text>
                     <AppButton
@@ -257,7 +293,7 @@ export default function WatchLaterPage({
 
     return (
         <View style={styles.page}>
-            {toolbar}
+            {header}
             <FlatList
                 ref={listRef}
                 data={videos}

@@ -17,7 +17,8 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
-import SelectionBar from '@/components/SelectionBar';
+import SelectionHeader from '@/components/SelectionHeader';
+import SelectionSheet from '@/components/SelectionSheet';
 import FollowingPictureCard from '@/page/following/FollowingPictureCard';
 import FollowingVideoCard from '@/page/following/FollowingVideoCard';
 import {
@@ -48,6 +49,7 @@ type Props = {
     onPicturePress: (picture: FollowingPicture) => void;
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
+    selectorRequestId: number;
 };
 
 function formatPublishedTime(timestamp: number): string {
@@ -116,9 +118,11 @@ export default function FollowingPage({
     onPicturePress,
     onVideoPress,
     refreshRequestId,
+    selectorRequestId,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [dynamics, setDynamics] = useState<FollowingItem[]>([]);
+    const [isSelectorVisible, setIsSelectorVisible] = useState(false);
     const [groups, setGroups] = useState<FollowingGroup[]>([]);
     const [memberMidsByTagId, setMemberMidsByTagId] =
         useState<MemberMidsByTagId>({});
@@ -148,6 +152,7 @@ export default function FollowingPage({
     const isGroupScanPausedRef = useRef(false);
     const isRefreshingRef = useRef(false);
     const handledRefreshRequestIdRef = useRef(refreshRequestId);
+    const handledSelectorRequestIdRef = useRef(selectorRequestId);
     const listRef = useRef<FlatList<FollowingItem> | null>(null);
     const listViewportHeightRef = useRef(0);
     const listContentHeightRef = useRef(0);
@@ -517,6 +522,15 @@ export default function FollowingPage({
     }, [refreshFollowing, refreshRequestId]);
 
     useEffect(() => {
+        if (handledSelectorRequestIdRef.current === selectorRequestId) {
+            return;
+        }
+
+        handledSelectorRequestIdRef.current = selectorRequestId;
+        setIsSelectorVisible(true);
+    }, [selectorRequestId]);
+
+    useEffect(() => {
         void loadFirstPage(false);
         void loadGroups();
 
@@ -536,6 +550,9 @@ export default function FollowingPage({
         () => groups.find((group) => group.tagId === selectedTagId) ?? null,
         [groups, selectedTagId],
     );
+    const selectedGroupLabel = selectedGroup === null
+        ? '全部'
+        : `${selectedGroup.name}(${selectedGroup.memberCount})`;
     const selectedMemberMids = useMemo(() => {
         if (selectedTagId === null) {
             return null;
@@ -787,9 +804,16 @@ export default function FollowingPage({
 
     return (
         <View style={styles.page}>
-            <SelectionBar
+            <SelectionHeader
+                accessibilityLabel='选择关注分组'
+                label={selectedGroupLabel}
+                onPress={() => setIsSelectorVisible(true)}
+            />
+
+            <SelectionSheet
                 errorMessage={groupsErrorMessage}
                 isLoading={isGroupsLoading && !isRefreshing}
+                onClose={() => setIsSelectorVisible(false)}
                 onRetry={() => void loadGroups()}
                 onSelect={handleGroupSelect}
                 options={[
@@ -805,6 +829,8 @@ export default function FollowingPage({
                     })),
                 ]}
                 selectedValue={selectedTagId}
+                title='选择关注分组'
+                visible={isSelectorVisible}
             />
 
             <FlatList

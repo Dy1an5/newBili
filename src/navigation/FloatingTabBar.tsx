@@ -125,6 +125,11 @@ export default function FloatingTabBar({
                             };
 
                             const handleLongPress = () => {
+                                if (!isFocused) {
+                                    navigation.navigate(route.name, route.params);
+                                    return;
+                                }
+
                                 navigation.emit({
                                     type: 'tabLongPress',
                                     target: route.key,
