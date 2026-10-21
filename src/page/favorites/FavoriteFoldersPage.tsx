@@ -14,7 +14,9 @@ import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
 import SelectionHeader from '@/components/SelectionHeader';
-import SelectionSheet from '@/components/SelectionSheet';
+import SelectionSheet, {
+    type SelectorAnchor,
+} from '@/components/SelectionSheet';
 import VideoListCard from '@/components/VideoListCard';
 import FollowedCollectionsPage from '@/page/favorites/FollowedCollectionsPage';
 import type { FollowedCollection } from '@/page/favorites/fetchFollowedCollections';
@@ -39,6 +41,7 @@ type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
     selectorRequestId: number;
+    selectorAnchor: SelectorAnchor | null;
 };
 
 type VideoRequestMode = 'initial' | 'refresh' | 'more';
@@ -69,6 +72,7 @@ export default function FavoriteFoldersPage({
     onVideoPress,
     refreshRequestId,
     selectorRequestId,
+    selectorAnchor,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [folders, setFolders] = useState<FavoriteFolder[]>([]);
@@ -335,7 +339,10 @@ export default function FavoriteFoldersPage({
     }, [refreshFavorites, refreshRequestId]);
 
     useEffect(() => {
-        if (handledSelectorRequestIdRef.current === selectorRequestId) {
+        if (
+            selectorRequestId === 0 ||
+            handledSelectorRequestIdRef.current === selectorRequestId
+        ) {
             return;
         }
 
@@ -479,6 +486,7 @@ export default function FavoriteFoldersPage({
             />
 
             <SelectionSheet
+                anchor={selectorAnchor}
                 errorMessage={
                     isCollectionsSelected || folders.length === 0
                         ? null

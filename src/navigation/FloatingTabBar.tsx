@@ -3,9 +3,10 @@ import {
     type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
-import { type RefObject, useContext } from 'react';
+import { type RefObject, useContext, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { SelectorAnchor } from '@/components/SelectionSheet';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -15,6 +16,10 @@ type Props = BottomTabBarProps & {
     blurTarget: RefObject<View | null>;
     hasDeepSeekApiKey: boolean;
     onAgentConfigPress: () => void;
+    onTabSelectorRequest: (
+        routeName: string,
+        anchor: SelectorAnchor | null,
+    ) => void;
 };
 
 const TAB_ITEMS: Record<string, { icon: TabIconName; label: string }> = {
@@ -73,8 +78,10 @@ export default function FloatingTabBar({
     blurTarget,
     hasDeepSeekApiKey,
     onAgentConfigPress,
+    onTabSelectorRequest,
 }: Props) {
     const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
+    const tabItemRefs = useRef<Record<string, View | null>>({});
 
     return (
         <View
@@ -130,9 +137,18 @@ export default function FloatingTabBar({
                                     return;
                                 }
 
-                                navigation.emit({
-                                    type: 'tabLongPress',
-                                    target: route.key,
+                                const tabItem = tabItemRefs.current[route.key];
+
+                                if (!tabItem) {
+                                    onTabSelectorRequest(route.name, null);
+                                    return;
+                                }
+
+                                tabItem.measureInWindow((x, _y, width) => {
+                                    onTabSelectorRequest(route.name, {
+                                        x,
+                                        width,
+                                    });
                                 });
                             };
 
@@ -144,6 +160,9 @@ export default function FloatingTabBar({
                                     key={route.key}
                                     onLongPress={handleLongPress}
                                     onPress={handlePress}
+                                    ref={(node) => {
+                                        tabItemRefs.current[route.key] = node;
+                                    }}
                                     style={({ pressed }) => [
                                         styles.tabItem,
                                         isFocused && styles.tabItemSelected,

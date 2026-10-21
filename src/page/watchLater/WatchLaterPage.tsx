@@ -14,7 +14,9 @@ import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
 import SelectionHeader from '@/components/SelectionHeader';
-import SelectionSheet from '@/components/SelectionSheet';
+import SelectionSheet, {
+    type SelectorAnchor,
+} from '@/components/SelectionSheet';
 import VideoListCard from '@/components/VideoListCard';
 import {
     fetchWatchLaterVideoPage,
@@ -34,6 +36,7 @@ type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
     selectorRequestId: number;
+    selectorAnchor: SelectorAnchor | null;
 };
 
 const getErrorMessage = createGetErrorMessage(
@@ -59,6 +62,7 @@ export default function WatchLaterPage({
     onVideoPress,
     refreshRequestId,
     selectorRequestId,
+    selectorAnchor,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [videos, setVideos] = useState<WatchLaterVideo[]>([]);
@@ -183,7 +187,10 @@ export default function WatchLaterPage({
     }, [refreshRequestId, refreshWatchLater]);
 
     useEffect(() => {
-        if (handledSelectorRequestIdRef.current === selectorRequestId) {
+        if (
+            selectorRequestId === 0 ||
+            handledSelectorRequestIdRef.current === selectorRequestId
+        ) {
             return;
         }
 
@@ -242,6 +249,7 @@ export default function WatchLaterPage({
             />
 
             <SelectionSheet
+                anchor={selectorAnchor}
                 onClose={() => setIsSelectorVisible(false)}
                 onSelect={selectSort}
                 options={[

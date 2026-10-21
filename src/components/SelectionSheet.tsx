@@ -1,3 +1,5 @@
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Modal,
@@ -6,14 +8,26 @@ import {
     StyleSheet,
     Text,
     View,
+    useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming,
+} from 'react-native-reanimated';
 
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 
 type SelectionValue = string | number | boolean | null;
+
+export type SelectorAnchor = {
+    x: number;
+    width: number;
+};
 
 export type SelectionOption<Value extends SelectionValue = SelectionValue> = {
     value: Value;
@@ -26,6 +40,7 @@ type Props<Value extends SelectionValue> = {
     title: string;
     options: SelectionOption<Value>[];
     selectedValue: Value;
+    anchor?: SelectorAnchor | null;
     isLoading?: boolean;
     errorMessage?: string | null;
     onClose: () => void;
@@ -33,25 +48,65 @@ type Props<Value extends SelectionValue> = {
     onSelect: (value: Value) => void;
 };
 
+const SHEET_WIDTH = 160;
+
 export default function SelectionSheet<Value extends SelectionValue>({
     visible,
     title,
     options,
     selectedValue,
+    anchor = null,
     isLoading = false,
     errorMessage = null,
     onClose,
     onRetry,
     onSelect,
 }: Props<Value>) {
-    const safeAreaInsets = useSafeAreaInsets();
+    const bottomTabBarHeight = useBottomTabBarHeight();
+    const { width: windowWidth } = useWindowDimensions();
+    const [isMounted, setIsMounted] = useState(visible);
+    const progress = useSharedValue(0);
+
+    useEffect(() => {
+        if (visible) {
+            setIsMounted(true);
+            progress.value = withSpring(1, {
+                damping: 22,
+                stiffness: 280,
+                mass: 0.7,
+            });
+            return;
+        }
+
+        progress.value = withTiming(0, { duration: 130 }, (finished) => {
+            if (finished) {
+                runOnJS(setIsMounted)(false);
+            }
+        });
+    }, [progress, visible]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        opacity: progress.value,
+        transform: [
+            { translateY: (1 - progress.value) * 10 },
+            { scale: 0.94 + progress.value * 0.06 },
+        ],
+    }));
+
+    const anchorCenterX = anchor === null
+        ? windowWidth / 2
+        : anchor.x + anchor.width / 2;
+    const left = Math.min(
+        Math.max(anchorCenterX - SHEET_WIDTH / 2, spacing.md),
+        Math.max(windowWidth - SHEET_WIDTH - spacing.md, spacing.md),
+    );
 
     return (
         <Modal
-            animationType='fade'
+            animationType='none'
             onRequestClose={onClose}
             transparent
-            visible={visible}
+            visible={isMounted}
         >
             <View style={styles.overlay}>
                 <Pressable
@@ -60,36 +115,22 @@ export default function SelectionSheet<Value extends SelectionValue>({
                     style={StyleSheet.absoluteFill}
                 />
 
-                <View
+                <Animated.View
                     style={[
                         styles.sheet,
                         {
-                            paddingBottom: Math.max(
-                                safeAreaInsets.bottom,
-                                spacing.md,
-                            ),
+                            left,
+                            bottom: bottomTabBarHeight + spacing.xs,
                         },
+                        animatedStyle,
                     ]}
                 >
-                    <View style={styles.header}>
-                        <Text numberOfLines={1} style={styles.title}>
-                            {title}
-                        </Text>
-
-                        <Pressable
-                            accessibilityRole='button'
-                            onPress={onClose}
-                            style={({ pressed }) => [
-                                styles.closeButton,
-                                pressed && styles.pressed,
-                            ]}
-                        >
-                            <Text style={styles.closeText}>关闭</Text>
-                        </Pressable>
-                    </View>
+                    <Text numberOfLines={1} style={styles.title}>
+                        {title}
+                    </Text>
 
                     {errorMessage ? (
-                        <View style={styles.errorRow}>
+                        <View style={styles.errorBox}>
                             <Text numberOfLines={2} style={styles.errorText}>
                                 {errorMessage}
                             </Text>
@@ -110,7 +151,7 @@ export default function SelectionSheet<Value extends SelectionValue>({
                     ) : null}
 
                     {isLoading ? (
-                        <View style={styles.loadingRow}>
+                        <View style={styles.loading}>
                             <ActivityIndicator
                                 color={colors.accentForeground}
                                 size='small'
@@ -162,7 +203,7 @@ export default function SelectionSheet<Value extends SelectionValue>({
                             })}
                         </ScrollView>
                     )}
-                </View>
+                </Animated.View>
             </View>
         </Modal>
     );
@@ -171,106 +212,94 @@ export default function SelectionSheet<Value extends SelectionValue>({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: colors.modalBackdrop,
     },
     sheet: {
-        maxHeight: '70%',
-        paddingTop: spacing.md,
-        borderTopWidth: 1,
+        position: 'absolute',
+        width: SHEET_WIDTH,
+        maxHeight: '60%',
+        paddingVertical: spacing.sm,
+        borderWidth: 1,
         borderColor: colors.surfaceBorder,
-        borderTopLeftRadius: radius.lg,
-        borderTopRightRadius: radius.lg,
+        borderRadius: radius.md,
         backgroundColor: colors.surfaceBackground,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.lg,
+        elevation: 12,
+        shadowColor: colors.pageBackground,
+        shadowOffset: {
+            width: 0,
+            height: 6,
+        },
+        shadowOpacity: 0.5,
+        shadowRadius: 14,
+        transformOrigin: 'bottom',
     },
     title: {
-        flex: 1,
-        color: colors.primaryText,
-        fontSize: 17,
-        fontWeight: '700',
-    },
-    closeButton: {
-        minHeight: 40,
-        justifyContent: 'center',
-        paddingLeft: spacing.md,
-    },
-    closeText: {
-        color: colors.secondaryText,
-        fontSize: 14,
+        paddingHorizontal: spacing.md,
+        paddingBottom: spacing.xs,
+        color: colors.mutedText,
+        fontSize: 11,
         fontWeight: '600',
     },
-    errorRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.lg,
-        paddingTop: spacing.sm,
+    errorBox: {
+        paddingHorizontal: spacing.md,
+        paddingBottom: spacing.sm,
     },
     errorText: {
-        flex: 1,
         color: colors.mutedText,
-        fontSize: 13,
+        fontSize: 12,
+        lineHeight: 17,
     },
     retryButton: {
-        paddingHorizontal: spacing.sm,
+        alignSelf: 'flex-start',
         paddingVertical: spacing.xs,
     },
     retryText: {
         color: colors.accentForeground,
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '600',
     },
-    loadingRow: {
-        minHeight: 96,
+    loading: {
+        minHeight: 72,
         alignItems: 'center',
         justifyContent: 'center',
     },
     optionScroll: {
-        marginTop: spacing.sm,
+        flexShrink: 1,
     },
     options: {
-        paddingHorizontal: spacing.md,
-        paddingBottom: spacing.sm,
+        paddingHorizontal: spacing.xs,
+        paddingBottom: spacing.xs,
     },
     option: {
-        minHeight: 48,
+        minHeight: 38,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: spacing.xs,
-        paddingHorizontal: spacing.md,
-        borderWidth: 1,
-        borderColor: colors.surfaceBorder,
-        borderRadius: radius.md,
-        backgroundColor: colors.pageBackground,
+        marginBottom: 2,
+        paddingHorizontal: spacing.sm,
+        borderRadius: radius.sm,
     },
     selectedOption: {
-        borderColor: colors.accentForeground,
         backgroundColor: colors.accentBackground,
     },
     optionText: {
         flexShrink: 1,
         color: colors.secondaryText,
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
     },
     selectedOptionText: {
         color: colors.accentForeground,
     },
     checkMark: {
-        marginLeft: spacing.sm,
+        marginLeft: spacing.xs,
         color: colors.accentForeground,
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: '700',
     },
     emptyText: {
-        paddingVertical: spacing.lg,
+        paddingVertical: spacing.md,
         color: colors.mutedText,
-        fontSize: 13,
+        fontSize: 12,
         textAlign: 'center',
     },
     pressed: {

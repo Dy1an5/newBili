@@ -10,6 +10,7 @@ import { BlurTargetView } from 'expo-blur';
 import {
     createContext,
     type RefObject,
+    useCallback,
     useContext,
     useEffect,
     useMemo,
@@ -20,6 +21,7 @@ import { StyleSheet, type View } from 'react-native';
 
 import { useAgentSession } from '@/agent/session/AgentSessionContext';
 import ApiKeyInputModal from '@/agent/ui/ApiKeyInputModal';
+import type { SelectorAnchor } from '@/components/SelectionSheet';
 import FloatingTabBar from '@/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
 import FollowedCollectionDetailPage from '@/page/favorites/FollowedCollectionDetailPage';
@@ -52,6 +54,7 @@ type BlurTargets = Record<keyof MainTabParamList, RefObject<View | null>>;
 type TabPageProps = {
     refreshRequestId: number;
     selectorRequestId: number;
+    selectorAnchor: SelectorAnchor | null;
 };
 
 type FavoritesStackParamList = {
@@ -76,6 +79,20 @@ const FavoritesStack = createNativeStackNavigator<FavoritesStackParamList>();
 const WatchLaterStack = createNativeStackNavigator<WatchLaterStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const BlurTargetsContext = createContext<BlurTargets | null>(null);
+const TabSelectorRequestContext =
+    createContext<TabSelectorRequest | null>(null);
+
+type TabSelectorRequest = {
+    id: number;
+    routeName: string;
+    anchor: SelectorAnchor | null;
+};
+
+function useTabSelectorRequest(routeName: string) {
+    const request = useContext(TabSelectorRequestContext);
+
+    return request?.routeName === routeName ? request : null;
+}
 
 function useBlurTarget(tabName: keyof MainTabParamList) {
     const blurTargets = useContext(BlurTargetsContext);
@@ -101,24 +118,11 @@ function useTabRefreshRequest(
     return refreshRequestId;
 }
 
-function useTabLongPressRequest(
-    navigation: BottomTabNavigationProp<MainTabParamList>,
-) {
-    const [selectorRequestId, setSelectorRequestId] = useState(0);
-
-    useEffect(() => navigation.addListener('tabLongPress', () => {
-        if (navigation.isFocused()) {
-            setSelectorRequestId((currentId) => currentId + 1);
-        }
-    }), [navigation]);
-
-    return selectorRequestId;
-}
-
 function HomeScreen({
     navigation,
     refreshRequestId,
     selectorRequestId,
+    selectorAnchor,
 }: NativeStackScreenProps<HomeStackParamList, 'Home'> & TabPageProps) {
     return (
         <FollowingPage
@@ -129,6 +133,7 @@ function HomeScreen({
                 navigation.navigate('VideoDetail', { target });
             }}
             refreshRequestId={refreshRequestId}
+            selectorAnchor={selectorAnchor}
             selectorRequestId={selectorRequestId}
         />
     );
@@ -162,7 +167,7 @@ function HomeNavigator({
 }: BottomTabScreenProps<MainTabParamList, 'HomeTab'>) {
     const blurTarget = useBlurTarget('HomeTab');
     const refreshRequestId = useTabRefreshRequest(navigation);
-    const selectorRequestId = useTabLongPressRequest(navigation);
+    const selectorRequest = useTabSelectorRequest('HomeTab');
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
@@ -172,7 +177,8 @@ function HomeNavigator({
                         <HomeScreen
                             {...props}
                             refreshRequestId={refreshRequestId}
-                            selectorRequestId={selectorRequestId}
+                            selectorAnchor={selectorRequest?.anchor ?? null}
+                            selectorRequestId={selectorRequest?.id ?? 0}
                         />
                     )}
                 </HomeStack.Screen>
@@ -190,6 +196,7 @@ function FavoritesHomeScreen({
     navigation,
     refreshRequestId,
     selectorRequestId,
+    selectorAnchor,
 }: NativeStackScreenProps<FavoritesStackParamList, 'FavoritesHome'> & TabPageProps) {
     return (
         <FavoriteFoldersPage
@@ -198,6 +205,7 @@ function FavoritesHomeScreen({
             }}
             onVideoPress={(target) => navigation.navigate('VideoDetail', { target })}
             refreshRequestId={refreshRequestId}
+            selectorAnchor={selectorAnchor}
             selectorRequestId={selectorRequestId}
         />
     );
@@ -234,7 +242,7 @@ function FavoritesNavigator({
 }: BottomTabScreenProps<MainTabParamList, 'FavoritesTab'>) {
     const blurTarget = useBlurTarget('FavoritesTab');
     const refreshRequestId = useTabRefreshRequest(navigation);
-    const selectorRequestId = useTabLongPressRequest(navigation);
+    const selectorRequest = useTabSelectorRequest('FavoritesTab');
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
@@ -244,7 +252,8 @@ function FavoritesNavigator({
                         <FavoritesHomeScreen
                             {...props}
                             refreshRequestId={refreshRequestId}
-                            selectorRequestId={selectorRequestId}
+                            selectorAnchor={selectorRequest?.anchor ?? null}
+                            selectorRequestId={selectorRequest?.id ?? 0}
                         />
                     )}
                 </FavoritesStack.Screen>
@@ -262,6 +271,7 @@ function WatchLaterListScreen({
     navigation,
     refreshRequestId,
     selectorRequestId,
+    selectorAnchor,
 }: NativeStackScreenProps<WatchLaterStackParamList, 'WatchLaterList'> & TabPageProps) {
     return (
         <WatchLaterPage
@@ -269,6 +279,7 @@ function WatchLaterListScreen({
                 navigation.navigate('VideoDetail', { target });
             }}
             refreshRequestId={refreshRequestId}
+            selectorAnchor={selectorAnchor}
             selectorRequestId={selectorRequestId}
         />
     );
@@ -292,7 +303,7 @@ function WatchLaterNavigator({
 }: BottomTabScreenProps<MainTabParamList, 'WatchLaterTab'>) {
     const blurTarget = useBlurTarget('WatchLaterTab');
     const refreshRequestId = useTabRefreshRequest(navigation);
-    const selectorRequestId = useTabLongPressRequest(navigation);
+    const selectorRequest = useTabSelectorRequest('WatchLaterTab');
 
     return (
         <BlurTargetView ref={blurTarget} style={styles.blurTarget}>
@@ -302,7 +313,8 @@ function WatchLaterNavigator({
                         <WatchLaterListScreen
                             {...props}
                             refreshRequestId={refreshRequestId}
-                            selectorRequestId={selectorRequestId}
+                            selectorAnchor={selectorRequest?.anchor ?? null}
+                            selectorRequestId={selectorRequest?.id ?? 0}
                         />
                     )}
                 </WatchLaterStack.Screen>
@@ -320,6 +332,8 @@ export default function MainTabNavigator() {
     const favoritesBlurTarget = useRef<View | null>(null);
     const watchLaterBlurTarget = useRef<View | null>(null);
     const [isApiKeyModalVisible, setIsApiKeyModalVisible] = useState(false);
+    const [tabSelectorRequest, setTabSelectorRequest] =
+        useState<TabSelectorRequest | null>(null);
     const {
         clearDeepSeekApiKey,
         deepSeekApiKey,
@@ -330,53 +344,66 @@ export default function MainTabNavigator() {
         FavoritesTab: favoritesBlurTarget,
         WatchLaterTab: watchLaterBlurTarget,
     }), []);
+    const handleTabSelectorRequest = useCallback((
+        routeName: string,
+        anchor: SelectorAnchor | null,
+    ) => {
+        setTabSelectorRequest((currentRequest) => ({
+            id: (currentRequest?.id ?? 0) + 1,
+            routeName,
+            anchor,
+        }));
+    }, []);
 
     return (
         <BlurTargetsContext.Provider value={blurTargets}>
-            <Tab.Navigator
-                tabBar={(props) => {
-                    const activeRoute = props.state.routes[props.state.index];
-                    const nestedRouteName = getFocusedRouteNameFromRoute(activeRoute);
+            <TabSelectorRequestContext.Provider value={tabSelectorRequest}>
+                <Tab.Navigator
+                    tabBar={(props) => {
+                        const activeRoute = props.state.routes[props.state.index];
+                        const nestedRouteName = getFocusedRouteNameFromRoute(activeRoute);
 
-                    if (
-                        nestedRouteName === 'CollectionDetail' ||
-                        nestedRouteName === 'DynamicDetail' ||
-                        nestedRouteName === 'VideoDetail'
-                    ) {
-                        return null;
-                    }
+                        if (
+                            nestedRouteName === 'CollectionDetail' ||
+                            nestedRouteName === 'DynamicDetail' ||
+                            nestedRouteName === 'VideoDetail'
+                        ) {
+                            return null;
+                        }
 
-                    const routeName = activeRoute.name as keyof MainTabParamList;
+                        const routeName = activeRoute.name as keyof MainTabParamList;
 
-                    return (
-                        <FloatingTabBar
-                            {...props}
-                            blurTarget={blurTargets[routeName]}
-                            hasDeepSeekApiKey={deepSeekApiKey !== null}
-                            onAgentConfigPress={() => setIsApiKeyModalVisible(true)}
-                        />
-                    );
-                }}
-                screenOptions={{
-                    headerShown: false,
-                }}
-            >
-                <Tab.Screen
-                    name='HomeTab'
-                    component={HomeNavigator}
-                    options={{ title: '动态' }}
-                />
-                <Tab.Screen
-                    name='FavoritesTab'
-                    component={FavoritesNavigator}
-                    options={{ title: '收藏' }}
-                />
-                <Tab.Screen
-                    name='WatchLaterTab'
-                    component={WatchLaterNavigator}
-                    options={{ title: '稍后再看' }}
-                />
-            </Tab.Navigator>
+                        return (
+                            <FloatingTabBar
+                                {...props}
+                                blurTarget={blurTargets[routeName]}
+                                hasDeepSeekApiKey={deepSeekApiKey !== null}
+                                onAgentConfigPress={() => setIsApiKeyModalVisible(true)}
+                                onTabSelectorRequest={handleTabSelectorRequest}
+                            />
+                        );
+                    }}
+                    screenOptions={{
+                        headerShown: false,
+                    }}
+                >
+                    <Tab.Screen
+                        name='HomeTab'
+                        component={HomeNavigator}
+                        options={{ title: '动态' }}
+                    />
+                    <Tab.Screen
+                        name='FavoritesTab'
+                        component={FavoritesNavigator}
+                        options={{ title: '收藏' }}
+                    />
+                    <Tab.Screen
+                        name='WatchLaterTab'
+                        component={WatchLaterNavigator}
+                        options={{ title: '稍后再看' }}
+                    />
+                </Tab.Navigator>
+            </TabSelectorRequestContext.Provider>
 
             <ApiKeyInputModal
                 hasApiKey={deepSeekApiKey !== null}

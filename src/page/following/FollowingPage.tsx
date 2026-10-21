@@ -18,7 +18,9 @@ import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
 import SelectionHeader from '@/components/SelectionHeader';
-import SelectionSheet from '@/components/SelectionSheet';
+import SelectionSheet, {
+    type SelectorAnchor,
+} from '@/components/SelectionSheet';
 import FollowingPictureCard from '@/page/following/FollowingPictureCard';
 import FollowingVideoCard from '@/page/following/FollowingVideoCard';
 import {
@@ -50,6 +52,7 @@ type Props = {
     onVideoPress: (target: VideoPlaybackTarget) => void;
     refreshRequestId: number;
     selectorRequestId: number;
+    selectorAnchor: SelectorAnchor | null;
 };
 
 function formatPublishedTime(timestamp: number): string {
@@ -119,6 +122,7 @@ export default function FollowingPage({
     onVideoPress,
     refreshRequestId,
     selectorRequestId,
+    selectorAnchor,
 }: Props) {
     const bottomTabBarHeight = useBottomTabBarHeight();
     const [dynamics, setDynamics] = useState<FollowingItem[]>([]);
@@ -522,7 +526,10 @@ export default function FollowingPage({
     }, [refreshFollowing, refreshRequestId]);
 
     useEffect(() => {
-        if (handledSelectorRequestIdRef.current === selectorRequestId) {
+        if (
+            selectorRequestId === 0 ||
+            handledSelectorRequestIdRef.current === selectorRequestId
+        ) {
             return;
         }
 
@@ -811,6 +818,7 @@ export default function FollowingPage({
             />
 
             <SelectionSheet
+                anchor={selectorAnchor}
                 errorMessage={groupsErrorMessage}
                 isLoading={isGroupsLoading && !isRefreshing}
                 onClose={() => setIsSelectorVisible(false)}
