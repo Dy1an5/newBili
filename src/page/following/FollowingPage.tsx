@@ -36,6 +36,7 @@ import {
 } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 const GROUP_FEED_SCAN_PAGE_LIMIT = 3;
@@ -78,13 +79,10 @@ function formatPublishedTime(timestamp: number): string {
     return `${month}-${day} ${hour}:${minute}`;
 }
 
-function getErrorMessage(error: unknown): string {
-    if (error instanceof FollowingRequestError) {
-        return error.message;
-    }
-
-    return '加载动态失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [FollowingRequestError],
+    '加载动态失败,请稍后重试',
+);
 
 function getFollowingItemKey(item: FollowingItem): string {
     return item.dynamicId;

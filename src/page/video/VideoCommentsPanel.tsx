@@ -47,6 +47,7 @@ import type {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = CollapsiblePageScrollProps & {
@@ -82,13 +83,10 @@ type PicturePreviewState = {
     initialIndex: number;
 };
 
-function getErrorMessage(error: unknown): string {
-    if (error instanceof VideoCommentsError) {
-        return error.message;
-    }
-
-    return '获取评论失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [VideoCommentsError],
+    '获取评论失败,请稍后重试',
+);
 
 function formatCount(count: number): string {
     if (count >= 10000) {

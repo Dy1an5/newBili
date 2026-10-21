@@ -30,6 +30,7 @@ import {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
@@ -40,13 +41,10 @@ type Props = {
 
 type RequestMode = 'initial' | 'refresh';
 
-function getErrorMessage(error: unknown): string {
-    if (error instanceof FollowedCollectionsRequestError) {
-        return error.message;
-    }
-
-    return '加载合集详情失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [FollowedCollectionsRequestError],
+    '加载合集详情失败,请稍后重试',
+);
 
 function formatPublishedTime(timestamp: number): string {
     if (timestamp <= 0) {

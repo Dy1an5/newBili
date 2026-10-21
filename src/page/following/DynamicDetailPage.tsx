@@ -26,6 +26,7 @@ import VideoCommentsPanel from '@/page/video/VideoCommentsPanel';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
@@ -34,13 +35,10 @@ type Props = {
 
 type DetailStatus = 'loading' | 'success' | 'error';
 
-function getErrorMessage(error: unknown): string {
-    if (error instanceof FollowingRequestError) {
-        return error.message;
-    }
-
-    return '加载动态详情失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [FollowingRequestError],
+    '加载动态详情失败,请稍后重试',
+);
 
 function formatPublishedTime(timestamp: number): string {
     if (timestamp <= 0) {

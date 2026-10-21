@@ -30,6 +30,7 @@ import {
 } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { createGetErrorMessageWithResource } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
@@ -42,13 +43,10 @@ type VideoRequestMode = 'initial' | 'refresh' | 'more';
 
 const COLLECTIONS_OPTION_VALUE = 'followed-collections';
 
-function getErrorMessage(error: unknown, resourceName: string): string {
-    if (error instanceof FavoritesRequestError) {
-        return error.message;
-    }
-
-    return `加载${resourceName}失败,请稍后重试`;
-}
+const getErrorMessage = createGetErrorMessageWithResource(
+    [FavoritesRequestError],
+    (resourceName) => `加载${resourceName}失败,请稍后重试`,
+);
 
 function formatFavoritedTime(timestamp: number): string {
     if (timestamp <= 0) {

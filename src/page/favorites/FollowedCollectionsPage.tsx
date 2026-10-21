@@ -24,6 +24,7 @@ import {
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 const COVER_WIDTH = 132;
@@ -40,13 +41,10 @@ type FailedRequest = {
     mode: RequestMode;
 };
 
-function getErrorMessage(error: unknown): string {
-    if (error instanceof FollowedCollectionsRequestError) {
-        return error.message;
-    }
-
-    return '加载合集失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [FollowedCollectionsRequestError],
+    '加载合集失败,请稍后重试',
+);
 
 function getCollectionKey(collection: FollowedCollection): string {
     return collection.id;

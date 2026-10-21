@@ -26,6 +26,7 @@ import {
 } from '@/page/video/videoPlaybackTarget';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
@@ -33,13 +34,10 @@ type Props = {
     refreshRequestId: number;
 };
 
-function getErrorMessage(error: unknown): string {
-    if (error instanceof WatchLaterRequestError) {
-        return error.message;
-    }
-
-    return '加载稍后再看失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [WatchLaterRequestError],
+    '加载稍后再看失败,请稍后重试',
+);
 
 function formatPublishedTime(timestamp: number): string {
     if (timestamp <= 0) {

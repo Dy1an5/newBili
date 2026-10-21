@@ -49,6 +49,7 @@ import type {
     CollapsiblePageScrollHandle,
     CollapsiblePageScrollProps,
 } from '@/page/video/collapsibleVideoScroll';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 const DEEPSEEK_MODEL_ID = 'deepseek-v4-flash';
@@ -93,19 +94,16 @@ type SummaryRequest = {
     target: VideoPartSummaryTarget;
 };
 
-function getErrorMessage(error: unknown): string {
-    if (
-        error instanceof BilibiliSubtitleError
-        || error instanceof DeepSeekRequestError
-        || error instanceof AgentTaskError
-        || error instanceof VideoSummaryPromptError
-        || error instanceof VideoPartSummaryStorageError
-    ) {
-        return error.message;
-    }
-
-    return '生成总结失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [
+        BilibiliSubtitleError,
+        DeepSeekRequestError,
+        AgentTaskError,
+        VideoSummaryPromptError,
+        VideoPartSummaryStorageError,
+    ],
+    '生成总结失败,请稍后重试',
+);
 
 function formatTime(timeMs: number): string {
     const totalSeconds = Math.max(0, Math.floor(timeMs / 1000));
