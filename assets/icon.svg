@@ -1,5 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="1024" height="1024">
-  <rect width="108" height="108" fill="#00AEEC"/>
-  <path d="M33 34a9 9 0 0 1 9-9h24a9 9 0 0 1 9 9v48L54 69 33 82z" fill="#FFFFFF"/>
-  <path d="M45 35v24l18-12z" fill="#00AEEC"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+    <rect width="1024" height="1024" fill="#F7F5F0"/>
+    <g>
+        <defs>
+            <linearGradient id="ring" gradientUnits="userSpaceOnUse" x1="340" y1="120" x2="700" y2="800">
+                <stop offset="0" stop-color="#D3895F"/>
+                <stop offset="0.55" stop-color="#C56942"/>
+                <stop offset="1" stop-color="#BE6039"/>
+            </linearGradient>
+            <radialGradient id="planet" cx="0.36" cy="0.32" r="0.82">
+                <stop offset="0" stop-color="#DC8B5E"/>
+                <stop offset="0.55" stop-color="#C4623A"/>
+                <stop offset="1" stop-color="#A44E2A"/>
+            </radialGradient>
+            <radialGradient id="moon" cx="0.36" cy="0.3" r="0.85">
+                <stop offset="0" stop-color="#F6D0B0"/>
+                <stop offset="0.55" stop-color="#EAB288"/>
+                <stop offset="1" stop-color="#E1A070"/>
+            </radialGradient>
+            <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0" stop-color="#FFFFFF"/>
+                <stop offset="0.2" stop-color="#FFFFFF"/>
+                <stop offset="1" stop-color="#000000"/>
+            </radialGradient>
+            <radialGradient id="hide" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0" stop-color="#000000"/>
+                <stop offset="0.35" stop-color="#000000"/>
+                <stop offset="1" stop-color="#FFFFFF"/>
+            </radialGradient>
+            <mask id="glowMask">
+                <rect width="1024" height="1024" fill="#000000"/>
+                <circle cx="352" cy="342" r="190" fill="url(#glow)"/>
+                <ellipse cx="672" cy="630" rx="270" ry="125" transform="rotate(145 672 630)" fill="url(#glow)"/>
+            </mask>
+            <mask id="moonFade">
+                <rect width="1024" height="1024" fill="#FFFFFF"/>
+                <circle cx="374" cy="327" r="94" fill="url(#hide)"/>
+                <circle cx="723" cy="591" r="94" fill="url(#hide)"/>
+            </mask>
+        </defs>
+        <g mask="url(#moonFade)">
+            <ellipse cx="516" cy="480.5" rx="423.9" ry="205.3" transform="rotate(-24.13 516 480.5)" fill="none" stroke="url(#ring)" stroke-width="34.3"/>
+            <ellipse cx="516" cy="480.5" rx="423.9" ry="205.3" transform="rotate(-24.13 516 480.5)" fill="none" stroke="#DFA47C" stroke-width="34.3" opacity="0.6" mask="url(#glowMask)"/>
+        </g>
+        <circle cx="509.9" cy="490.6" r="131.8" fill="url(#planet)"/>
+        <circle cx="373.8" cy="326.7" r="34" fill="url(#moon)"/>
+        <circle cx="723" cy="591.3" r="34" fill="url(#moon)"/>
+    </g>
 </svg>

@@ -27,7 +27,7 @@ fi
 printf '构建限制: 内存上限 6GiB, CPU %s, Gradle worker 1, ABI arm64-v8a.\n' "$first_cpu"
 
 exec systemd-run --user --scope --quiet \
-    --unit=myfollow-android-build \
+    --unit=orbit-android-build \
     --property=MemoryHigh=5G \
     --property=MemoryMax=6G \
     --property=MemorySwapMax=0 \

@@ -1,7 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="1024" height="1024">
-  <mask id="play-hole">
-    <rect width="108" height="108" fill="#FFFFFF"/>
-    <path d="M45 35v24l18-12z" fill="#000000"/>
-  </mask>
-  <path d="M33 34a9 9 0 0 1 9-9h24a9 9 0 0 1 9 9v48L54 69 33 82z" fill="#FFFFFF" mask="url(#play-hole)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+    <g transform="translate(512 512) scale(0.72) translate(-512 -480.4)">
+        <g fill="#FFFFFF">
+        <defs>
+            <mask id="moonGaps">
+                <rect width="1024" height="1024" fill="#FFFFFF"/>
+                <circle cx="373.8" cy="326.7" r="58" fill="#000000"/>
+                <circle cx="723" cy="591.3" r="58" fill="#000000"/>
+            </mask>
+        </defs>
+        <ellipse cx="516" cy="480.5" rx="423.9" ry="205.3" transform="rotate(-24.13 516 480.5)" fill="none" stroke="#FFFFFF" stroke-width="34.3" mask="url(#moonGaps)"/>
+        <circle cx="509.9" cy="490.6" r="131.8"/>
+        <circle cx="373.8" cy="326.7" r="34"/>
+        <circle cx="723" cy="591.3" r="34"/>
+    </g>
+    </g>
 </svg>

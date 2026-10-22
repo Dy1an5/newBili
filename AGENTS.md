@@ -6,7 +6,7 @@
 - 项目以学习和渐进实现为主,先完成可运行的小功能,理解数据和调用关系后再重构.
 - 原项目参考: `/home/dylan/Projects/bilidynamic1`.
 - 结构和实现参考: `/home/dylan/Projects/PiliPlus`.
-- 品牌方向是 Myfollow 和书签加播放三角图标.应用名,包名,slug 和数据库文件名以配置文件为准,改包名或数据库文件前先说明数据影响.
+- 品牌方向是 orbit 和轨道卫星图标.应用名,包名,slug 和数据库文件名以配置文件为准,改包名或数据库文件前先说明数据影响.
 
 ## Agent 工作流
 
@@ -62,8 +62,8 @@
 
 ## 日常开发和重新构建条件
 
-- 前提是手机已安装包含当前所需原生模块的 Myfollow development build.日常直接复用这个应用,不反复生成或安装 APK.
-- 用 `adb devices` 确认真机连接,在项目根目录运行 `corepack pnpm dev` 启动 Metro,然后在手机打开 Myfollow 并连接该开发服务.
+- 前提是手机已安装包含当前所需原生模块的 orbit development build.日常直接复用这个应用,不反复生成或安装 APK.
+- 用 `adb devices` 确认真机连接,在项目根目录运行 `corepack pnpm dev` 启动 Metro,然后在手机打开 orbit 并连接该开发服务.
 - USB 调试时,如果设备无法连接 Metro,执行 `adb reverse tcp:8081 tcp:8081`,再连接电脑上的开发服务.端口不是 8081 时使用 Metro 实际端口.
 - 修改并保存 `.ts` / `.tsx` 后通过 Fast Refresh 查看结果.必要时手动 Reload;修改 Metro 配置或纯 JS 依赖后可以重启 Metro,不因此直接重新打包.
 - 页面,样式,导航,请求和接口解析,业务逻辑,提示词以及由 JS 引用的图片等资源,默认使用 Metro + 真机 + 必要的 logcat 验证.播放或登录的 JS 逻辑修改也遵循这个流程,不因功能名称涉及原生能力就自动构建.

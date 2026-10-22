@@ -381,7 +381,7 @@ function VideoSummaryPanel({
                     output: result.output,
                 });
                 logAgentDebug('准备保存总结到本地数据库', {
-                    database: 'newbili.db',
+                    database: 'orbit.db',
                     table: 'video_part_summaries',
                     bvid: requestTarget.identity.bvid,
                     cid: requestTarget.identity.cid,
@@ -404,7 +404,7 @@ function VideoSummaryPanel({
                         sourceHash: subtitle.sourceHash,
                     });
                     logAgentDebug('总结已保存到本地数据库', {
-                        database: 'newbili.db',
+                        database: 'orbit.db',
                         table: 'video_part_summaries',
                         bvid: requestTarget.identity.bvid,
                         cid: requestTarget.identity.cid,

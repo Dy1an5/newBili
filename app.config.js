@@ -1,8 +1,8 @@
 export default ({ config }) => ({
     ...config,
-    name: 'Myfollow',
+    name: 'orbit',
     android: {
         ...config.android,
-        package: 'com.dylan.myfollow',
+        package: 'com.dylan.orbit',
     },
 });

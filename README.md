@@ -1,4 +1,4 @@
-# Myfollow
+# orbit
 
 一个使用 Expo 和 React Native 开发的 Android B站第三方客户端, 以学习和渐进实现为目标. iOS 暂不在支持范围内.
 
@@ -85,7 +85,7 @@ release 构建使用 `corepack pnpm android:build :app:assembleRelease`.APK 仅�
 sdk.dir=/path/to/Android/Sdk
 ```
 
-APK 包名是 `com.dylan.myfollow`.
+APK 包名是 `com.dylan.orbit`.
 
 ### 启动开发服务
 

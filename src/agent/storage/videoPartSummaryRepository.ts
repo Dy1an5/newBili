@@ -9,7 +9,7 @@ import type {
 } from '../domain/videoSummary';
 import { parseVideoPartSummary } from '../prompt/videoPartSummaryPrompt';
 
-const DATABASE_NAME = 'newbili.db';
+const DATABASE_NAME = 'orbit.db';
 const TABLE_NAME = 'video_part_summaries';
 
 type SummaryRow = {
