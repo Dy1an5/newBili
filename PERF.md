@@ -7,9 +7,9 @@
 ### 条件
 
 - 设备: vivo V2309A, MediaTek mt6989, 1260x2800 @ 560dpi, 120Hz 显示
-- 构建: `android/gradlew :app:assembleRelease`,包名 `com.dylan.newbili`
+- 构建: `cd android && ./gradlew :app:assembleRelease`,包名 `com.dylan.myfollow`
   - 用 release 而不是 dev 构建,因为 `__DEV__` 开销会让数字失真
-- 工具: `adb shell dumpsys gfxinfo com.dylan.newbili`,每轮前 reset
+- 工具: `adb shell dumpsys gfxinfo com.dylan.myfollow`,每轮前 reset
 - 场景: 从屏幕下部快速划到上部,重复 10 次,每场景 5 轮
 - 120Hz 的帧预算是 8.3ms
 
@@ -93,13 +93,13 @@ A 面帧数中位 220, B 面 124. 滚动距离不一致(列表滑到底),两边�
 ### 如何重跑
 
 ```bash
-cd android && ./gradlew :app:assembleRelease --no-daemon
-adb install -r app/build/outputs/apk/release/app-release.apk
+corepack pnpm android:build :app:assembleRelease
+adb install -r android/app/build/outputs/apk/release/app-release.apk
 
 # 每轮
-adb shell dumpsys gfxinfo com.dylan.newbili reset
+adb shell dumpsys gfxinfo com.dylan.myfollow reset
 for i in $(seq 1 10); do adb shell input swipe 630 2200 630 500 80; done
-adb shell dumpsys gfxinfo com.dylan.newbili
+adb shell dumpsys gfxinfo com.dylan.myfollow
 ```
 
 注意 `dumpsys gfxinfo` 的 `Janky frames` 默认按 60Hz 阈值统计,在 120Hz 设备上要同时看 `Janky frames (legacy)` 和百分位数字.

@@ -5,9 +5,10 @@
     "private": true,
     "main": "src/index.ts",
     "scripts": {
-        "dev": "APP_VARIANT=development expo start --dev-client",
+        "dev": "expo start --dev-client",
         "start": "expo start",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "android:build": "bash scripts/build-android.sh"
     },
     "keywords": [],
     "author": "",

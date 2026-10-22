@@ -1,4 +1,4 @@
-# newBili
+# Myfollow
 
 一个使用 Expo 和 React Native 开发的 Android B站第三方客户端, 以学习和渐进实现为目标. iOS 暂不在支持范围内.
 
@@ -44,8 +44,8 @@ src/
 ### 环境要求
 
 - Node.js 和 Corepack
-- Android 设备或模拟器 (已安装 development build)
-- EAS 账号 (用于云端构建 development client)
+- Android SDK 和 JDK (本地 Gradle 构建)
+- Android 设备 (adb 实机调试)
 
 ### 安装依赖
 
@@ -55,11 +55,37 @@ corepack pnpm install
 
 ### 构建 development client
 
-项目使用 `expo-dev-client`, 首次需要在 EAS 云端构建 APK 并安装到设备:
+项目使用 `expo-dev-client`. 首次构建, 或者修改了 `app.json`/`app.config.js` 的插件, 应用名, 包名和图标后, 先同步原生工程:
 
 ```bash
-corepack pnpm exec eas build --profile development --platform android
+corepack pnpm exec expo prebuild --platform android
 ```
+
+仅在需要完整重建原生工程时使用 `--clean`,执行前检查本地原生改动.
+
+在项目根目录构建 debug APK:
+
+```bash
+corepack pnpm android:build
+```
+
+连接真机后构建并安装:
+
+```bash
+corepack pnpm android:build :app:installDebug
+```
+
+入口脚本要求 Linux systemd 用户会话和 `taskset`.构建进程树的内存硬上限为 6GiB,5GiB 后开始回收,使用 1 个逻辑 CPU 和 1 个 Gradle worker.Gradle Java 堆上限为 1536MiB,Kotlin 编译在 Gradle 进程内执行,仅编译 arm64-v8a.这些设置位于受版本控制的脚本中,prebuild 不会清除它们.如果资源限制无法生效,脚本直接失败.
+
+release 构建使用 `corepack pnpm android:build :app:assembleRelease`.APK 仅适用于 arm64-v8a 设备.
+
+`prebuild --clean` 会删掉 `android/local.properties`. 如果构建报 `SDK location not found`, 在 `android/local.properties` 写入本机 SDK 路径:
+
+```properties
+sdk.dir=/path/to/Android/Sdk
+```
+
+APK 包名是 `com.dylan.myfollow`.
 
 ### 启动开发服务
 
