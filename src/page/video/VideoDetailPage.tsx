@@ -42,6 +42,7 @@ import VideoPlayer, {
     type FullscreenOrientation,
 } from '@/page/video/VideoPlayer';
 import type { VideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
+import { createGetErrorMessage } from '@/tool/errorMessage';
 import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
@@ -51,10 +52,7 @@ type Props = {
 
 const COLLAPSED_TITLE_LINE_COUNT = 2;
 const DEFAULT_VIDEO_ASPECT_RATIO = 16 / 9;
-const NEAR_SQUARE_ASPECT_RATIO_MIN = 0.8;
-const NEAR_SQUARE_ASPECT_RATIO_MAX = 1.2;
-const NEAR_SQUARE_PLAYER_HEIGHT_RATIO = 0.42;
-const VERTICAL_PLAYER_HEIGHT_RATIO = 0.48;
+const VERTICAL_PLAYER_MAX_HEIGHT_RATIO = 0.65;
 const DETAIL_TAB_HEIGHT = 46;
 const DETAIL_PAGE_COUNT = 3;
 
@@ -82,13 +80,10 @@ function useCollapsibleScrollHandler(
     });
 }
 
-function getErrorMessage(error: unknown): string {
-    if (error instanceof VideoPlaybackError) {
-        return error.message;
-    }
-
-    return '获取播放地址失败,请稍后重试';
-}
+const getErrorMessage = createGetErrorMessage(
+    [VideoPlaybackError],
+    '获取播放地址失败,请稍后重试',
+);
 
 function formatDuration(durationSeconds: number): string {
     if (durationSeconds <= 0) {
@@ -117,33 +112,34 @@ function formatCommentCount(count: number): string {
     return `${value >= 100 ? Math.floor(value) : value.toFixed(1).replace(/\.0$/, '')}万`;
 }
 
-function getPlayerHeight(
+type PlayerStage = {
+    height: number;
+    collapsedHeight: number;
+};
+
+function getPlayerStage(
     windowWidth: number,
     windowHeight: number,
     part: VideoPart | null,
-): number {
+): PlayerStage {
     const width = part?.width;
     const height = part?.height;
-    const nearSquareMaximumHeight =
-        windowHeight * NEAR_SQUARE_PLAYER_HEIGHT_RATIO;
+    const landscapeHeight = windowWidth / DEFAULT_VIDEO_ASPECT_RATIO;
 
-    if (width === undefined || height === undefined || width <= 0 || height <= 0) {
-        return windowWidth / DEFAULT_VIDEO_ASPECT_RATIO;
+    if (width === undefined || height === undefined || width >= height) {
+        return {
+            height: landscapeHeight,
+            collapsedHeight: landscapeHeight,
+        };
     }
 
-    const aspectRatio = width / height;
-
-    if (aspectRatio < NEAR_SQUARE_ASPECT_RATIO_MIN) {
-        return windowHeight * VERTICAL_PLAYER_HEIGHT_RATIO;
-    }
-
-    const naturalHeight = windowWidth / aspectRatio;
-
-    if (aspectRatio <= NEAR_SQUARE_ASPECT_RATIO_MAX) {
-        return Math.min(naturalHeight, nearSquareMaximumHeight);
-    }
-
-    return naturalHeight;
+    return {
+        height: Math.min(
+            windowWidth * height / width,
+            windowHeight * VERTICAL_PLAYER_MAX_HEIGHT_RATIO,
+        ),
+        collapsedHeight: landscapeHeight,
+    };
 }
 
 function getFullscreenOrientation(
@@ -334,11 +330,9 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
             durationMs: selectedPart.durationSeconds * 1000,
         }
         : null;
-    const collapsedPlayerHeight = windowWidth / DEFAULT_VIDEO_ASPECT_RATIO;
-    const playerHeight = Math.max(
-        getPlayerHeight(windowWidth, windowHeight, selectedPart),
-        collapsedPlayerHeight,
-    );
+    const playerStage = getPlayerStage(windowWidth, windowHeight, selectedPart);
+    const playerHeight = playerStage.height;
+    const collapsedPlayerHeight = playerStage.collapsedHeight;
     const collapseDistance = playerHeight - collapsedPlayerHeight;
     const headerSpacerHeight = playerHeight + DETAIL_TAB_HEIGHT;
     const minimumContentHeight = windowHeight + collapseDistance;
