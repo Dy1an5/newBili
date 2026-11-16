@@ -1,4 +1,5 @@
 # newBili
+<!-- effort-probe -->
 
 一个使用 Expo 和 React Native 开发的 Android B站第三方客户端, 以学习和渐进实现为目标. iOS 暂不在支持范围内.
 
