@@ -9,7 +9,6 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    Text,
     useWindowDimensions,
     View,
 } from 'react-native';
@@ -22,9 +21,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getLoginCookie } from '@/auth/authCookie';
-import type { VideoPartSummaryTarget } from '@/agent/domain/videoSummary';
-import VideoSummaryPanel from '@/agent/ui/VideoSummaryPage';
 import AppButton from '@/components/AppButton';
+import AppText from '@/components/AppText';
 import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
@@ -47,14 +45,13 @@ import { isRequestCancelled } from '@/tool/requestCancellation';
 
 type Props = {
     target: VideoPlaybackTarget;
-    deepSeekApiKey: string | null;
 };
 
 const COLLAPSED_TITLE_LINE_COUNT = 2;
 const DEFAULT_VIDEO_ASPECT_RATIO = 16 / 9;
 const VERTICAL_PLAYER_MAX_HEIGHT_RATIO = 0.65;
-const DETAIL_TAB_HEIGHT = 46;
-const DETAIL_PAGE_COUNT = 3;
+const DETAIL_TAB_HEIGHT = 48;
+const DETAIL_PAGE_COUNT = 2;
 
 function useCollapsibleScrollHandler(
     pageIndex: number,
@@ -155,7 +152,7 @@ function getFullscreenOrientation(
     return width < height ? 'portrait' : 'landscape';
 }
 
-export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
+export default function VideoDetailPage({ target }: Props) {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const safeAreaInsets = useSafeAreaInsets();
     const [videoAid, setVideoAid] = useState<string | null>(null);
@@ -184,11 +181,9 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const detailPagerRef = useRef<ScrollView>(null);
     const introScrollRef = useRef<ScrollView>(null);
     const commentsScrollRef = useRef<CollapsiblePageScrollHandle>(null);
-    const summaryScrollRef = useRef<CollapsiblePageScrollHandle>(null);
     const headerScrollOffset = useSharedValue(0);
     const introPageOffset = useSharedValue(0);
     const commentsPageOffset = useSharedValue(0);
-    const summaryPageOffset = useSharedValue(0);
     const activePageIndex = useSharedValue(detailPageIndex);
     const fullscreenValue = useSharedValue(isPlayerFullscreen);
     const collapseDistanceValue = useSharedValue(0);
@@ -203,14 +198,6 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const commentsScrollHandler = useCollapsibleScrollHandler(
         1,
         commentsPageOffset,
-        activePageIndex,
-        headerScrollOffset,
-        collapseDistanceValue,
-        fullscreenValue,
-    );
-    const summaryScrollHandler = useCollapsibleScrollHandler(
-        2,
-        summaryPageOffset,
         activePageIndex,
         headerScrollOffset,
         collapseDistanceValue,
@@ -317,19 +304,6 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
 
     const selectedPartIndex = parts.findIndex((part) => part.cid === selectedCid);
     const selectedPart = selectedPartIndex >= 0 ? parts[selectedPartIndex] : null;
-    const summaryTarget: VideoPartSummaryTarget | null = selectedPart
-        ? {
-            identity: {
-                bvid: target.bvid,
-                cid: selectedPart.cid,
-            },
-            videoTitle: target.title,
-            authorName: target.authorName,
-            partTitle: selectedPart.title,
-            partNumber: selectedPart.page,
-            durationMs: selectedPart.durationSeconds * 1000,
-        }
-        : null;
     const playerStage = getPlayerStage(windowWidth, windowHeight, selectedPart);
     const playerHeight = playerStage.height;
     const collapsedPlayerHeight = playerStage.collapsedHeight;
@@ -340,7 +314,6 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const detailTabs = [
         '简介',
         commentCount === null ? '评论' : `评论 ${formatCommentCount(commentCount)}`,
-        'AI总结',
     ];
 
     useEffect(() => {
@@ -392,7 +365,6 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     const pageOffsets = [
         introPageOffset,
         commentsPageOffset,
-        summaryPageOffset,
     ];
 
     const scrollPageToOffset = useCallback((
@@ -402,25 +374,20 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
     ) => {
         const pageOffset = pageIndex === 0
             ? introPageOffset
-            : pageIndex === 1
-                ? commentsPageOffset
-                : summaryPageOffset;
+            : commentsPageOffset;
 
         pageOffset.value = offset;
 
         if (pageIndex === 0) {
             introScrollRef.current?.scrollTo({ y: offset, animated });
-        } else if (pageIndex === 1) {
-            commentsScrollRef.current?.scrollToOffset(offset, animated);
         } else {
-            summaryScrollRef.current?.scrollToOffset(offset, animated);
+            commentsScrollRef.current?.scrollToOffset(offset, animated);
         }
-    }, [commentsPageOffset, introPageOffset, summaryPageOffset]);
+    }, [commentsPageOffset, introPageOffset]);
 
     useEffect(() => {
         introPageOffset.value = 0;
         commentsPageOffset.value = 0;
-        summaryPageOffset.value = 0;
         headerScrollOffset.value = 0;
         setSettledPlayerHeight(playerHeight);
 
@@ -433,7 +400,6 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
         introPageOffset,
         scrollPageToOffset,
         selectedCid,
-        summaryPageOffset,
         target.bvid,
     ]);
 
@@ -461,12 +427,6 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
         event: NativeSyntheticEvent<NativeScrollEvent>,
     ) => {
         handlePageScrollEnd(1, event);
-    }, [handlePageScrollEnd]);
-
-    const handleSummaryScrollEnd = useCallback((
-        event: NativeSyntheticEvent<NativeScrollEvent>,
-    ) => {
-        handlePageScrollEnd(2, event);
     }, [handlePageScrollEnd]);
 
     const handleTitleTextLayout = (event: TextLayoutEvent) => {
@@ -528,7 +488,9 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                     />
                 ) : errorMessage ? (
                     <View style={styles.playerStatus}>
-                        <Text style={styles.errorText}>{errorMessage}</Text>
+                        <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>
+                            {errorMessage}
+                        </AppText>
                         <AppButton
                             onPress={() => setReloadKey((value) => value + 1)}
                             style={styles.actionButton}
@@ -538,7 +500,9 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                 ) : (
                     <View style={styles.playerStatus}>
                         <ActivityIndicator color={colors.accentForeground} size='large' />
-                        <Text style={styles.loadingText}>正在获取播放地址...</Text>
+                        <AppText style={styles.loadingText} variant='bodySmall'>
+                            正在获取播放地址...
+                        </AppText>
                     </View>
                 )}
             </Animated.View>
@@ -560,14 +524,12 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                             onPress={() => scrollToDetailPage(pageIndex)}
                             style={styles.detailTab}
                         >
-                            <Text
-                                style={[
-                                    styles.detailTabText,
-                                    isSelected && styles.detailTabTextSelected,
-                                ]}
+                            <AppText
+                                color={isSelected ? colors.accentForeground : colors.mutedText}
+                                variant='titleSmall'
                             >
                                 {label}
-                            </Text>
+                            </AppText>
                             {isSelected ? <View style={styles.detailTabIndicator} /> : null}
                         </Pressable>
                     );
@@ -602,32 +564,34 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                     >
                         <View style={styles.infoSection}>
                     <View style={styles.titleContainer}>
-                        <Text
+                        <AppText
                             ellipsizeMode='tail'
                             numberOfLines={
                                 isTitleExpanded
                                     ? undefined
                                     : COLLAPSED_TITLE_LINE_COUNT
                             }
-                            style={styles.title}
+                            variant='title'
                         >
                             {target.title}
-                        </Text>
+                        </AppText>
 
-                        <Text
+                        <AppText
                             accessibilityElementsHidden
                             importantForAccessibility='no-hide-descendants'
                             onTextLayout={handleTitleTextLayout}
                             pointerEvents='none'
-                            style={[styles.title, styles.titleMeasurement]}
+                            style={styles.titleMeasurement}
+                            variant='title'
                         >
                             {target.title}
-                        </Text>
+                        </AppText>
 
                         {isTitleOverflowing ? (
                             <Pressable
                                 accessibilityLabel={isTitleExpanded ? '收起视频标题' : '展开视频标题'}
                                 accessibilityRole='button'
+                                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                                 onPress={() => {
                                     setIsTitleExpanded((value) => !value);
                                 }}
@@ -636,9 +600,9 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                                     pressed && styles.titleTogglePressed,
                                 ]}
                             >
-                                <Text style={styles.titleToggleText}>
+                                <AppText color={colors.accentForeground} variant='label'>
                                     {isTitleExpanded ? '收起' : '展开'}
-                                </Text>
+                                </AppText>
                             </Pressable>
                         ) : null}
                     </View>
@@ -651,9 +615,14 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                                 style={styles.authorAvatar}
                                 uri={target.authorAvatarUrl}
                             />
-                            <Text numberOfLines={1} style={styles.authorName}>
+                            <AppText
+                                color={colors.secondaryText}
+                                numberOfLines={1}
+                                style={styles.authorName}
+                                variant='titleSmall'
+                            >
                                 {target.authorName}
-                            </Text>
+                            </AppText>
                         </View>
                     ) : null}
 
@@ -662,12 +631,17 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                         {parts.length > 1 ? (
                             <View style={styles.partsSection}>
                         <View style={styles.partsHeader}>
-                            <Text style={styles.partsHeading}>视频选集</Text>
-                            <Text numberOfLines={1} style={styles.partsSummary}>
+                            <AppText variant='heading'>视频选集</AppText>
+                            <AppText
+                                color={colors.mutedText}
+                                numberOfLines={1}
+                                style={styles.partsSummary}
+                                variant='caption'
+                            >
                                 {selectedPart
                                     ? `正在播放:P${selectedPart.page} ${selectedPart.title}`
                                     : `共${parts.length}P`}
-                            </Text>
+                            </AppText>
                         </View>
 
                         <ScrollView
@@ -699,24 +673,29 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                                             pressed && styles.partButtonPressed,
                                         ]}
                                     >
-                                        <Text
+                                        <AppText
+                                            color={
+                                                isSelected
+                                                    ? colors.accentForeground
+                                                    : colors.primaryText
+                                            }
                                             numberOfLines={1}
-                                            style={[
-                                                styles.partTitle,
-                                                isSelected && styles.partTitleSelected,
-                                            ]}
+                                            variant='titleSmall'
                                         >
                                             P{part.page} {part.title}
-                                        </Text>
+                                        </AppText>
                                         {duration ? (
-                                            <Text
-                                                style={[
-                                                    styles.partDuration,
-                                                    isSelected && styles.partDurationSelected,
-                                                ]}
+                                            <AppText
+                                                color={
+                                                    isSelected
+                                                        ? colors.accentForeground
+                                                        : colors.mutedText
+                                                }
+                                                style={styles.partDuration}
+                                                variant='caption'
                                             >
                                                 {duration}
-                                            </Text>
+                                            </AppText>
                                         ) : null}
                                     </Pressable>
                                 );
@@ -737,18 +716,6 @@ export default function VideoDetailPage({ target, deepSeekApiKey }: Props) {
                         onScrollEnd={handleCommentsScrollEnd}
                         onTotalCountChange={setCommentCount}
                         subject={videoCommentSubject}
-                    />
-                </View>
-
-                <View style={[styles.detailPage, { width: windowWidth }]}>
-                    <VideoSummaryPanel
-                        ref={summaryScrollRef}
-                        apiKey={deepSeekApiKey}
-                        headerSpacerHeight={headerSpacerHeight}
-                        minimumContentHeight={minimumContentHeight}
-                        onScroll={summaryScrollHandler}
-                        onScrollEnd={handleSummaryScrollEnd}
-                        target={summaryTarget}
                     />
                 </View>
             </ScrollView>
@@ -779,15 +746,6 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    detailTabText: {
-        color: colors.mutedText,
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    detailTabTextSelected: {
-        color: colors.accentForeground,
-        fontWeight: '700',
     },
     detailTabIndicator: {
         position: 'absolute',
@@ -845,12 +803,8 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: spacing.sm,
-        color: colors.primaryText,
-        fontSize: 14,
     },
     errorText: {
-        color: colors.primaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     actionButton: {
@@ -865,12 +819,6 @@ const styles = StyleSheet.create({
     },
     titleContainer: {
         position: 'relative',
-    },
-    title: {
-        color: colors.primaryText,
-        fontSize: 20,
-        lineHeight: 28,
-        fontWeight: '700',
     },
     titleMeasurement: {
         position: 'absolute',
@@ -888,11 +836,7 @@ const styles = StyleSheet.create({
     titleTogglePressed: {
         opacity: 0.68,
     },
-    titleToggleText: {
-        color: colors.accentForeground,
-        fontSize: 14,
-        fontWeight: '600',
-    },
+
     authorRow: {
         marginTop: spacing.md,
         flexDirection: 'row',
@@ -903,9 +847,6 @@ const styles = StyleSheet.create({
     },
     authorName: {
         flex: 1,
-        color: colors.secondaryText,
-        fontSize: 15,
-        fontWeight: '600',
     },
     partsSection: {
         paddingTop: spacing.lg,
@@ -919,16 +860,9 @@ const styles = StyleSheet.create({
         marginHorizontal: spacing.lg,
         marginBottom: spacing.md,
     },
-    partsHeading: {
-        color: colors.primaryText,
-        fontSize: 17,
-        fontWeight: '700',
-    },
     partsSummary: {
         flex: 1,
         marginLeft: spacing.md,
-        color: colors.mutedText,
-        fontSize: 12,
         textAlign: 'right',
     },
     partsList: {
@@ -953,20 +887,7 @@ const styles = StyleSheet.create({
     partButtonPressed: {
         opacity: 0.76,
     },
-    partTitle: {
-        color: colors.primaryText,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    partTitleSelected: {
-        color: colors.accentForeground,
-    },
     partDuration: {
         marginTop: spacing.xs,
-        color: colors.mutedText,
-        fontSize: 12,
-    },
-    partDurationSelected: {
-        color: colors.accentForeground,
     },
 });

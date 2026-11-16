@@ -4,7 +4,6 @@ import {
     ActivityIndicator,
     FlatList,
     StyleSheet,
-    Text,
     View,
     type ListRenderItemInfo,
 } from 'react-native';
@@ -13,6 +12,7 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
+import AppText from '@/components/AppText';
 import SelectionHeader from '@/components/SelectionHeader';
 import SelectionSheet, {
     type SelectorAnchor,
@@ -388,13 +388,15 @@ export default function FavoriteFoldersPage({
         favoriteContent = (
             <View style={styles.centeredContent}>
                 <ActivityIndicator color={colors.accentForeground} size='large' />
-                <Text style={styles.statusText}>正在加载收藏夹...</Text>
+                <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                    正在加载收藏夹...
+                </AppText>
             </View>
         );
     } else if (foldersErrorMessage && folders.length === 0) {
         favoriteContent = (
             <View style={styles.centeredContent}>
-                <Text style={styles.errorText}>{foldersErrorMessage}</Text>
+                <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{foldersErrorMessage}</AppText>
                 <AppButton
                     onPress={() => void initializeFavorites()}
                     style={styles.actionButton}
@@ -406,13 +408,15 @@ export default function FavoriteFoldersPage({
         favoriteContent = (
             <View style={styles.centeredContent}>
                 <ActivityIndicator color={colors.accentForeground} size='large' />
-                <Text style={styles.statusText}>正在加载收藏视频...</Text>
+                <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                    正在加载收藏视频...
+                </AppText>
             </View>
         );
     } else if (videosErrorMessage && videos.length === 0) {
         favoriteContent = (
             <View style={styles.centeredContent}>
-                <Text style={styles.errorText}>{videosErrorMessage}</Text>
+                <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{videosErrorMessage}</AppText>
                 {selectedFolder ? (
                     <AppButton
                         onPress={() => void loadVideoPage(selectedFolder, 1, 'initial')}
@@ -434,17 +438,23 @@ export default function FavoriteFoldersPage({
                 initialNumToRender={8}
                 keyExtractor={getFavoriteVideoKey}
                 ListEmptyComponent={(
-                    <Text style={styles.statusText}>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
                         {selectedFolder
                             ? '该收藏夹暂时没有可显示的视频'
                             : '暂时没有收藏夹'}
-                    </Text>
+                    </AppText>
                 )}
                 ListFooterComponent={isLoadingMore ? (
                     <AppLoadingIndicator style={styles.footerLoading} />
                 ) : null}
                 ListHeaderComponent={videosErrorMessage ? (
-                    <Text style={styles.inlineError}>{videosErrorMessage}</Text>
+                    <AppText
+                        color={colors.secondaryText}
+                        style={styles.inlineError}
+                        variant='caption'
+                    >
+                        {videosErrorMessage}
+                    </AppText>
                 ) : null}
                 onEndReached={() => {
                     if (
@@ -581,20 +591,14 @@ const styles = StyleSheet.create({
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.primaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginHorizontal: spacing.md,
         marginBottom: spacing.md,
-        color: colors.secondaryText,
-        fontSize: 13,
         textAlign: 'center',
     },
     actionButton: {

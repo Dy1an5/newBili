@@ -3,7 +3,11 @@ import {
     type BottomTabNavigationProp,
     type BottomTabScreenProps,
 } from '@react-navigation/bottom-tabs';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import {
+    CommonActions,
+    getFocusedRouteNameFromRoute,
+    type NavigatorScreenParams,
+} from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BlurTargetView } from 'expo-blur';
@@ -19,8 +23,6 @@ import {
 } from 'react';
 import { StyleSheet, type View } from 'react-native';
 
-import { useAgentSession } from '@/agent/session/AgentSessionContext';
-import ApiKeyInputModal from '@/agent/ui/ApiKeyInputModal';
 import type { SelectorAnchor } from '@/components/SelectionSheet';
 import FloatingTabBar from '@/navigation/FloatingTabBar';
 import FavoriteFoldersPage from '@/page/favorites/FavoriteFoldersPage';
@@ -29,12 +31,14 @@ import type { FollowedCollection } from '@/page/favorites/fetchFollowedCollectio
 import DynamicDetailPage from '@/page/following/DynamicDetailPage';
 import FollowingPage from '@/page/following/FollowingPage';
 import type { FollowingPicture } from '@/page/following/fetchFollowing';
+import SearchPage from '@/page/search/SearchPage';
 import VideoDetailPage from '@/page/video/VideoDetailPage';
 import type { VideoPlaybackTarget } from '@/page/video/videoPlaybackTarget';
 import WatchLaterPage from '@/page/watchLater/WatchLaterPage';
 
 type HomeStackParamList = {
     Home: undefined;
+    Search: undefined;
     DynamicDetail: {
         picture: FollowingPicture;
     };
@@ -44,9 +48,9 @@ type HomeStackParamList = {
 };
 
 type MainTabParamList = {
-    HomeTab: undefined;
-    FavoritesTab: undefined;
-    WatchLaterTab: undefined;
+    HomeTab: NavigatorScreenParams<HomeStackParamList> | undefined;
+    FavoritesTab: NavigatorScreenParams<FavoritesStackParamList> | undefined;
+    WatchLaterTab: NavigatorScreenParams<WatchLaterStackParamList> | undefined;
 };
 
 type BlurTargets = Record<keyof MainTabParamList, RefObject<View | null>>;
@@ -59,6 +63,7 @@ type TabPageProps = {
 
 type FavoritesStackParamList = {
     FavoritesHome: undefined;
+    Search: undefined;
     CollectionDetail: {
         collection: FollowedCollection;
     };
@@ -69,6 +74,7 @@ type FavoritesStackParamList = {
 
 type WatchLaterStackParamList = {
     WatchLaterList: undefined;
+    Search: undefined;
     VideoDetail: {
         target: VideoPlaybackTarget;
     };
@@ -152,11 +158,8 @@ function DynamicDetailScreen({
 function VideoDetailScreen({
     route,
 }: NativeStackScreenProps<HomeStackParamList, 'VideoDetail'>) {
-    const { deepSeekApiKey } = useAgentSession();
-
     return (
         <VideoDetailPage
-            deepSeekApiKey={deepSeekApiKey}
             target={route.params.target}
         />
     );
@@ -182,6 +185,7 @@ function HomeNavigator({
                         />
                     )}
                 </HomeStack.Screen>
+                <HomeStack.Screen name='Search' component={SearchPage} />
                 <HomeStack.Screen
                     name='DynamicDetail'
                     component={DynamicDetailScreen}
@@ -227,11 +231,8 @@ function FollowedCollectionDetailScreen({
 function FavoriteVideoDetailScreen({
     route,
 }: NativeStackScreenProps<FavoritesStackParamList, 'VideoDetail'>) {
-    const { deepSeekApiKey } = useAgentSession();
-
     return (
         <VideoDetailPage
-            deepSeekApiKey={deepSeekApiKey}
             target={route.params.target}
         />
     );
@@ -257,6 +258,7 @@ function FavoritesNavigator({
                         />
                     )}
                 </FavoritesStack.Screen>
+                <FavoritesStack.Screen name='Search' component={SearchPage} />
                 <FavoritesStack.Screen
                     name='CollectionDetail'
                     component={FollowedCollectionDetailScreen}
@@ -288,11 +290,8 @@ function WatchLaterListScreen({
 function WatchLaterVideoDetailScreen({
     route,
 }: NativeStackScreenProps<WatchLaterStackParamList, 'VideoDetail'>) {
-    const { deepSeekApiKey } = useAgentSession();
-
     return (
         <VideoDetailPage
-            deepSeekApiKey={deepSeekApiKey}
             target={route.params.target}
         />
     );
@@ -318,6 +317,7 @@ function WatchLaterNavigator({
                         />
                     )}
                 </WatchLaterStack.Screen>
+                <WatchLaterStack.Screen name='Search' component={SearchPage} />
                 <WatchLaterStack.Screen
                     name='VideoDetail'
                     component={WatchLaterVideoDetailScreen}
@@ -331,14 +331,8 @@ export default function MainTabNavigator() {
     const homeBlurTarget = useRef<View | null>(null);
     const favoritesBlurTarget = useRef<View | null>(null);
     const watchLaterBlurTarget = useRef<View | null>(null);
-    const [isApiKeyModalVisible, setIsApiKeyModalVisible] = useState(false);
     const [tabSelectorRequest, setTabSelectorRequest] =
         useState<TabSelectorRequest | null>(null);
-    const {
-        clearDeepSeekApiKey,
-        deepSeekApiKey,
-        setDeepSeekApiKey,
-    } = useAgentSession();
     const blurTargets = useMemo<BlurTargets>(() => ({
         HomeTab: homeBlurTarget,
         FavoritesTab: favoritesBlurTarget,
@@ -366,6 +360,7 @@ export default function MainTabNavigator() {
                         if (
                             nestedRouteName === 'CollectionDetail' ||
                             nestedRouteName === 'DynamicDetail' ||
+                            nestedRouteName === 'Search' ||
                             nestedRouteName === 'VideoDetail'
                         ) {
                             return null;
@@ -377,8 +372,14 @@ export default function MainTabNavigator() {
                             <FloatingTabBar
                                 {...props}
                                 blurTarget={blurTargets[routeName]}
-                                hasDeepSeekApiKey={deepSeekApiKey !== null}
-                                onAgentConfigPress={() => setIsApiKeyModalVisible(true)}
+                                onSearchPress={() => {
+                                    props.navigation.dispatch(
+                                        CommonActions.navigate(
+                                            routeName,
+                                            { screen: 'Search' },
+                                        ),
+                                    );
+                                }}
                                 onTabSelectorRequest={handleTabSelectorRequest}
                             />
                         );
@@ -404,20 +405,6 @@ export default function MainTabNavigator() {
                     />
                 </Tab.Navigator>
             </TabSelectorRequestContext.Provider>
-
-            <ApiKeyInputModal
-                hasApiKey={deepSeekApiKey !== null}
-                visible={isApiKeyModalVisible}
-                onCancel={() => setIsApiKeyModalVisible(false)}
-                onClear={() => {
-                    clearDeepSeekApiKey();
-                    setIsApiKeyModalVisible(false);
-                }}
-                onConfirm={(apiKey) => {
-                    setDeepSeekApiKey(apiKey);
-                    setIsApiKeyModalVisible(false);
-                }}
-            />
         </BlurTargetsContext.Provider>
     );
 }

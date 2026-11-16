@@ -1,10 +1,10 @@
 import {
     Pressable,
     StyleSheet,
-    Text,
     View,
 } from 'react-native';
 
+import AppText from '@/components/AppText';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -32,9 +32,9 @@ export default function VideoListSortToolbar({
     return (
         <View style={styles.container}>
             <View style={styles.toolbar}>
-                <Text numberOfLines={1} style={styles.title}>
+                <AppText numberOfLines={1} style={styles.title} variant='heading'>
                     {title}
-                </Text>
+                </AppText>
 
                 <View style={styles.sortControl}>
                     {options.map((option) => {
@@ -53,15 +53,13 @@ export default function VideoListSortToolbar({
                                     pressed && styles.pressedOption,
                                 ]}
                             >
-                                <Text
+                                <AppText
+                                    color={isSelected ? colors.accentForeground : colors.secondaryText}
                                     numberOfLines={1}
-                                    style={[
-                                        styles.sortText,
-                                        isSelected && styles.selectedSortText,
-                                    ]}
+                                    variant='label'
                                 >
                                     {option.label}
-                                </Text>
+                                </AppText>
                             </Pressable>
                         );
                     })}
@@ -78,7 +76,6 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
     toolbar: {
-        minHeight: 34,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -88,12 +85,9 @@ const styles = StyleSheet.create({
     title: {
         flexShrink: 1,
         marginRight: spacing.md,
-        color: colors.primaryText,
-        fontSize: 16,
-        fontWeight: '600',
     },
     sortControl: {
-        minHeight: 34,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
@@ -103,7 +97,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     sortOption: {
-        minHeight: 32,
+        minHeight: 48,
         paddingHorizontal: spacing.md,
         alignItems: 'center',
         justifyContent: 'center',
@@ -114,13 +108,5 @@ const styles = StyleSheet.create({
     },
     pressedOption: {
         opacity: 0.75,
-    },
-    sortText: {
-        color: colors.secondaryText,
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    selectedSortText: {
-        color: colors.accentForeground,
     },
 });

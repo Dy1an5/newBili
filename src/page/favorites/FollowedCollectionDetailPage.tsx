@@ -4,15 +4,16 @@ import {
     FlatList,
     Pressable,
     StyleSheet,
-    Text,
     View,
     type ListRenderItemInfo,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppRefreshControl from '@/components/AppRefreshControl';
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import UserAvatar from '@/components/UserAvatar';
 import VideoListCard from '@/components/VideoListCard';
@@ -203,11 +204,15 @@ export default function FollowedCollectionDetailPage({
                         pressed && styles.pressed,
                     ]}
                 >
-                    <Text style={styles.backIcon}>‹</Text>
+                    <MaterialIcons
+                        color={colors.primaryText}
+                        name='chevron-left'
+                        size={24}
+                    />
                 </Pressable>
-                <Text numberOfLines={1} style={styles.navigationTitle}>
+                <AppText numberOfLines={1} style={styles.navigationTitle} variant='heading'>
                     合集详情
-                </Text>
+                </AppText>
                 <View style={styles.headerSpacer} />
             </View>
 
@@ -218,9 +223,9 @@ export default function FollowedCollectionDetailPage({
                     uri={collection.coverUrl}
                 />
                 <View style={styles.collectionInfo}>
-                    <Text numberOfLines={2} style={styles.collectionTitle}>
+                    <AppText numberOfLines={2} variant='titleSmall'>
                         {collection.title}
-                    </Text>
+                    </AppText>
                     <View style={styles.authorRow}>
                         <UserAvatar
                             name={collection.author.name}
@@ -228,13 +233,18 @@ export default function FollowedCollectionDetailPage({
                             style={styles.avatar}
                             uri={collection.author.avatarUrl}
                         />
-                        <Text numberOfLines={1} style={styles.authorName}>
+                        <AppText
+                            color={colors.secondaryText}
+                            numberOfLines={1}
+                            style={styles.authorName}
+                            variant='caption'
+                        >
                             {collection.author.name}
-                        </Text>
+                        </AppText>
                     </View>
-                    <Text style={styles.mediaCount}>
+                    <AppText color={colors.mutedText} style={styles.mediaCount} variant='caption'>
                         共{collection.mediaCount}个视频
-                    </Text>
+                    </AppText>
                 </View>
             </View>
         </>
@@ -246,7 +256,9 @@ export default function FollowedCollectionDetailPage({
                 {header}
                 <View style={styles.centered}>
                     <ActivityIndicator color={colors.accentForeground} size='large' />
-                    <Text style={styles.statusText}>正在加载合集视频...</Text>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                        正在加载合集视频...
+                    </AppText>
                 </View>
             </View>
         );
@@ -257,7 +269,7 @@ export default function FollowedCollectionDetailPage({
             <View style={styles.page}>
                 {header}
                 <View style={styles.centered}>
-                    <Text style={styles.errorText}>{errorMessage}</Text>
+                    <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{errorMessage}</AppText>
                     <AppButton
                         onPress={() => void loadDetail('initial')}
                         style={styles.actionButton}
@@ -289,13 +301,19 @@ export default function FollowedCollectionDetailPage({
                 initialNumToRender={8}
                 keyExtractor={(video) => video.bvid}
                 ListEmptyComponent={(
-                    <Text style={styles.statusText}>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
                         该合集暂时没有可显示的视频
-                    </Text>
+                    </AppText>
                 )}
                 ListFooterComponent={errorMessage && videos.length > 0 ? (
                     <View style={styles.footer}>
-                        <Text style={styles.inlineError}>{errorMessage}</Text>
+                        <AppText
+                            color={colors.secondaryText}
+                            style={styles.inlineError}
+                            variant='caption'
+                        >
+                            {errorMessage}
+                        </AppText>
                         <AppButton
                             onPress={() => void refreshDetail()}
                             title='重试'
@@ -327,7 +345,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     navigationHeader: {
-        height: 50,
+        minHeight: 56,
         paddingHorizontal: spacing.sm,
         flexDirection: 'row',
         alignItems: 'center',
@@ -335,26 +353,17 @@ const styles = StyleSheet.create({
         borderBottomColor: colors.surfaceBorder,
     },
     backButton: {
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    backIcon: {
-        color: colors.primaryText,
-        fontSize: 38,
-        lineHeight: 40,
-        fontWeight: '300',
-    },
     navigationTitle: {
         flex: 1,
-        color: colors.primaryText,
-        fontSize: 16,
-        fontWeight: '600',
         textAlign: 'center',
     },
     headerSpacer: {
-        width: 44,
+        width: 48,
     },
     collectionHeader: {
         padding: spacing.md,
@@ -373,12 +382,6 @@ const styles = StyleSheet.create({
         minWidth: 0,
         marginLeft: spacing.md,
     },
-    collectionTitle: {
-        color: colors.primaryText,
-        fontSize: 15,
-        lineHeight: 21,
-        fontWeight: '600',
-    },
     authorRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -389,13 +392,9 @@ const styles = StyleSheet.create({
     },
     authorName: {
         flex: 1,
-        color: colors.secondaryText,
-        fontSize: 12,
     },
     mediaCount: {
         marginTop: spacing.xs,
-        color: colors.mutedText,
-        fontSize: 12,
     },
     centered: {
         flex: 1,
@@ -414,19 +413,13 @@ const styles = StyleSheet.create({
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.primaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginVertical: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 13,
         textAlign: 'center',
     },
     actionButton: {

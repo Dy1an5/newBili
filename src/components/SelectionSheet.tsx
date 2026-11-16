@@ -6,7 +6,6 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    Text,
     View,
     useWindowDimensions,
 } from 'react-native';
@@ -18,7 +17,9 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 
+import AppText from '@/components/AppText';
 import { colors } from '@/theme/colors';
+import { duration, spring, timingConfig } from '@/theme/motion';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 
@@ -70,15 +71,11 @@ export default function SelectionSheet<Value extends SelectionValue>({
     useEffect(() => {
         if (visible) {
             setIsMounted(true);
-            progress.value = withSpring(1, {
-                damping: 22,
-                stiffness: 280,
-                mass: 0.7,
-            });
+            progress.value = withSpring(1, spring.sheet);
             return;
         }
 
-        progress.value = withTiming(0, { duration: 130 }, (finished) => {
+        progress.value = withTiming(0, timingConfig(duration.quick), (finished) => {
             if (finished) {
                 runOnJS(setIsMounted)(false);
             }
@@ -125,15 +122,24 @@ export default function SelectionSheet<Value extends SelectionValue>({
                         animatedStyle,
                     ]}
                 >
-                    <Text numberOfLines={1} style={styles.title}>
+                    <AppText
+                        color={colors.mutedText}
+                        numberOfLines={1}
+                        style={styles.title}
+                        variant='micro'
+                    >
                         {title}
-                    </Text>
+                    </AppText>
 
                     {errorMessage ? (
                         <View style={styles.errorBox}>
-                            <Text numberOfLines={2} style={styles.errorText}>
+                            <AppText
+                                color={colors.alertText}
+                                numberOfLines={2}
+                                variant='caption'
+                            >
                                 {errorMessage}
-                            </Text>
+                            </AppText>
 
                             {onRetry ? (
                                 <Pressable
@@ -144,7 +150,9 @@ export default function SelectionSheet<Value extends SelectionValue>({
                                         pressed && styles.pressed,
                                     ]}
                                 >
-                                    <Text style={styles.retryText}>重试</Text>
+                                    <AppText color={colors.accentForeground} variant='label'>
+                                        重试
+                                    </AppText>
                                 </Pressable>
                             ) : null}
                         </View>
@@ -163,7 +171,13 @@ export default function SelectionSheet<Value extends SelectionValue>({
                             style={styles.optionScroll}
                         >
                             {options.length === 0 && !errorMessage ? (
-                                <Text style={styles.emptyText}>暂无可选项</Text>
+                                <AppText
+                                    color={colors.mutedText}
+                                    style={styles.emptyText}
+                                    variant='caption'
+                                >
+                                    暂无可选项
+                                </AppText>
                             ) : null}
 
                             {options.map((option) => {
@@ -185,18 +199,23 @@ export default function SelectionSheet<Value extends SelectionValue>({
                                             pressed && styles.pressed,
                                         ]}
                                     >
-                                        <Text
+                                        <AppText
+                                            color={isSelected ? colors.accentForeground : colors.secondaryText}
                                             numberOfLines={1}
-                                            style={[
-                                                styles.optionText,
-                                                isSelected && styles.selectedOptionText,
-                                            ]}
+                                            style={styles.optionText}
+                                            variant='titleSmall'
                                         >
                                             {option.label}
-                                        </Text>
+                                        </AppText>
 
                                         {isSelected ? (
-                                            <Text style={styles.checkMark}>✓</Text>
+                                            <AppText
+                                                color={colors.accentForeground}
+                                                style={styles.checkMark}
+                                                variant='label'
+                                            >
+                                                ✓
+                                            </AppText>
                                         ) : null}
                                     </Pressable>
                                 );
@@ -222,40 +241,29 @@ const styles = StyleSheet.create({
         borderColor: colors.surfaceBorder,
         borderRadius: radius.md,
         backgroundColor: colors.surfaceBackground,
-        elevation: 12,
-        shadowColor: colors.pageBackground,
+        elevation: 6,
+        shadowColor: colors.shadow,
         shadowOffset: {
             width: 0,
-            height: 6,
+            height: 4,
         },
-        shadowOpacity: 0.5,
-        shadowRadius: 14,
+        shadowOpacity: 0.16,
+        shadowRadius: 12,
         transformOrigin: 'bottom',
     },
     title: {
         paddingHorizontal: spacing.md,
         paddingBottom: spacing.xs,
-        color: colors.mutedText,
-        fontSize: 11,
-        fontWeight: '600',
     },
     errorBox: {
         paddingHorizontal: spacing.md,
         paddingBottom: spacing.sm,
     },
-    errorText: {
-        color: colors.mutedText,
-        fontSize: 12,
-        lineHeight: 17,
-    },
     retryButton: {
+        minHeight: 48,
         alignSelf: 'flex-start',
-        paddingVertical: spacing.xs,
-    },
-    retryText: {
-        color: colors.accentForeground,
-        fontSize: 12,
-        fontWeight: '600',
+        paddingHorizontal: spacing.xs,
+        justifyContent: 'center',
     },
     loading: {
         minHeight: 72,
@@ -270,11 +278,11 @@ const styles = StyleSheet.create({
         paddingBottom: spacing.xs,
     },
     option: {
-        minHeight: 38,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 2,
+        marginBottom: spacing.xs,
         paddingHorizontal: spacing.sm,
         borderRadius: radius.sm,
     },
@@ -283,23 +291,12 @@ const styles = StyleSheet.create({
     },
     optionText: {
         flexShrink: 1,
-        color: colors.secondaryText,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    selectedOptionText: {
-        color: colors.accentForeground,
     },
     checkMark: {
         marginLeft: spacing.xs,
-        color: colors.accentForeground,
-        fontSize: 13,
-        fontWeight: '700',
     },
     emptyText: {
         paddingVertical: spacing.md,
-        color: colors.mutedText,
-        fontSize: 12,
         textAlign: 'center',
     },
     pressed: {

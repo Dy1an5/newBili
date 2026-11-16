@@ -2,10 +2,10 @@ import { memo } from 'react';
 import {
     Pressable,
     StyleSheet,
-    Text,
     View,
 } from 'react-native';
 
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
@@ -56,6 +56,7 @@ function VideoListCard({
 
     return (
         <Pressable
+            accessibilityLabel={`${video.title}, ${video.author.name}`}
             accessibilityRole='button'
             onPress={onPress}
             style={({ pressed }) => [
@@ -74,13 +75,17 @@ function VideoListCard({
                 />
                 {duration ? (
                     <View style={styles.durationBadge}>
-                        <Text style={styles.durationText}>{duration}</Text>
+                        <AppText color={colors.mediaForeground} variant='micro'>
+                            {duration}
+                        </AppText>
                     </View>
                 ) : null}
             </View>
 
             <View style={styles.videoInfo}>
-                <Text numberOfLines={2} style={styles.videoTitle}>{video.title}</Text>
+                <AppText numberOfLines={2} variant='titleSmall'>
+                    {video.title}
+                </AppText>
                 <View style={styles.authorRow}>
                     <UserAvatar
                         name={video.author.name}
@@ -88,10 +93,23 @@ function VideoListCard({
                         style={styles.avatar}
                         uri={video.author.avatarUrl}
                     />
-                    <Text numberOfLines={1} style={styles.authorName}>{video.author.name}</Text>
+                    <AppText
+                        color={colors.secondaryText}
+                        numberOfLines={1}
+                        style={styles.authorName}
+                        variant='caption'
+                    >
+                        {video.author.name}
+                    </AppText>
                 </View>
                 {metaText ? (
-                    <Text style={styles.metaText}>{metaText}</Text>
+                    <AppText
+                        color={colors.mutedText}
+                        style={styles.metaText}
+                        variant='micro'
+                    >
+                        {metaText}
+                    </AppText>
                 ) : null}
             </View>
         </Pressable>
@@ -130,25 +148,14 @@ const styles = StyleSheet.create({
         right: spacing.xs,
         bottom: spacing.xs,
         paddingHorizontal: spacing.xs,
-        paddingVertical: 2,
-        borderRadius: 4,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.xs,
         backgroundColor: colors.mediaOverlayBackground,
-    },
-    durationText: {
-        color: colors.primaryText,
-        fontSize: 11,
-        fontWeight: '600',
     },
     videoInfo: {
         flex: 1,
         minWidth: 0,
         marginLeft: spacing.md,
-    },
-    videoTitle: {
-        color: colors.primaryText,
-        fontSize: 14,
-        lineHeight: 20,
-        fontWeight: '600',
     },
     authorRow: {
         flexDirection: 'row',
@@ -160,12 +167,8 @@ const styles = StyleSheet.create({
     },
     authorName: {
         flex: 1,
-        color: colors.secondaryText,
-        fontSize: 12,
     },
     metaText: {
         marginTop: spacing.xs,
-        color: colors.mutedText,
-        fontSize: 11,
     },
 });

@@ -4,7 +4,6 @@ import {
     ActivityIndicator,
     FlatList,
     StyleSheet,
-    Text,
     View,
     type ListRenderItemInfo,
 } from 'react-native';
@@ -13,6 +12,7 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
+import AppText from '@/components/AppText';
 import SelectionHeader from '@/components/SelectionHeader';
 import SelectionSheet, {
     type SelectorAnchor,
@@ -277,7 +277,9 @@ export default function WatchLaterPage({
                 {header}
                 <View style={styles.centered}>
                     <ActivityIndicator color={colors.accentForeground} size='large' />
-                    <Text style={styles.statusText}>正在加载稍后再看...</Text>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                        正在加载稍后再看...
+                    </AppText>
                 </View>
             </View>
         );
@@ -288,7 +290,7 @@ export default function WatchLaterPage({
             <View style={styles.page}>
                 {header}
                 <View style={styles.centered}>
-                    <Text style={styles.errorText}>{errorMessage}</Text>
+                    <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{errorMessage}</AppText>
                     <AppButton
                         onPress={() => void loadVideoPage(1, false)}
                         style={styles.actionButton}
@@ -332,13 +334,19 @@ export default function WatchLaterPage({
                 }}
                 ListHeaderComponent={
                     errorMessage ? (
-                        <Text style={styles.inlineError}>{errorMessage}</Text>
+                        <AppText
+                            color={colors.secondaryText}
+                            style={styles.inlineError}
+                            variant='caption'
+                        >
+                            {errorMessage}
+                        </AppText>
                     ) : null
                 }
                 ListEmptyComponent={
-                    <Text style={styles.statusText}>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
                         暂时没有可显示的稍后再看视频
-                    </Text>
+                    </AppText>
                 }
                 ListFooterComponent={
                     isLoadingMore ? (
@@ -378,20 +386,14 @@ const styles = StyleSheet.create({
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.primaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginHorizontal: spacing.md,
         marginBottom: spacing.md,
-        color: colors.secondaryText,
-        fontSize: 13,
         textAlign: 'center',
     },
     actionButton: {

@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
-import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
     SafeAreaProvider,
@@ -8,7 +8,6 @@ import {
 } from 'react-native-safe-area-context';
 
 import LoginPage from './auth/LoginPage';
-import { AgentSessionProvider } from './agent/session/AgentSessionContext';
 import { clearLoginCookie, getLoginCookie } from './auth/authCookie';
 import { setAuthFailureHandler } from './tool/authFailure';
 import MainPage from './main/MainPage';
@@ -81,30 +80,28 @@ export default function App() {
         );
     } else {
         content = (
-            <AgentSessionProvider>
-                <NavigationContainer
-                    theme={{
-                        ...DarkTheme,
-                        colors: {
-                            ...DarkTheme.colors,
-                            primary: colors.accentForeground,
-                            background: colors.pageBackground,
-                            card: colors.pageBackground,
-                            text: colors.primaryText,
-                            border: colors.surfaceBorder,
-                        },
-                    }}
-                >
-                    <MainTabNavigator />
-                </NavigationContainer>
-            </AgentSessionProvider>
+            <NavigationContainer
+                theme={{
+                    ...DefaultTheme,
+                    colors: {
+                        ...DefaultTheme.colors,
+                        primary: colors.accentForeground,
+                        background: colors.pageBackground,
+                        card: colors.pageBackground,
+                        text: colors.primaryText,
+                        border: colors.surfaceBorder,
+                    },
+                }}
+            >
+                <MainTabNavigator />
+            </NavigationContainer>
         );
     }
 
     return (
         <GestureHandlerRootView style={styles.appRoot}>
             <SafeAreaProvider>
-                <StatusBar barStyle='light-content' backgroundColor={colors.pageBackground} />
+                <StatusBar barStyle='dark-content' backgroundColor={colors.pageBackground} />
                 <SafeAreaView edges={['top']} style={styles.safeArea}>
                     {content}
                 </SafeAreaView>

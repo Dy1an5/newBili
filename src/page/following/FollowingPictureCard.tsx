@@ -7,10 +7,10 @@ import type {
 import {
     Pressable,
     StyleSheet,
-    Text,
     View,
 } from 'react-native';
 
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import FullscreenImageViewer from '@/components/FullscreenImageViewer';
 import UserAvatar from '@/components/UserAvatar';
@@ -133,50 +133,52 @@ function FollowingPictureCard({
                             hasPictures && styles.contentContainerWithPictures,
                         ]}
                     >
-                        <Text
+                        <AppText
                             ellipsizeMode='tail'
                             numberOfLines={
                                 isContentExpanded
                                     ? undefined
                                     : COLLAPSED_CONTENT_LINE_COUNT
                             }
-                            style={styles.contentText}
+                            variant='body'
                         >
                             {contentText}
-                        </Text>
+                        </AppText>
 
-                        <Text
+                        <AppText
                             accessibilityElementsHidden
                             importantForAccessibility='no-hide-descendants'
                             key={contentText}
                             onTextLayout={handleContentTextLayout}
                             pointerEvents='none'
-                            style={[styles.contentText, styles.contentMeasurement]}
+                            style={styles.contentMeasurement}
+                            variant='body'
                         >
                             {contentText}
-                        </Text>
+                        </AppText>
 
                         {isContentOverflowing ? (
                             <Pressable
                                 accessibilityLabel={isContentExpanded ? '收起动态全文' : '展开动态全文'}
                                 accessibilityRole='button'
+                                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                                 onPress={toggleContentExpanded}
                                 style={({ pressed }) => [
                                     styles.contentToggle,
                                     pressed && styles.contentTogglePressed,
                                 ]}
                             >
-                                <Text style={styles.contentToggleText}>
+                                <AppText color={colors.accentForeground} variant='label'>
                                     {isContentExpanded ? '收起' : '展开'}
-                                </Text>
+                                </AppText>
                             </Pressable>
                         ) : null}
                     </View>
                 ) : (
                     <View style={styles.emptyContentLink}>
-                        <Text style={styles.emptyContentLinkText}>
+                        <AppText color={colors.accentForeground} variant='label'>
                             查看动态详情与评论
-                        </Text>
+                        </AppText>
                     </View>
                 )}
 
@@ -224,17 +226,19 @@ function FollowingPictureCard({
                             uri={avatarUrl}
                         />
 
-                        <Text
+                        <AppText
+                            color={colors.secondaryText}
                             numberOfLines={1}
                             style={styles.author}
+                            variant='titleSmall'
                         >
                             {authorName}
-                        </Text>
+                        </AppText>
                     </View>
 
-                    <Text style={styles.time}>
+                    <AppText color={colors.mutedText} variant='caption'>
                         {publishedTimeText}
-                    </Text>
+                    </AppText>
                 </View>
             </Pressable>
 
@@ -276,25 +280,10 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
     },
 
-    contentText: {
-        fontSize: 18,
-        lineHeight: 25,
-
-        fontWeight: '700',
-
-        color: colors.primaryText,
-    },
-
     emptyContentLink: {
         alignSelf: 'flex-start',
         marginBottom: spacing.md,
         paddingVertical: spacing.xs,
-    },
-
-    emptyContentLinkText: {
-        color: colors.accentForeground,
-        fontSize: 14,
-        fontWeight: '600',
     },
 
     contentMeasurement: {
@@ -314,12 +303,6 @@ const styles = StyleSheet.create({
 
     contentTogglePressed: {
         opacity: 0.68,
-    },
-
-    contentToggleText: {
-        color: colors.accentForeground,
-        fontSize: 14,
-        fontWeight: '600',
     },
 
     pictureGrid: {
@@ -372,17 +355,6 @@ const styles = StyleSheet.create({
 
     author: {
         flex: 1,
-
-        fontSize: 14,
-        fontWeight: '600',
-
-        color: colors.secondaryText,
-    },
-
-    time: {
-        fontSize: 13,
-
-        color: colors.mutedText,
     },
 
 });

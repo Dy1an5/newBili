@@ -1,12 +1,12 @@
 import {
     Pressable,
     StyleSheet,
-    Text,
     type PressableProps,
     type StyleProp,
     type ViewStyle,
 } from 'react-native';
 
+import AppText from '@/components/AppText';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -40,31 +40,28 @@ export default function AppButton({
                 pressed && !disabled && styles.pressed,
             ]}
         >
-            <Text style={styles.text}>{title}</Text>
+            <AppText color={colors.accentSolidText} variant='label'>
+                {title}
+            </AppText>
         </Pressable>
     );
 }
 
 const styles = StyleSheet.create({
     button: {
-        minHeight: 40,
-        paddingHorizontal: spacing.lg,
+        minHeight: 48,
+        paddingHorizontal: spacing.xl,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: colors.accentForeground,
         borderRadius: radius.full,
-        backgroundColor: colors.accentBackground,
+        backgroundColor: colors.accentForeground,
     },
     disabled: {
-        opacity: 0.4,
+        opacity: 0.38,
     },
     pressed: {
         opacity: 0.75,
-    },
-    text: {
-        color: colors.accentForeground,
-        fontSize: 14,
-        fontWeight: '600',
     },
 });

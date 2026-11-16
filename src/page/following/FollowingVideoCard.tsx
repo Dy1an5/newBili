@@ -2,11 +2,11 @@ import { memo } from 'react';
 import {
     Pressable,
     StyleSheet,
-    Text,
     useWindowDimensions,
     View,
 } from 'react-native';
 
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import UserAvatar from '@/components/UserAvatar';
 import { colors } from '@/theme/colors';
@@ -38,18 +38,17 @@ function FollowingVideoCard({
 
     return (
         <Pressable
+            accessibilityLabel={`${title}, ${authorName}`}
+            accessibilityRole='button'
             onPress={onPress}
             style={({ pressed }) => [
                 styles.card,
                 pressed && styles.cardPressed,
             ]}
         >
-            <Text
-                style={styles.title}
-                numberOfLines={2}
-            >
+            <AppText numberOfLines={2} style={styles.title} variant='title'>
                 {title}
-            </Text>
+            </AppText>
 
             <View style={styles.coverContainer}>
                 <BilibiliImage
@@ -71,17 +70,19 @@ function FollowingVideoCard({
                         uri={avatarUrl}
                     />
 
-                    <Text
-                        style={styles.author}
+                    <AppText
+                        color={colors.secondaryText}
                         numberOfLines={1}
+                        style={styles.author}
+                        variant='titleSmall'
                     >
                         {authorName}
-                    </Text>
+                    </AppText>
                 </View>
 
-                <Text style={styles.time}>
+                <AppText color={colors.mutedText} variant='caption'>
                     {publishedTimeText}
-                </Text>
+                </AppText>
             </View>
         </Pressable>
     );
@@ -93,83 +94,43 @@ const styles = StyleSheet.create({
     card: {
         marginHorizontal: spacing.lg,
         marginVertical: spacing.sm,
-
         padding: spacing.md,
-
         backgroundColor: colors.surfaceBackground,
-
         borderWidth: 1,
         borderColor: colors.surfaceBorder,
         borderRadius: radius.lg,
     },
-
     cardPressed: {
         opacity: 0.94,
-
-        transform: [
-            {
-                scale: 0.995,
-            },
-        ],
     },
-
     title: {
         marginBottom: spacing.md,
-
-        fontSize: 18,
-        lineHeight: 25,
-
-        fontWeight: '700',
-
-        color: colors.primaryText,
     },
-
     coverContainer: {
         overflow: 'hidden',
-
         borderRadius: radius.md,
-
         backgroundColor: colors.pageBackground,
     },
-
     cover: {
         width: '100%',
         aspectRatio: 16 / 9,
     },
-
     footer: {
         marginTop: spacing.md,
-
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-
     authorContainer: {
         flex: 1,
-
         flexDirection: 'row',
         alignItems: 'center',
-
         marginRight: spacing.md,
     },
-
     avatar: {
         marginRight: spacing.sm,
     },
-
     author: {
         flex: 1,
-
-        fontSize: 14,
-        fontWeight: '600',
-
-        color: colors.secondaryText,
-    },
-
-    time: {
-        fontSize: 13,
-
-        color: colors.mutedText,
     },
 });

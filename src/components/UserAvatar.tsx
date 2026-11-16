@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
     StyleSheet,
-    Text,
     View,
     type StyleProp,
     type ViewStyle,
 } from 'react-native';
 
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import { colors } from '@/theme/colors';
 
@@ -53,9 +53,13 @@ export default function UserAvatar({
                     uri={normalizedUri}
                 />
             ) : (
-                <Text style={[styles.placeholder, { fontSize: Math.max(11, size * 0.38) }]}>
+                <AppText
+                    color={colors.secondaryText}
+                    style={{ fontSize: Math.max(11, size * 0.38) }}
+                    variant='micro'
+                >
                     {placeholder}
-                </Text>
+                </AppText>
             )}
         </View>
     );
@@ -71,9 +75,5 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
-    },
-    placeholder: {
-        color: colors.secondaryText,
-        fontWeight: '600',
     },
 });

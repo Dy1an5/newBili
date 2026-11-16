@@ -5,7 +5,6 @@ import {
     Pressable,
     StatusBar,
     StyleSheet,
-    Text,
     useWindowDimensions,
     View,
 } from 'react-native';
@@ -20,6 +19,7 @@ import {
     setVolume,
 } from 'react-native-volume-manager';
 
+import AppText from '@/components/AppText';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
@@ -679,7 +679,7 @@ export default function VideoPlayer({
             {adjustmentFeedback ? (
                 <View pointerEvents='none' style={styles.adjustmentFeedback}>
                     <MaterialIcons
-                        color={colors.primaryText}
+                        color={colors.mediaForeground}
                         name={adjustmentFeedback.kind === 'error'
                             ? 'error-outline'
                             : adjustmentFeedback.kind === 'brightness'
@@ -691,19 +691,23 @@ export default function VideoPlayer({
                                         : 'volume-up'}
                         size={22}
                     />
-                    <Text style={styles.adjustmentFeedbackText}>
+                    <AppText color={colors.mediaForeground} variant='label'>
                         {adjustmentFeedback.kind === 'error'
                             ? adjustmentFeedback.message
                             : `${Math.round(adjustmentFeedback.value * 100)}%`}
-                    </Text>
+                    </AppText>
                 </View>
             ) : null}
 
             {areProgressControlsVisible ? (
                 <View style={styles.progressControls}>
-                    <Text style={styles.progressTimeText}>
+                    <AppText
+                        color={colors.mediaForeground}
+                        style={styles.progressTimeText}
+                        variant='caption'
+                    >
                         {formatPlaybackTime(currentTime)} / {formatPlaybackTime(duration)}
-                    </Text>
+                    </AppText>
                     <View style={styles.progressControlsRow}>
                         <View
                             accessibilityActions={[
@@ -763,7 +767,7 @@ export default function VideoPlayer({
                             ]}
                         >
                             <MaterialIcons
-                                color={colors.primaryText}
+                                color={colors.mediaForeground}
                                 name={isFullscreen ? 'fullscreen-exit' : 'fullscreen'}
                                 size={24}
                             />
@@ -778,7 +782,7 @@ export default function VideoPlayer({
 const styles = StyleSheet.create({
     playerSurface: {
         flex: 1,
-        backgroundColor: colors.pageBackground,
+        backgroundColor: colors.mediaBackground,
     },
     player: {
         width: '100%',
@@ -802,11 +806,7 @@ const styles = StyleSheet.create({
             { translateY: -22 },
         ],
     },
-    adjustmentFeedbackText: {
-        color: colors.primaryText,
-        fontSize: 13,
-        fontWeight: '600',
-    },
+
     progressControls: {
         position: 'absolute',
         right: spacing.md,
@@ -815,9 +815,6 @@ const styles = StyleSheet.create({
     },
     progressTimeText: {
         alignSelf: 'flex-end',
-        color: colors.primaryText,
-        fontSize: 12,
-        fontWeight: '500',
     },
     progressControlsRow: {
         flexDirection: 'row',
@@ -825,23 +822,23 @@ const styles = StyleSheet.create({
     },
     progressTouchArea: {
         flex: 1,
-        height: 28,
+        height: 44,
         justifyContent: 'center',
     },
     progressTrack: {
         height: 3,
         overflow: 'hidden',
-        borderRadius: 2,
+        borderRadius: radius.full,
         backgroundColor: colors.mediaProgressTrack,
     },
     progressPlayed: {
         height: '100%',
-        backgroundColor: colors.accentForeground,
+        backgroundColor: colors.mediaAccent,
     },
     fullscreenButton: {
         marginLeft: spacing.sm,
         minWidth: 52,
-        minHeight: 28,
+        minHeight: 44,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: spacing.sm,

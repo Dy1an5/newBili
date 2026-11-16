@@ -5,7 +5,6 @@ import {
     FlatList,
     Pressable,
     StyleSheet,
-    Text,
     View,
     type LayoutChangeEvent,
     type ListRenderItemInfo,
@@ -17,6 +16,7 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
+import AppText from '@/components/AppText';
 import SelectionHeader from '@/components/SelectionHeader';
 import SelectionSheet, {
     type SelectorAnchor,
@@ -687,7 +687,9 @@ export default function FollowingPage({
         return (
             <View style={styles.centered}>
                 <ActivityIndicator color={colors.accentForeground} size='large' />
-                <Text style={styles.statusText}>正在加载动态...</Text>
+                <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                    正在加载动态...
+                </AppText>
             </View>
         );
     }
@@ -695,7 +697,7 @@ export default function FollowingPage({
     if (errorMessage && dynamics.length === 0) {
         return (
             <View style={styles.centered}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{errorMessage}</AppText>
                 <AppButton
                     onPress={() => void loadFirstPage(false)}
                     style={styles.actionButton}
@@ -721,7 +723,7 @@ export default function FollowingPage({
         if (selectedTagId !== null && memberErrorMessage) {
             return (
                 <View style={styles.emptyMessage}>
-                    <Text style={styles.errorText}>{memberErrorMessage}</Text>
+                    <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{memberErrorMessage}</AppText>
                     <AppButton
                         onPress={retrySelectedGroupMembers}
                         style={styles.actionButton}
@@ -734,7 +736,9 @@ export default function FollowingPage({
         if (selectedMemberMids instanceof Set && selectedMemberMids.size === 0) {
             return (
                 <View style={styles.emptyMessage}>
-                    <Text style={styles.statusText}>该分组暂无关注UP主</Text>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                        该分组暂无关注UP主
+                    </AppText>
                 </View>
             );
         }
@@ -750,7 +754,7 @@ export default function FollowingPage({
         if (paginationErrorMessage) {
             return (
                 <View style={styles.emptyMessage}>
-                    <Text style={styles.errorText}>{paginationErrorMessage}</Text>
+                    <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{paginationErrorMessage}</AppText>
                     <AppButton
                         onPress={continueLoadingDynamics}
                         style={styles.actionButton}
@@ -767,9 +771,9 @@ export default function FollowingPage({
         ) {
             return (
                 <View style={styles.emptyMessage}>
-                    <Text style={styles.statusText}>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
                         接下来3页暂无该分组的新动态
-                    </Text>
+                    </AppText>
                     <AppButton
                         onPress={continueLoadingDynamics}
                         style={styles.actionButton}
@@ -782,28 +786,33 @@ export default function FollowingPage({
         if (hasMore) {
             return (
                 <View style={styles.emptyMessage}>
-                    <Text style={styles.statusText}>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
                         {selectedTagId === null
                             ? '当前页暂无可展示动态'
                             : '当前已加载范围内暂无该分组动态'}
-                    </Text>
+                    </AppText>
                 </View>
             );
         }
 
         return (
             <View style={styles.emptyMessage}>
-                <Text style={styles.statusText}>
+                <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
                     {selectedTagId === null
                         ? '暂时没有识别到视频或图文动态'
                         : '该分组暂无可展示动态'}
-                </Text>
+                </AppText>
                 {selectedTagId === null && diagnostics ? (
-                    <Text selectable style={styles.diagnosticText}>
+                    <AppText
+                        color={colors.mutedText}
+                        selectable
+                        style={styles.diagnosticText}
+                        variant='caption'
+                    >
                         原始条数:{diagnostics.rawItemCount}{'\n'}
                         item.type:{diagnostics.itemTypes.join(',') || '无'}{'\n'}
                         major.type:{diagnostics.majorTypes.join(',') || '无'}
-                    </Text>
+                    </AppText>
                 ) : null}
             </View>
         );
@@ -857,14 +866,21 @@ export default function FollowingPage({
                             {isLoadingMore ? <AppLoadingIndicator /> : null}
                             {paginationErrorMessage ? (
                                 <>
-                                    <Text style={styles.inlineError}>
+                                    <AppText
+                                        color={colors.secondaryText}
+                                        style={styles.inlineError}
+                                        variant='caption'
+                                    >
                                         {paginationErrorMessage}
-                                    </Text>
+                                    </AppText>
                                     <Pressable
+                                        accessibilityRole='button'
                                         onPress={continueLoadingDynamics}
                                         style={styles.footerRetryButton}
                                     >
-                                        <Text style={styles.footerRetryText}>重试</Text>
+                                        <AppText color={colors.accentForeground} variant='label'>
+                                            重试
+                                        </AppText>
                                     </Pressable>
                                 </>
                             ) : null}
@@ -876,9 +892,9 @@ export default function FollowingPage({
                                 !paginationErrorMessage
                             ) ? (
                                 <>
-                                    <Text style={styles.footerText}>
+                                    <AppText color={colors.mutedText} variant='caption'>
                                         接下来3页暂无该分组的新动态
-                                    </Text>
+                                    </AppText>
                                     <AppButton
                                         onPress={continueLoadingDynamics}
                                         style={styles.actionButton}
@@ -887,14 +903,20 @@ export default function FollowingPage({
                                 </>
                             ) : null}
                             {!hasMore && !isLoadingMore && !paginationErrorMessage ? (
-                                <Text style={styles.footerText}>没有更多了</Text>
+                                <AppText color={colors.mutedText} variant='caption'>没有更多了</AppText>
                             ) : null}
                         </View>
                     ) : null
                 }
                 ListHeaderComponent={
                     errorMessage ? (
-                        <Text style={styles.inlineError}>{errorMessage}</Text>
+                        <AppText
+                            color={colors.secondaryText}
+                            style={styles.inlineError}
+                            variant='caption'
+                        >
+                            {errorMessage}
+                        </AppText>
                     ) : null
                 }
                 onContentSizeChange={handleListContentSizeChange}
@@ -948,8 +970,6 @@ const styles = StyleSheet.create({
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     emptyMessage: {
@@ -957,21 +977,14 @@ const styles = StyleSheet.create({
     },
     diagnosticText: {
         marginTop: spacing.md,
-        color: colors.mutedText,
-        fontSize: 12,
-        lineHeight: 18,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.primaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginHorizontal: spacing.md,
         marginVertical: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 13,
         textAlign: 'center',
     },
     actionButton: {
@@ -984,17 +997,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    footerText: {
-        color: colors.mutedText,
-        fontSize: 12,
-    },
     footerRetryButton: {
+        minHeight: 48,
+        justifyContent: 'center',
         paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-    },
-    footerRetryText: {
-        color: colors.accentForeground,
-        fontSize: 13,
-        fontWeight: '600',
     },
 });

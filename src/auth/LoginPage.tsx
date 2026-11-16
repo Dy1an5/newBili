@@ -3,13 +3,14 @@ import {
     ActivityIndicator,
     Pressable,
     StyleSheet,
-    Text,
     View,
 } from 'react-native';
 import CookieManager from '@preeternal/react-native-cookie-manager';
 import { WebView } from 'react-native-webview';
 
+import AppText from '@/components/AppText';
 import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 import { hasLoginCookie, saveLoginCookie } from './authCookie';
 
 const BILIBILI_LOGIN_URL = 'https://passport.bilibili.com/login';
@@ -66,12 +67,14 @@ export default function LoginPage({
                         onPress={onCancel}
                         style={styles.backButton}
                     >
-                        <Text style={styles.backButtonText}>返回</Text>
+                        <AppText color={colors.accentForeground} variant='label'>
+                            返回
+                        </AppText>
                     </Pressable>
                 ) : null}
-                <Text numberOfLines={1} style={styles.message}>
+                <AppText numberOfLines={1} style={styles.message} variant='bodySmall'>
                     {message}
-                </Text>
+                </AppText>
             </View>
 
             <WebView
@@ -107,26 +110,21 @@ const styles = StyleSheet.create({
         backgroundColor: colors.pageBackground,
     },
     header: {
-        minHeight: 52,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
+        paddingHorizontal: spacing.md,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: colors.surfaceBorder,
     },
     backButton: {
-        paddingHorizontal: 8,
-        paddingVertical: 10,
-        marginRight: 8,
-    },
-    backButtonText: {
-        color: colors.accentForeground,
-        fontSize: 16,
+        minHeight: 48,
+        justifyContent: 'center',
+        paddingHorizontal: spacing.sm,
+        marginRight: spacing.sm,
     },
     message: {
         flex: 1,
-        color: colors.primaryText,
-        fontSize: 14,
     },
     webView: {
         flex: 1,

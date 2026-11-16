@@ -7,8 +7,8 @@ import type {
 import {
     FlatList,
     Modal,
+    StatusBar,
     StyleSheet,
-    Text,
     useWindowDimensions,
     View,
 } from 'react-native';
@@ -26,8 +26,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import { colors } from '@/theme/colors';
+import { duration, timingConfig } from '@/theme/motion';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 
@@ -60,7 +62,7 @@ const MIN_SCALE = 1;
 const DOUBLE_TAP_SCALE = 2.5;
 const DOUBLE_TAP_INTERVAL_MS = 300;
 const RESET_SCALE_TOLERANCE = 0.001;
-const TRANSFORM_DURATION_MS = 180;
+const TRANSFORM_TIMING = timingConfig(duration.quick);
 
 function clamp(value: number, minimum: number, maximum: number): number {
     'worklet';
@@ -175,15 +177,9 @@ function ZoomablePreviewImage({
             cancelAnimation(translateY);
 
             if (scale.value > MIN_SCALE + RESET_SCALE_TOLERANCE) {
-                translateX.value = withTiming(0, {
-                    duration: TRANSFORM_DURATION_MS,
-                });
-                translateY.value = withTiming(0, {
-                    duration: TRANSFORM_DURATION_MS,
-                });
-                scale.value = withTiming(MIN_SCALE, {
-                    duration: TRANSFORM_DURATION_MS,
-                }, (finished) => {
+                translateX.value = withTiming(0, TRANSFORM_TIMING);
+                translateY.value = withTiming(0, TRANSFORM_TIMING);
+                scale.value = withTiming(MIN_SCALE, TRANSFORM_TIMING, (finished) => {
                     if (finished) {
                         runOnJS(updateZoomed)(false);
                     }
@@ -211,15 +207,9 @@ function ZoomablePreviewImage({
                 image,
             );
 
-            translateX.value = withTiming(nextTranslation.x, {
-                duration: TRANSFORM_DURATION_MS,
-            });
-            translateY.value = withTiming(nextTranslation.y, {
-                duration: TRANSFORM_DURATION_MS,
-            });
-            scale.value = withTiming(DOUBLE_TAP_SCALE, {
-                duration: TRANSFORM_DURATION_MS,
-            });
+            translateX.value = withTiming(nextTranslation.x, TRANSFORM_TIMING);
+            translateY.value = withTiming(nextTranslation.y, TRANSFORM_TIMING);
+            scale.value = withTiming(DOUBLE_TAP_SCALE, TRANSFORM_TIMING);
             runOnJS(updateZoomed)(true);
         }), [
         active,
@@ -378,6 +368,7 @@ export default function FullscreenImageViewer({
             visible
         >
             <GestureHandlerRootView style={styles.page}>
+                <StatusBar barStyle='light-content' />
                 <SafeAreaView edges={['top', 'bottom']} style={styles.page}>
                     <FlatList
                         data={validImageUrls}
@@ -418,9 +409,9 @@ export default function FullscreenImageViewer({
                     />
 
                     <View pointerEvents='none' style={styles.counter}>
-                        <Text style={styles.counterText}>
+                        <AppText color={colors.mediaForeground} variant='label'>
                             {currentIndex + 1}/{validImageUrls.length}
-                        </Text>
+                        </AppText>
                     </View>
                 </SafeAreaView>
             </GestureHandlerRootView>
@@ -431,7 +422,7 @@ export default function FullscreenImageViewer({
 const styles = StyleSheet.create({
     page: {
         flex: 1,
-        backgroundColor: colors.pageBackground,
+        backgroundColor: colors.mediaBackground,
     },
     list: {
         flex: 1,
@@ -454,10 +445,5 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.xs,
         borderRadius: radius.full,
         backgroundColor: colors.mediaOverlayBackground,
-    },
-    counterText: {
-        color: colors.primaryText,
-        fontSize: 13,
-        fontWeight: '600',
     },
 });

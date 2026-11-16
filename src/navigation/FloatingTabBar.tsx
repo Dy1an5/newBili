@@ -3,9 +3,11 @@ import {
     type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { type RefObject, useContext, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import AppText from '@/components/AppText';
 import type { SelectorAnchor } from '@/components/SelectionSheet';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
@@ -14,13 +16,16 @@ import { spacing } from '@/theme/spacing';
 type TabIconName = 'dynamic' | 'favorites' | 'watchLater';
 type Props = BottomTabBarProps & {
     blurTarget: RefObject<View | null>;
-    hasDeepSeekApiKey: boolean;
-    onAgentConfigPress: () => void;
+    onSearchPress: () => void;
     onTabSelectorRequest: (
         routeName: string,
         anchor: SelectorAnchor | null,
     ) => void;
 };
+
+const TAB_BAR_HEIGHT = 64;
+const TAB_ITEM_MIN_HEIGHT = 56;
+const SEARCH_BUTTON_SIZE = TAB_BAR_HEIGHT;
 
 const TAB_ITEMS: Record<string, { icon: TabIconName; label: string }> = {
     HomeTab: {
@@ -76,8 +81,7 @@ export default function FloatingTabBar({
     navigation,
     state,
     blurTarget,
-    hasDeepSeekApiKey,
-    onAgentConfigPress,
+    onSearchPress,
     onTabSelectorRequest,
 }: Props) {
     const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
@@ -104,7 +108,7 @@ export default function FloatingTabBar({
                         blurTarget={blurTarget}
                         intensity={36}
                         style={styles.tabGroupGlass}
-                        tint='systemThinMaterialDark'
+                        tint='systemUltraThinMaterialLight'
                     >
                         {state.routes.map((route, index) => {
                             const item = TAB_ITEMS[route.name];
@@ -127,13 +131,13 @@ export default function FloatingTabBar({
                                 });
 
                                 if (!isFocused && !event.defaultPrevented) {
-                                    navigation.navigate(route.name, route.params);
+                                    navigation.navigate(route.name);
                                 }
                             };
 
                             const handleLongPress = () => {
                                 if (!isFocused) {
-                                    navigation.navigate(route.name, route.params);
+                                    navigation.navigate(route.name);
                                     return;
                                 }
 
@@ -171,49 +175,43 @@ export default function FloatingTabBar({
                                     testID={options.tabBarButtonTestID}
                                 >
                                     <TabIcon color={color} name={item.icon} />
-                                    <Text
+                                    <AppText
+                                        color={color}
+                                        maxFontSizeMultiplier={1.5}
                                         numberOfLines={1}
-                                        style={[
-                                            styles.tabLabel,
-                                            { color },
-                                            isFocused && styles.tabLabelSelected,
-                                        ]}
+                                        variant='micro'
                                     >
                                         {item.label}
-                                    </Text>
+                                    </AppText>
                                 </Pressable>
                             );
                         })}
                     </BlurView>
                 </View>
 
-                <View style={styles.placeholderShadow}>
+                <View style={styles.searchButtonShadow}>
                     <BlurView
                         blurMethod='dimezisBlurViewSdk31Plus'
                         blurReductionFactor={3}
                         blurTarget={blurTarget}
                         intensity={36}
-                        style={styles.placeholderGlass}
-                        tint='systemThinMaterialDark'
+                        style={styles.searchButtonGlass}
+                        tint='systemUltraThinMaterialLight'
                     >
                         <Pressable
-                            accessibilityLabel='配置DeepSeek API key'
+                            accessibilityLabel='搜索'
                             accessibilityRole='button'
-                            accessibilityState={{ selected: hasDeepSeekApiKey }}
-                            onPress={onAgentConfigPress}
+                            onPress={onSearchPress}
                             style={({ pressed }) => [
-                                styles.placeholderButton,
+                                styles.searchButton,
                                 pressed && styles.pressed,
                             ]}
                         >
-                            <Text
-                                style={[
-                                    styles.agentButtonText,
-                                    hasDeepSeekApiKey && styles.agentButtonTextConfigured,
-                                ]}
-                            >
-                                AI
-                            </Text>
+                            <MaterialIcons
+                                color={colors.accentForeground}
+                                name='search'
+                                size={24}
+                            />
                         </Pressable>
                     </BlurView>
                 </View>
@@ -233,23 +231,23 @@ const styles = StyleSheet.create({
         backgroundColor: colors.tabBarTransparent,
     },
     row: {
-        height: 56,
+        minHeight: TAB_BAR_HEIGHT,
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
     },
     tabGroupShadow: {
         flex: 1,
-        height: 56,
+        minHeight: TAB_BAR_HEIGHT,
         borderRadius: radius.full,
         backgroundColor: colors.tabBarShadowBackground,
         elevation: 10,
-        shadowColor: colors.pageBackground,
+        shadowColor: colors.shadow,
         shadowOffset: {
             width: 0,
             height: 5,
         },
-        shadowOpacity: 0.16,
+        shadowOpacity: 0.12,
         shadowRadius: 12,
     },
     tabGroupGlass: {
@@ -266,10 +264,10 @@ const styles = StyleSheet.create({
     tabItem: {
         flex: 1,
         minWidth: 0,
-        height: 48,
+        minHeight: TAB_ITEM_MIN_HEIGHT,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 3,
+        gap: spacing.xs,
         borderRadius: radius.full,
     },
     tabItemSelected: {
@@ -280,28 +278,21 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.7,
     },
-    tabLabel: {
-        fontSize: 10,
-        fontWeight: '500',
-    },
-    tabLabelSelected: {
-        fontWeight: '700',
-    },
-    placeholderShadow: {
-        width: 56,
-        height: 56,
+    searchButtonShadow: {
+        width: SEARCH_BUTTON_SIZE,
+        height: SEARCH_BUTTON_SIZE,
         borderRadius: radius.full,
         backgroundColor: colors.tabBarShadowBackground,
         elevation: 10,
-        shadowColor: colors.pageBackground,
+        shadowColor: colors.shadow,
         shadowOffset: {
             width: 0,
             height: 5,
         },
-        shadowOpacity: 0.16,
+        shadowOpacity: 0.12,
         shadowRadius: 12,
     },
-    placeholderGlass: {
+    searchButtonGlass: {
         flex: 1,
         borderWidth: 1,
         borderColor: colors.tabBarBorder,
@@ -309,7 +300,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         backgroundColor: colors.tabBarBackground,
     },
-    placeholderButton: {
+    searchButton: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
@@ -328,7 +319,7 @@ const styles = StyleSheet.create({
         width: 16,
         height: 18,
         borderWidth: 2,
-        borderRadius: 3,
+        borderRadius: radius.xs,
     },
     favoriteIconFold: {
         position: 'absolute',
@@ -367,13 +358,5 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
         transform: [{ rotate: '30deg' }],
         transformOrigin: 'left center',
-    },
-    agentButtonText: {
-        color: colors.secondaryText,
-        fontSize: 16,
-        fontWeight: '800',
-    },
-    agentButtonTextConfigured: {
-        color: colors.accentForeground,
     },
 });

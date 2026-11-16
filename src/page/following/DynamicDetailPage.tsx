@@ -6,7 +6,6 @@ import type {
 import {
     Pressable,
     StyleSheet,
-    Text,
     useWindowDimensions,
     View,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { useAnimatedScrollHandler } from 'react-native-reanimated';
 
 import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import FullscreenImageViewer from '@/components/FullscreenImageViewer';
 import UserAvatar from '@/components/UserAvatar';
@@ -165,19 +165,23 @@ export default function DynamicDetailPage({ initialPicture }: Props) {
                         uri={picture.author.avatarUrl}
                     />
                     <View style={styles.authorText}>
-                        <Text numberOfLines={1} style={styles.authorName}>
+                        <AppText color={colors.secondaryText} numberOfLines={1} variant='titleSmall'>
                             {picture.author.name}
-                        </Text>
-                        <Text style={styles.publishedTime}>
+                        </AppText>
+                        <AppText
+                            color={colors.mutedText}
+                            style={styles.publishedTime}
+                            variant='caption'
+                        >
                             {formatPublishedTime(picture.publishedAt)}
-                        </Text>
+                        </AppText>
                     </View>
                 </View>
 
                 {picture.contentText ? (
-                    <Text selectable style={styles.contentText}>
+                    <AppText selectable style={styles.contentText} variant='body'>
                         {picture.contentText}
-                    </Text>
+                    </AppText>
                 ) : null}
 
                 <View style={styles.pictureGrid}>
@@ -214,14 +218,24 @@ export default function DynamicDetailPage({ initialPicture }: Props) {
                 </View>
 
                 {detailStatus === 'loading' ? (
-                    <Text style={styles.detailStatus}>正在更新动态详情...</Text>
+                    <AppText
+                        color={colors.mutedText}
+                        style={styles.detailStatus}
+                        variant='caption'
+                    >
+                        正在更新动态详情...
+                    </AppText>
                 ) : null}
 
                 {detailErrorMessage ? (
                     <View style={styles.detailError}>
-                        <Text style={styles.detailErrorText}>
+                        <AppText
+                            color={colors.alertText}
+                            style={styles.detailErrorText}
+                            variant='bodySmall'
+                        >
                             {detailErrorMessage}
-                        </Text>
+                        </AppText>
                         <AppButton
                             onPress={() => setReloadKey((currentKey) => currentKey + 1)}
                             title='重试详情'
@@ -230,9 +244,13 @@ export default function DynamicDetailPage({ initialPicture }: Props) {
                 ) : null}
             </View>
 
-            <Text style={styles.commentsTitle}>
+            <AppText
+                color={colors.accentForeground}
+                style={styles.commentsTitle}
+                variant='heading'
+            >
                 {formatCommentCount(commentCount)}
-            </Text>
+            </AppText>
         </>
     );
 
@@ -280,21 +298,11 @@ const styles = StyleSheet.create({
         flex: 1,
         minWidth: 0,
     },
-    authorName: {
-        color: colors.primaryText,
-        fontSize: 15,
-        fontWeight: '700',
-    },
     publishedTime: {
-        marginTop: 2,
-        color: colors.mutedText,
-        fontSize: 12,
+        marginTop: spacing.xs,
     },
     contentText: {
         marginTop: spacing.lg,
-        color: colors.primaryText,
-        fontSize: 17,
-        lineHeight: 26,
     },
     pictureGrid: {
         flexDirection: 'row',
@@ -316,8 +324,6 @@ const styles = StyleSheet.create({
     },
     detailStatus: {
         marginTop: spacing.md,
-        color: colors.mutedText,
-        fontSize: 12,
     },
     detailError: {
         alignItems: 'flex-start',
@@ -328,16 +334,10 @@ const styles = StyleSheet.create({
     },
     detailErrorText: {
         marginBottom: spacing.sm,
-        color: colors.alertText,
-        fontSize: 13,
-        lineHeight: 19,
     },
     commentsTitle: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.md,
-        color: colors.accentForeground,
-        fontSize: 16,
-        fontWeight: '700',
         backgroundColor: colors.pageBackground,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,

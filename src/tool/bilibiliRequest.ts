@@ -21,6 +21,8 @@ export type BilibiliRequestOptions = {
     resourceName: string;
     createError: BilibiliRequestErrorConstructor;
     signal?: AbortSignal;
+    // 搜索等接口的风控按来源页判断, 需要覆盖默认 Referer.
+    referer?: string;
     // 少数接口对某些业务码有专门文案, 在这里给一个 code 到文案的映射,
     // 免得为了一个特判再复制整段请求逻辑.
     messageByCode?: Readonly<Record<number, string>>;
@@ -33,6 +35,7 @@ export async function requestBilibiliJson(
         resourceName,
         createError,
         signal,
+        referer = BILIBILI_REFERER,
         messageByCode,
     }: BilibiliRequestOptions,
 ): Promise<JsonRecord> {
@@ -41,7 +44,7 @@ export async function requestBilibiliJson(
         headers: {
             Accept: 'application/json',
             Cookie: sessdata,
-            Referer: BILIBILI_REFERER,
+            Referer: referer,
             'User-Agent': USER_AGENT,
         },
         signal,

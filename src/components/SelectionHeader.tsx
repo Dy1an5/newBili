@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
+import AppText from '@/components/AppText';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -24,17 +25,19 @@ export default function SelectionHeader({
                 pressed && styles.pressed,
             ]}
         >
-            <Text numberOfLines={1} style={styles.label}>
+            <AppText numberOfLines={1} style={styles.label} variant='heading'>
                 {label}
-            </Text>
-            <Text style={styles.chevron}>▾</Text>
+            </AppText>
+            <AppText color={colors.mutedText} style={styles.chevron} variant='caption'>
+                ▾
+            </AppText>
         </Pressable>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: 44,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: spacing.md,
@@ -44,14 +47,9 @@ const styles = StyleSheet.create({
     },
     label: {
         flexShrink: 1,
-        color: colors.primaryText,
-        fontSize: 16,
-        fontWeight: '600',
     },
     chevron: {
         marginLeft: spacing.xs,
-        color: colors.mutedText,
-        fontSize: 12,
     },
     pressed: {
         opacity: 0.75,

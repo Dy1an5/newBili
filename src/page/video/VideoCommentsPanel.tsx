@@ -17,7 +17,6 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    Text,
     type TextLayoutEvent,
     View,
     type ViewToken,
@@ -28,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
+import AppText from '@/components/AppText';
 import AppRefreshControl from '@/components/AppRefreshControl';
 import BilibiliImage from '@/components/BilibiliImage';
 import FullscreenImageViewer from '@/components/FullscreenImageViewer';
@@ -271,31 +271,44 @@ const CommentCard = memo(function CommentCard({
 
             <View style={styles.commentBody}>
                 <View style={styles.authorLine}>
-                    <Text
+                    <AppText
+                        color={comment.isUpAuthor ? colors.upAuthorText : colors.secondaryText}
                         numberOfLines={1}
-                        style={[
-                            styles.commentAuthor,
-                            comment.isUpAuthor && styles.upAuthorName,
-                        ]}
+                        style={styles.commentAuthor}
+                        variant='label'
                     >
                         {comment.author.name}
-                    </Text>
+                    </AppText>
                     {comment.isUpAuthor ? (
-                        <Text style={styles.badge}>UP</Text>
+                        <AppText
+                            color={colors.accentForeground}
+                            style={styles.badge}
+                            variant='micro'
+                        >
+                            UP
+                        </AppText>
                     ) : null}
                     {comment.isPinned ? (
-                        <Text style={styles.pinnedBadge}>置顶</Text>
+                        <AppText
+                            color={colors.accentForeground}
+                            style={styles.pinnedBadge}
+                            variant='micro'
+                        >
+                            置顶
+                        </AppText>
                     ) : null}
                 </View>
 
                 {createdAt || comment.location ? (
-                    <Text style={styles.commentMeta}>
+                    <AppText color={colors.mutedText} style={styles.commentMeta} variant='micro'>
                         {[createdAt, comment.location].filter(Boolean).join(' · ')}
-                    </Text>
+                    </AppText>
                 ) : null}
 
                 {comment.message ? (
-                    <Text style={styles.commentMessage}>{comment.message}</Text>
+                    <AppText style={styles.commentMessage} variant='body'>
+                        {comment.message}
+                    </AppText>
                 ) : null}
 
                 <CommentPictures
@@ -304,11 +317,13 @@ const CommentCard = memo(function CommentCard({
                 />
 
                 <View style={styles.commentStats}>
-                    <Text style={styles.commentStat}>赞 {formatCount(comment.likeCount)}</Text>
+                    <AppText color={colors.mutedText} style={styles.commentStat} variant='caption'>
+                        赞 {formatCount(comment.likeCount)}
+                    </AppText>
                     {comment.replyCount > 0 ? (
-                        <Text style={styles.commentStat}>
+                        <AppText color={colors.mutedText} style={styles.commentStat} variant='caption'>
                             {formatCount(comment.replyCount)}条回复
-                        </Text>
+                        </AppText>
                     ) : null}
                 </View>
 
@@ -316,47 +331,51 @@ const CommentCard = memo(function CommentCard({
                     <View style={styles.replyPreview}>
                         {renderedReplies.map((reply) => (
                             <View key={reply.id} style={styles.replyItem}>
-                                <Text
+                                <AppText
                                     numberOfLines={
                                         isExpanded || isPreviewTextExpanded
                                             ? undefined
                                             : COLLAPSED_REPLY_LINE_COUNT
                                     }
-                                    style={styles.replyPreviewText}
+                                    color={colors.secondaryText}
+                                    variant='bodySmall'
                                 >
-                                    <Text
-                                        style={[
-                                            styles.replyPreviewAuthor,
-                                            reply.isUpAuthor && styles.upAuthorName,
-                                        ]}
+                                    <AppText
+                                        color={
+                                            reply.isUpAuthor
+                                                ? colors.upAuthorText
+                                                : colors.accentForeground
+                                        }
+                                        variant='label'
                                     >
                                         {reply.author.name}{reply.isUpAuthor ? ' [UP]' : ''}:
-                                    </Text>
+                                    </AppText>
                                     {reply.message ? ` ${reply.message}` : ''}
-                                </Text>
+                                </AppText>
                                 {!isExpanded ? (
-                                    <Text
+                                    <AppText
                                         accessibilityElementsHidden
                                         importantForAccessibility='no-hide-descendants'
                                         onTextLayout={(event) => {
                                             handleReplyTextLayout(reply.id, event);
                                         }}
                                         pointerEvents='none'
-                                        style={[
-                                            styles.replyPreviewText,
-                                            styles.replyTextMeasurement,
-                                        ]}
+                                        color={colors.secondaryText}
+                                        style={styles.replyTextMeasurement}
+                                        variant='bodySmall'
                                     >
-                                        <Text
-                                            style={[
-                                                styles.replyPreviewAuthor,
-                                                reply.isUpAuthor && styles.upAuthorName,
-                                            ]}
+                                        <AppText
+                                            color={
+                                                reply.isUpAuthor
+                                                    ? colors.upAuthorText
+                                                    : colors.accentForeground
+                                            }
+                                            variant='label'
                                         >
                                             {reply.author.name}{reply.isUpAuthor ? ' [UP]' : ''}:
-                                        </Text>
+                                        </AppText>
                                         {reply.message ? ` ${reply.message}` : ''}
-                                    </Text>
+                                    </AppText>
                                 ) : null}
                                 <CommentPictures
                                     comment={reply}
@@ -366,9 +385,13 @@ const CommentCard = memo(function CommentCard({
                             </View>
                         ))}
                         {replyErrorMessage ? (
-                            <Text style={styles.replyErrorText}>
+                            <AppText
+                                color={colors.alertText}
+                                style={styles.replyErrorText}
+                                variant='caption'
+                            >
                                 {replyErrorMessage}
-                            </Text>
+                            </AppText>
                         ) : null}
                         {isLoading || shouldShowLoadMore ? (
                             <Pressable
@@ -380,13 +403,13 @@ const CommentCard = memo(function CommentCard({
                                     pressed && styles.pressed,
                                 ]}
                             >
-                                <Text style={styles.showAllReplies}>
+                                <AppText color={colors.accentForeground} variant='label'>
                                     {isLoading
                                         ? '正在加载回复...'
                                         : replyErrorMessage
                                             ? '重试'
                                             : '加载更多'}
-                                </Text>
+                                </AppText>
                             </Pressable>
                         ) : null}
                         {shouldShowPreviewToggle ? (
@@ -405,9 +428,9 @@ const CommentCard = memo(function CommentCard({
                                     pressed && styles.pressed,
                                 ]}
                             >
-                                <Text style={styles.showAllReplies}>
+                                <AppText color={colors.accentForeground} variant='label'>
                                     {isPreviewTextExpanded ? '收起' : '展开全文'}
-                                </Text>
+                                </AppText>
                             </Pressable>
                         ) : null}
                     </View>
@@ -1005,11 +1028,11 @@ function VideoCommentsPanel({
                     {subject || !subjectUnavailableMessage ? (
                         <AppLoadingIndicator />
                     ) : null}
-                    <Text style={styles.statusText}>
+                    <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
                         {subject
                             ? '正在获取评论...'
                             : subjectUnavailableMessage ?? '正在获取评论信息...'}
-                    </Text>
+                    </AppText>
                 </View>
             </Animated.ScrollView>
         );
@@ -1036,7 +1059,9 @@ function VideoCommentsPanel({
             >
                 {contentHeader}
                 <View style={styles.centeredStatus}>
-                    <Text style={styles.errorText}>{errorMessage}</Text>
+                    <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>
+                        {errorMessage}
+                    </AppText>
                     <AppButton
                         onPress={() => void loadInitialPage(false)}
                         style={styles.retryButton}
@@ -1067,19 +1092,37 @@ function VideoCommentsPanel({
                     <>
                         {contentHeader}
                         {errorMessage ? (
-                            <Text style={styles.inlineError}>{errorMessage}</Text>
+                            <AppText
+                                color={colors.secondaryText}
+                                style={styles.inlineError}
+                                variant='caption'
+                            >
+                                {errorMessage}
+                            </AppText>
                         ) : null}
                     </>
                 ) : null}
                 ListEmptyComponent={(
-                    <Text style={styles.emptyText}>暂时没有可显示的评论</Text>
+                    <AppText
+                        color={colors.mutedText}
+                        style={styles.emptyText}
+                        variant='bodySmall'
+                    >
+                        暂时没有可显示的评论
+                    </AppText>
                 )}
                 ListFooterComponent={isLoadingMore ? (
                     <View style={styles.listFooter}>
                         <AppLoadingIndicator />
                     </View>
                 ) : comments.length > 0 && !hasMore ? (
-                    <Text style={styles.endText}>没有更多评论了</Text>
+                    <AppText
+                        color={colors.mutedText}
+                        style={styles.endText}
+                        variant='caption'
+                    >
+                        没有更多评论了
+                    </AppText>
                 ) : null}
                 onEndReached={() => {
                     if (!isLoadingMore) {
@@ -1141,13 +1184,8 @@ const styles = StyleSheet.create({
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 14,
     },
     errorText: {
-        color: colors.primaryText,
-        fontSize: 14,
-        lineHeight: 21,
         textAlign: 'center',
     },
     retryButton: {
@@ -1159,16 +1197,11 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         padding: spacing.xl,
-        color: colors.mutedText,
-        fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
-        color: colors.alertText,
-        fontSize: 13,
-        lineHeight: 19,
         backgroundColor: colors.surfaceBackground,
     },
     commentCard: {
@@ -1191,44 +1224,26 @@ const styles = StyleSheet.create({
         minWidth: 0,
     },
     authorLine: {
-        minHeight: 19,
         flexDirection: 'row',
         alignItems: 'center',
     },
     commentAuthor: {
         maxWidth: '70%',
-        color: colors.secondaryText,
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    upAuthorName: {
-        color: colors.upAuthorText,
     },
     badge: {
         marginLeft: spacing.xs,
         paddingHorizontal: spacing.xs,
         borderRadius: radius.sm,
-        color: colors.accentForeground,
         backgroundColor: colors.accentBackground,
-        fontSize: 10,
-        fontWeight: '700',
     },
     pinnedBadge: {
         marginLeft: spacing.xs,
-        color: colors.accentForeground,
-        fontSize: 11,
-        fontWeight: '600',
     },
     commentMeta: {
-        marginTop: 2,
-        color: colors.mutedText,
-        fontSize: 11,
+        marginTop: spacing.xs,
     },
     commentMessage: {
         marginTop: spacing.sm,
-        color: colors.primaryText,
-        fontSize: 15,
-        lineHeight: 23,
     },
     pictureList: {
         paddingTop: spacing.sm,
@@ -1261,8 +1276,6 @@ const styles = StyleSheet.create({
     },
     commentStat: {
         marginRight: spacing.lg,
-        color: colors.mutedText,
-        fontSize: 12,
     },
     replyPreview: {
         marginTop: spacing.xs,
@@ -1273,16 +1286,7 @@ const styles = StyleSheet.create({
     },
     replyItem: {
         position: 'relative',
-        marginVertical: 2,
-    },
-    replyPreviewText: {
-        color: colors.secondaryText,
-        fontSize: 13,
-        lineHeight: 19,
-    },
-    replyPreviewAuthor: {
-        color: colors.accentForeground,
-        fontWeight: '600',
+        marginVertical: spacing.xs,
     },
     replyTextMeasurement: {
         position: 'absolute',
@@ -1293,20 +1297,12 @@ const styles = StyleSheet.create({
     },
     replyErrorText: {
         marginTop: spacing.xs,
-        color: colors.alertText,
-        fontSize: 12,
-        lineHeight: 18,
     },
     loadMoreButton: {
-        minHeight: 32,
+        minHeight: 48,
         alignSelf: 'flex-start',
         justifyContent: 'center',
         paddingRight: spacing.md,
-    },
-    showAllReplies: {
-        color: colors.accentForeground,
-        fontSize: 12,
-        fontWeight: '600',
     },
     listFooter: {
         alignItems: 'center',
@@ -1314,8 +1310,6 @@ const styles = StyleSheet.create({
     },
     endText: {
         paddingVertical: spacing.lg,
-        color: colors.mutedText,
-        fontSize: 12,
         textAlign: 'center',
     },
 });

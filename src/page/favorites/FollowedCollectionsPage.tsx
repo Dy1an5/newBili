@@ -5,7 +5,6 @@ import {
     FlatList,
     Pressable,
     StyleSheet,
-    Text,
     View,
     type ListRenderItemInfo,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { getLoginCookie } from '@/auth/authCookie';
 import AppButton from '@/components/AppButton';
 import AppLoadingIndicator from '@/components/AppLoadingIndicator';
 import AppRefreshControl from '@/components/AppRefreshControl';
+import AppText from '@/components/AppText';
 import BilibiliImage from '@/components/BilibiliImage';
 import UserAvatar from '@/components/UserAvatar';
 import {
@@ -94,9 +94,9 @@ function CollectionCard({
             />
 
             <View style={styles.collectionInfo}>
-                <Text numberOfLines={2} style={styles.collectionTitle}>
+                <AppText numberOfLines={2} variant='titleSmall'>
                     {collection.title}
-                </Text>
+                </AppText>
                 <View style={styles.authorRow}>
                     <UserAvatar
                         name={collection.author.name}
@@ -104,13 +104,18 @@ function CollectionCard({
                         style={styles.avatar}
                         uri={collection.author.avatarUrl}
                     />
-                    <Text numberOfLines={1} style={styles.authorName}>
+                    <AppText
+                        color={colors.secondaryText}
+                        numberOfLines={1}
+                        style={styles.authorName}
+                        variant='caption'
+                    >
                         {collection.author.name}
-                    </Text>
+                    </AppText>
                 </View>
-                <Text style={styles.mediaCount}>
+                <AppText color={colors.mutedText} style={styles.mediaCount} variant='micro'>
                     {collection.mediaCount}个视频
-                </Text>
+                </AppText>
             </View>
         </Pressable>
     );
@@ -241,7 +246,9 @@ export default function FollowedCollectionsPage({
         return (
             <View style={styles.centered}>
                 <ActivityIndicator color={colors.accentForeground} size='large' />
-                <Text style={styles.statusText}>正在加载合集...</Text>
+                <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                    正在加载合集...
+                </AppText>
             </View>
         );
     }
@@ -249,7 +256,7 @@ export default function FollowedCollectionsPage({
     if (errorMessage && collections.length === 0) {
         return (
             <View style={styles.centered}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <AppText color={colors.alertText} style={styles.errorText} variant='bodySmall'>{errorMessage}</AppText>
                 <AppButton
                     onPress={() => void loadPage(1, 'initial')}
                     style={styles.actionButton}
@@ -271,14 +278,22 @@ export default function FollowedCollectionsPage({
             initialNumToRender={8}
             keyExtractor={getCollectionKey}
             ListEmptyComponent={(
-                <Text style={styles.statusText}>暂时没有已关注的合集</Text>
+                <AppText color={colors.secondaryText} style={styles.statusText} variant='bodySmall'>
+                    暂时没有已关注的合集
+                </AppText>
             )}
             ListFooterComponent={(
                 <View style={styles.footer}>
                     {isLoadingMore ? <AppLoadingIndicator /> : null}
                     {errorMessage && collections.length > 0 ? (
                         <>
-                            <Text style={styles.inlineError}>{errorMessage}</Text>
+                            <AppText
+                                color={colors.secondaryText}
+                                style={styles.inlineError}
+                                variant='caption'
+                            >
+                                {errorMessage}
+                            </AppText>
                             <AppButton
                                 onPress={() => {
                                     if (failedRequest) {
@@ -364,12 +379,6 @@ const styles = StyleSheet.create({
         minWidth: 0,
         marginLeft: spacing.md,
     },
-    collectionTitle: {
-        color: colors.primaryText,
-        fontSize: 14,
-        lineHeight: 20,
-        fontWeight: '600',
-    },
     authorRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -380,29 +389,19 @@ const styles = StyleSheet.create({
     },
     authorName: {
         flex: 1,
-        color: colors.secondaryText,
-        fontSize: 12,
     },
     mediaCount: {
         marginTop: spacing.xs,
-        color: colors.mutedText,
-        fontSize: 11,
     },
     statusText: {
         marginTop: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     errorText: {
-        color: colors.primaryText,
-        fontSize: 14,
         textAlign: 'center',
     },
     inlineError: {
         marginVertical: spacing.sm,
-        color: colors.secondaryText,
-        fontSize: 13,
         textAlign: 'center',
     },
     actionButton: {
